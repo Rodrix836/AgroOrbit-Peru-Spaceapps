@@ -150,3 +150,44 @@ def test_auth_ownership_and_validation(client, auth_headers, owner_headers, test
     default = body(test_plot)
     default.pop("horizon_days")
     assert client.post(URL, json=default, headers=owner_headers).status_code == 200
+
+
+def test_start_on_optional_uses_planned_cycle(client, db, owner_headers, test_plot):
+    no_date = body(test_plot)
+    no_date.pop("start_on")
+    first = client.post(URL, json=no_date, headers=owner_headers)
+    assert first.status_code == 200, first.text
+    assert first.json()["context"]["start_on"] is None
+    assert missing_fields(first)[0] == "plot.next_sowing_date"
+
+    client.post(f"/api/plots/{test_plot['id']}/crop-cycles", json={"status": "planned", "sowing_date": "2026-12-15"},
+                headers=owner_headers)
+    second = client.post(URL, json=no_date, headers=owner_headers).json()
+    assert second["context"]["start_on"] == "2026-12-15"
+    assert "plot.next_sowing_date" not in [m["field"] for m in second["missing"]]
+
+    explicit = client.post(URL, json=body(test_plot, start_on="2027-01-10"), headers=owner_headers).json()
+    assert explicit["context"]["start_on"] == "2027-01-10"
+
+
+def test_created_at_is_utc_now(client, owner_headers, test_plot):
+    from datetime import datetime, timezone
+    before = datetime.now(timezone.utc)
+    stamp = client.post(URL, json=body(test_plot), headers=owner_headers).json()["created_at"]
+    assert stamp.endswith("Z")
+    parsed = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    assert before - timedelta(seconds=1) <= parsed <= datetime.now(timezone.utc) + timedelta(seconds=1)
+
+
+def test_engine_receives_resolved_start_on(client, db, owner_headers, test_plot, monkeypatch):
+    complete_plot(client, db, owner_headers, test_plot)
+    complete_catalog(monkeypatch)
+    client.post(f"/api/plots/{test_plot['id']}/crop-cycles", json={"status": "planned", "sowing_date": "2026-12-15"},
+                headers=owner_headers)
+    seen = []
+    monkeypatch.setattr(recommendation_service, "ROTATION_ENGINE",
+                        lambda plot, request, context: seen.append(request.start_on) or ("evaluacion", [], []))
+    no_date = body(test_plot)
+    no_date.pop("start_on")
+    assert client.post(URL, json=no_date, headers=owner_headers).json()["status"] == "ok"
+    assert seen == [date(2026, 12, 15)]
