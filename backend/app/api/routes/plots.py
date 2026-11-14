@@ -12,7 +12,7 @@ from app.database.models import AppUser, Device, Plot, SensorReading
 from app.schemas.common import as_utc
 from app.schemas.climate import PlotClimateRead
 from app.schemas.device import DeviceCreate, DeviceRead, DeviceRegistered
-from app.schemas.plot import PlotCreate, PlotRead
+from app.schemas.plot import PlotCreate, PlotRead, PlotUpdate
 from app.schemas.sensor import SensorReadingRead, SensorType
 from app.services import climate_service, sensor_service
 
@@ -43,6 +43,20 @@ def list_my_plots(user: CurrentUser, session: DbSession) -> list[Plot]:
 
 @router.get("/{plot_id}", response_model=PlotRead)
 def get_plot(plot: OwnedPlot) -> Plot:
+    return plot
+
+
+@router.patch("/{plot_id}", response_model=PlotRead)
+def update_plot(plot: OwnedPlot, body: PlotUpdate, session: DbSession) -> Plot:
+    """Actualiza solo los campos enviados (p. ej. water_availability o priority).
+
+    Si cambian latitude/longitude, el historial NASA guardado del punto anterior deja de
+    mostrarse: vuelve a importar con POST /api/plots/{plot_id}/nasa/power.
+    """
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(plot, field, value)
+    session.commit()
+    session.refresh(plot)
     return plot
 
 
