@@ -108,7 +108,79 @@ Actualiza **solo los campos enviados** y devuelve el `PlotRead` completo. Acepta
 - `{}` no cambia nada. Campos desconocidos, `id` o `user_id` → **422** `validation_error`.
 - Parcela ajena o inexistente → **404** `plot_not_found`.
 - Si cambian `latitude`/`longitude`, el historial NASA del punto anterior deja de mostrarse: vuelve a importar con `POST /api/plots/{plot_id}/nasa/power`.
-- El cultivo anterior, el actual y la fecha de la próxima campaña **aún no tienen columna en la base**. Necesitan una migración (propuesta: tabla `crop_cycle`).
+- El historial de cultivos y la fecha de la próxima campaña se guardan en `crop_cycle`. La migración `20261114222638_create_crop_cycles.sql` prepara las tablas. Las rutas están en [Ciclos de cultivo](#ciclos-de-cultivo-cultivo-anterior-actual-y-próxima-campaña).
+
+#### Persistencia para las rutas de campañas
+
+| Campo del formulario | Registro en `crop_cycle` |
+| --- | --- |
+| Cultivo anterior | Último ciclo `finished`, con `crop_code`. Orden sugerido: `coalesce(harvest_date, sowing_date) DESC NULLS LAST, created_at DESC, id DESC`. |
+| Cultivo actual | Único ciclo `active` de la parcela, con `crop_code`. |
+| Inicio previsto de la próxima campaña | `sowing_date` del único ciclo `planned` de la parcela. El cultivo puede quedar pendiente (`crop_code = null`). |
+
+Las fechas de ciclos activos y terminados pueden quedar en `null` si el usuario no las conoce. Si se informan ambas fechas, la cosecha debe ser igual o posterior a la siembra. Usa `origin: "farmer"` para datos declarados y `"recommendation"` para una campaña que se registra a partir de una recomendación.
+
+Usa la dependencia `OwnedPlot` para limitar las lecturas y escrituras al propietario. Al corregir los datos del formulario, actualiza el ciclo seleccionado por su ID. La base admite varios ciclos terminados y limita los ciclos activos y planificados a uno de cada tipo por parcela.
+
+Los códigos del catálogo inicial son `maiz`, `frijol_caupi` y `camote`, iguales a los IDs de `GET /api/crops`. Esa ruta sigue leyendo el catálogo de Python. Al añadir un código allí, inclúyelo también en el catálogo SQL antes de registrarlo en `crop_cycle`.
+
+## Ciclos de cultivo: cultivo anterior, actual y próxima campaña
+
+Todas requieren el token del propietario (`OwnedPlot`): parcela ajena o inexistente → **404** `plot_not_found`.
+
+### `GET /api/plots/{plot_id}/crop-cycles` → 200
+
+Lo que necesita el formulario, más el historial (del más reciente al más antiguo):
+
+```json
+{
+  "previous": { "id": "…", "plot_id": "…", "crop_code": "maiz", "sowing_date": "2026-03-01", "harvest_date": "2026-07-15", "status": "finished", "origin": "farmer", "created_at": "2026-11-14T22:40:00Z" },
+  "current":  { "id": "…", "plot_id": "…", "crop_code": "frijol_caupi", "sowing_date": null, "harvest_date": null, "status": "active", "origin": "farmer", "created_at": "…" },
+  "planned":  { "id": "…", "plot_id": "…", "crop_code": null, "sowing_date": "2026-12-01", "harvest_date": null, "status": "planned", "origin": "farmer", "created_at": "…" },
+  "cycles":   [ "…los tres anteriores y cualquier otro finished…" ]
+}
+```
+
+`previous` es el último `finished` (orden: `coalesce(harvest_date, sowing_date)` descendente con nulos al final, luego `created_at` e `id`). Si no hay, cada campo es `null` y `cycles` es `[]`.
+
+### `POST /api/plots/{plot_id}/crop-cycles` → 201
+
+```json
+{ "status": "finished", "crop_code": "maiz", "sowing_date": "2026-03-01", "harvest_date": "2026-07-15" }
+{ "status": "active", "crop_code": "frijol_caupi" }
+{ "status": "planned", "sowing_date": "2026-12-01" }
+```
+
+| Campo | Obligatorio | Notas |
+|---|---|---|
+| `status` | sí | `active`, `finished` o `planned` |
+| `crop_code` | en `active` y `finished` | ID de `GET /api/crops`; opcional en `planned` |
+| `sowing_date` | en `planned` | `AAAA-MM-DD`; opcional en los demás |
+| `harvest_date` | no | ≥ `sowing_date` si ambas existen |
+| `origin` | no | `farmer` (por defecto) o `recommendation` |
+
+Devuelve el ciclo (`CropCycleRead`). Errores:
+- **422** `validation_error`: falta `crop_code` o `sowing_date` según el estado, cosecha antes de la siembra, cultivo desconocido o campos extra. `details[].field` indica el campo.
+- **409** `active_cycle_exists` / `planned_cycle_exists`: la parcela ya tiene uno; `details.cycle_id` es su ID para corregirlo con PATCH.
+
+### `PATCH /api/plots/{plot_id}/crop-cycles/{cycle_id}` → 200
+
+Corrige un ciclo **por su ID**: solo los campos enviados, con las mismas reglas sobre el resultado. Ejemplos:
+- Cambiar el cultivo actual: `{ "crop_code": "camote" }` sobre el ciclo `active`.
+- Cerrar la campaña actual: `{ "status": "finished", "harvest_date": "2026-12-20" }`. Pasa a ser el cultivo anterior y deja libre el `active`.
+- Mover la próxima siembra: `{ "sowing_date": "2027-01-10" }` sobre el ciclo `planned`.
+
+Un ID que no es de esta parcela → **404** `cycle_not_found`.
+
+### `DELETE /api/plots/{plot_id}/crop-cycles/{cycle_id}` → 204
+
+Borra el ciclo (por ejemplo, para quitar la próxima campaña). ID ajeno o ya borrado → **404** `cycle_not_found`.
+
+> **Para Luis, cómo guardar el formulario:** lee `GET …/crop-cycles`.
+> - **`currentCropId`:** si `current` existe, `PATCH` su `crop_code`; si no, `POST` con `status: "active"`.
+> - **`previousCropId`:** igual sobre `previous`, con `status: "finished"`.
+> - **`startOn`:** igual sobre `planned`, con `status: "planned"` y `sowing_date`.
+> - **`waterAvailability` y `priority`:** van con `PATCH /api/plots/{plot_id}`.
 
 ## Cultivos
 
@@ -125,6 +197,82 @@ Catálogo de `app/data/crops.py` para los selectores. No requiere token. Coincid
 ```
 
 Los requisitos agronómicos no se exponen aquí. Mientras no tengan fuente, el motor no puede recomendar.
+
+## Recomendaciones de rotación
+
+> **Estado:** la ruta **ya responde**, pero **sin motor de rotaciones**: devuelve siempre `insufficient_data` con lo que falta de verdad, nunca alternativas. El formato está acordado con Luis (frontend) y **pendiente de que Milene (motor) lo confirme**.
+
+### `POST /api/recommendations` → 200
+
+Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot_not_found`; cuerpo inválido (`priority` distinta de las dos, `horizon_days` fuera de 90–730, campos extra) → **422** `validation_error`.
+
+**Cómo se calcula hoy** (`app/services/recommendation_service.py`; criterios provisionales):
+
+| `missing[].field` | Aparece si… |
+|---|---|
+| `plot.previous_crop` | la parcela no tiene ningún ciclo `finished` en `crop_cycle` |
+| `plot.water_availability` | la parcela no lo tiene (se guarda con `PATCH /api/plots/{id}`) |
+| `plot.soil_texture` | la parcela no lo tiene (igual) |
+| `crops.<id>.requirements` | el cultivo del catálogo tiene algún rango de temperatura o agua en `null` o no tiene `fuentes` |
+| `climate.history` | no hay NASA POWER guardado anterior a `start_on`, o hay menos de 365 días con `T2M` válido |
+| `engine` | están todos los datos, pero el motor aún no está integrado |
+
+- `context.power` sale de `nasa_observation`: los días guardados del punto actual **anteriores a `start_on`**. `use` es `historico` con ≥ 365 días y `contexto_del_periodo` si hay menos. Es `null` si no hay datos.
+- `context.sensor` resume las lecturas del kit. Las `quality_flag: "test"` nunca se usan como evidencia.
+- **Para integrar el motor (Milene):** asigna `ROTATION_ENGINE` en `recommendation_service.py` a una función `motor(plot, request, context) -> (mode, assumptions, alternatives)`. La ruta ya rellena `status: "ok"`, `selected_id` y `engine_version` (atributo `version` de la función).
+
+```json
+{ "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6", "priority": "save_water", "start_on": "2026-12-01", "horizon_days": 365 }
+```
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `plot_id` | UUID | Parcela propia |
+| `priority` | `save_water` o `improve_soil` | Las dos que ofrece la interfaz |
+| `start_on` | `AAAA-MM-DD` | Inicio de la primera campaña |
+| `horizon_days` | entero | Por defecto 365 |
+
+**Respuesta** (siempre HTTP 200; el resultado del motor va en `status` y `mode`):
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `status` | `ok` o `insufficient_data` | |
+| `mode` | `evaluacion` o `escenario_demostracion` | `escenario_demostracion` = hay datos supuestos; mostrarlo **claramente** como demo |
+| `engine_version` | texto | |
+| `plot_id` | UUID | |
+| `context.notice` | texto | Aviso para mostrar (p. ej. «parcela representativa, no una chacra real») |
+| `context.power` | objeto | `source`, `time_standard`, `start`, `end`, `use` (`contexto_del_periodo` o `historico`) e `indicators` |
+| `context.sensor` | objeto | `quality_flag`, `used_as_evidence` y `reason`. Las lecturas `test` no se usan como evidencia |
+| `context.assumptions` | `[{ field, value, reason }]` | Solo con `escenario_demostracion`; vacío en otro caso |
+| `missing` | `[{ field, reason }]` | Con `insufficient_data` lista lo que falta; `[]` en otro caso |
+| `selected_id` | texto o `null` | `null` con `insufficient_data` |
+| `alternatives` | lista | **Vacía con `insufficient_data`** (sin `score`) |
+| `alternatives[].id`, `rank`, `score` | texto, entero, 0–100 | `score` según el criterio del motor |
+| `alternatives[].campaigns` | `[{ crop, starts_on, ends_on }]` | `crop` = id de `GET /api/crops` |
+| `alternatives[].reasons`, `limitations` | texto[] | |
+| `alternatives[].sources` | `[{ title, url }]` | Fuente de cada requisito usado |
+
+**Tres casos de ejemplo** (los de `ok` y escenario solo muestran la **forma**; sus textos `<...>` y puntuaciones no son recomendaciones):
+
+- [recommendations-post-insufficient-data.json](examples/recommendations-post-insufficient-data.json): `insufficient_data` con lo que hoy le falta de verdad a la parcela demostrativa.
+- [recommendations-post-escenario.json](examples/recommendations-post-escenario.json): `ok` + `escenario_demostracion`, con `assumptions`.
+- [recommendations-post-ok.json](examples/recommendations-post-ok.json): `ok` + `evaluacion`, con datos declarados y fuentes.
+
+```json
+{
+  "status": "insufficient_data",
+  "mode": "evaluacion",
+  "engine_version": "<versión>",
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "context": { "notice": "…", "power": { "start": "2026-11-01", "end": "2026-11-14", "use": "contexto_del_periodo", "…": "…" }, "sensor": { "quality_flag": "test", "used_as_evidence": false, "reason": "…" }, "assumptions": [] },
+  "missing": [
+    { "field": "plot.previous_crop", "reason": "La regla de rotación necesita el cultivo anterior; la parcela aún no tiene un ciclo finished." },
+    { "field": "crops.maiz.requirements", "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo." }
+  ],
+  "selected_id": null,
+  "alternatives": []
+}
+```
 
 ### `GET /api/plots/{plot_id}/climate` → 200
 
