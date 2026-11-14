@@ -1,0 +1,37 @@
+{
+  "status": "ok",
+  "engine_version": "ejemplo-0.0",
+  "selected_id": "alt-a",
+  "alternatives": [
+    {
+      "id": "alt-a",
+      "rank": 1,
+      "score": 69,
+      "campaigns": [
+        { "crop": "Caupí (ejemplo)", "starts_on": "2027-01-15", "ends_on": "2027-04-10" },
+        { "crop": "Maíz (ejemplo)", "starts_on": "2027-05-01", "ends_on": "2027-09-15" }
+      ],
+      "reasons": [
+        "[Ejemplo] Con la prioridad de mejorar el suelo, una leguminosa antes del maíz puntúa más en la sucesión.",
+        "[Ejemplo] El ganador no cambió respecto a ahorrar agua: eso puede pasar cuando la evidencia no justifica un cambio."
+      ],
+      "limitations": [
+        "[Ejemplo] Respuesta de muestra: no proviene del motor de reglas.",
+        "[Ejemplo] No se mide la mejora del suelo; es un criterio del prototipo."
+      ],
+      "sources": [{ "title": "NASA POWER, API diaria", "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/" }]
+    },
+    {
+      "id": "alt-b",
+      "rank": 2,
+      "score": 51,
+      "campaigns": [
+        { "crop": "Maíz (ejemplo)", "starts_on": "2027-01-15", "ends_on": "2027-06-01" },
+        { "crop": "Caupí (ejemplo)", "starts_on": "2027-06-20", "ends_on": "2027-09-15" }
+      ],
+      "reasons": ["[Ejemplo] Alternativa con el orden de cultivos invertido, para comparar."],
+      "limitations": ["[Ejemplo] Respuesta de muestra: no proviene del motor de reglas."],
+      "sources": [{ "title": "NASA POWER, API diaria", "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/" }]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-campo-50: #f0fdf4;
+  --color-campo-100: #dcfce7;
+  --color-campo-600: #16a34a;
+  --color-campo-700: #15803d;
+  --color-campo-800: #166534;
+  --color-campo-900: #14532d;
+  --color-tierra-50: #fefce8;
+  --color-tierra-700: #a16207;
+  --color-nasa-50: #eff6ff;
+  --color-nasa-700: #1d4ed8;
+}
+
+html {
+  font-size: 17px; /* base algo mayor: legible en celular al sol y en proyector */
+}
+
+body {
+  margin: 0;
+  background: #f8faf7;
+  color: #1c1917;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
