@@ -1,22 +1,84 @@
 import type { Campaign } from '../../types/api'
 import { formatDay } from '../../utils/format'
 
+function parse(day: string) {
+  const [y, m, d] = day.split('-').map(Number)
+  return { y, m, d }
+}
+
+const clamp = (n: number) => Math.max(0, Math.min(100, n))
+
+/**
+ * Calendario de 12 meses (01 a 12) que empieza en el mes de la primera siembra.
+ * Primera campaña: barra lima sólida. Siguientes: barra con solo borde lima.
+ * En pantallas angostas se desplaza en horizontal.
+ */
 export function CampaignCalendar({ campaigns }: { campaigns: Campaign[] }) {
+  if (campaigns.length === 0) return null
+  const startIdx = (day: string) => {
+    const p = parse(day)
+    return p.y * 12 + p.m - 1
+  }
+  const base = Math.min(...campaigns.map((c) => startIdx(c.starts_on)))
+
+  /** Posición en meses (0 a 12) de un día dentro de la ventana. */
+  const pos = (day: string, endOfDay = false) => {
+    const p = parse(day)
+    const dim = new Date(p.y, p.m, 0).getDate()
+    return startIdx(day) - base + (p.d - 1 + (endOfDay ? 1 : 0)) / dim
+  }
+
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const idx = base + i
+    return { n: String((idx % 12) + 1).padStart(2, '0'), year: Math.floor(idx / 12), first: i === 0 || idx % 12 === 0 }
+  })
+
   return (
-    <ol className="space-y-2">
-      {campaigns.map((c, i) => (
-        <li key={i} className="flex items-start gap-3 rounded-xl bg-brand-50 p-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-800 font-bold text-white">
-            {i + 1}
-          </span>
-          <div>
-            <p className="font-bold text-brand-900">{c.crop}</p>
-            <p className="text-muted">
-              Siembra: {formatDay(c.starts_on)} · Cosecha: {formatDay(c.ends_on)}
-            </p>
+    <div>
+      <div className="overflow-x-auto" tabIndex={0} aria-label="Calendario de 12 meses, desplazable">
+        <div className="min-w-[640px]">
+          <div className="grid grid-cols-12 border-b border-line">
+            {months.map((m, i) => (
+              <div key={i} className="border-l border-line px-1 pb-1 font-mono text-[13px] text-muted first:border-l-0">
+                <span className="text-ink">{m.n}</span>
+                {m.first && <span className="ml-1">’{String(m.year).slice(2)}</span>}
+              </div>
+            ))}
           </div>
-        </li>
-      ))}
-    </ol>
+          {campaigns.map((c, i) => {
+            const left = clamp((pos(c.starts_on) / 12) * 100)
+            const right = clamp((pos(c.ends_on, true) / 12) * 100)
+            return (
+              <div
+                key={i}
+                className="relative h-12 border-b border-line"
+                style={{
+                  backgroundImage: 'linear-gradient(90deg, #25332b 1px, transparent 1px)',
+                  backgroundSize: 'calc(100% / 12) 100%',
+                }}
+              >
+                <div
+                  title={`${c.crop}: ${formatDay(c.starts_on)} a ${formatDay(c.ends_on)}`}
+                  className={`absolute top-1.5 flex h-9 items-center overflow-hidden whitespace-nowrap px-2 text-sm font-semibold ${
+                    i === 0 ? 'bg-lima text-bg' : 'border border-lima bg-bg text-lima'
+                  }`}
+                  style={{ left: `${left}%`, width: `${Math.max(right - left, 2)}%` }}
+                >
+                  {c.crop}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      <ol className="mt-3 space-y-1">
+        {campaigns.map((c, i) => (
+          <li key={i} className="font-mono text-base text-ink">
+            <span className="text-lima">{String(i + 1).padStart(2, '0')}</span> {c.crop} · siembra{' '}
+            {formatDay(c.starts_on)} · cosecha {formatDay(c.ends_on)}
+          </li>
+        ))}
+      </ol>
+    </div>
   )
 }

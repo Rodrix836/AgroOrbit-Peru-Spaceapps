@@ -1,57 +1,41 @@
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 @import "tailwindcss";
 
 /*
- * Sistema visual de AgroOrbit
- *  - brand:  verde oscuro (marca y navegación)
- *  - soil:   tono tierra (datos del sensor ESP32)
- *  - nasa:   azul (datos de NASA POWER)
- *  - warn / danger / nodata: estados (aviso, error, datos insuficientes)
+ * AgroOrbit: panel oscuro tipo control de misión.
+ *  lima  = acciones, elemento activo y seleccionado
+ *  ámbar = todo lo que viene del sensor ESP32, y los avisos
+ *  cielo = todo lo que viene de NASA POWER, y los enlaces
+ * Sin esquinas redondeadas ni sombras: bordes rectos y líneas de 1 px.
  */
 @theme {
-  --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-  --color-brand-50: #eef7f1;
-  --color-brand-100: #d5ecdc;
-  --color-brand-600: #1f7a43;
-  --color-brand-700: #17623a;
-  --color-brand-800: #124d2e;
-  --color-brand-900: #0d3a22;
+  --color-bg: #0b110e;
+  --color-panel: #0e1511;
+  --color-line: #25332b;
+  --color-edge: #3a4b41;
+  --color-track: #1c2921;
+  --color-dots: #18231c;
 
-  --color-soil-50: #faf5ec;
-  --color-soil-100: #f1e4cb;
-  --color-soil-200: #e2cb9e;
-  --color-soil-600: #9a6a2e;
-  --color-soil-700: #7c5322;
-  --color-soil-800: #5f3f19;
+  --color-ink: #e8efe9;
+  --color-muted: #9baaa0;
 
-  --color-nasa-50: #eef4ff;
-  --color-nasa-100: #dbe7fe;
-  --color-nasa-200: #b9cffc;
-  --color-nasa-600: #2563eb;
-  --color-nasa-700: #1d4ed8;
-  --color-nasa-800: #1e40af;
+  --color-lima: #c8f169;
+  --color-ambar: #f2b35e;
+  --color-ambar-bg: #1f1a0e;
+  --color-cielo: #7fbbff;
+  --color-error: #ff9a8a;
+  --color-error-bg: #231413;
 
-  --color-warn-50: #fff7e0;
-  --color-warn-100: #ffecb3;
-  --color-warn-700: #92600a;
-  --color-warn-900: #5c3b05;
-
-  --color-danger-50: #fdecec;
-  --color-danger-700: #b42318;
-  --color-danger-900: #6b1410;
-
-  --color-nodata-50: #f3f0fa;
-  --color-nodata-100: #e6e0f5;
-  --color-nodata-700: #5b4a99;
-  --color-nodata-900: #34285f;
-
-  --color-surface: #f5f6f2;
-  --color-line: #dfe3d9;
-  --color-ink: #1b2420;
-  --color-muted: #475249;
-
-  /* Ningún texto por debajo de 16 px: lo secundario se distingue por color y peso. */
+  /* Texto de lectura nunca por debajo de 16 px. */
   --text-xs: 1rem;
   --text-xs--line-height: 1.5rem;
   --text-sm: 1rem;
@@ -60,25 +44,39 @@
   --text-base--line-height: 1.6rem;
 }
 
-html {
-  font-size: 16px;
-}
+/* En @layer base para que las clases de Tailwind (utilities) las puedan sobrescribir. */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
 
-body {
-  margin: 0;
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
+  html {
+    font-size: 16px;
+  }
 
-button,
-input,
-select {
-  font: inherit;
-}
+  body {
+    margin: 0;
+    background-color: var(--color-bg);
+    background-image: radial-gradient(var(--color-dots) 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
 
-:focus-visible {
-  outline: 3px solid var(--color-nasa-600);
-  outline-offset: 2px;
+  button,
+  input,
+  select {
+    font: inherit;
+    border-radius: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cielo);
+    outline-offset: 2px;
+  }
+
+  a {
+    color: var(--color-cielo);
+  }
 }

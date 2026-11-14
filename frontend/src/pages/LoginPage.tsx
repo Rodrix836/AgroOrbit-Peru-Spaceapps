@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
+import { Alert } from '../components/ui/Alert'
+import { Button } from '../components/ui/Button'
+import { Eyebrow } from '../components/ui/Eyebrow'
+import { inputClass } from '../components/ui/styles'
 import { useAuth } from '../hooks/useAuth'
 
 export function LoginPage() {
@@ -19,12 +23,14 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-brand-50 p-4">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-md"
-      >
-        <h1 className="text-3xl font-extrabold tracking-tight text-brand-900">AgroOrbit</h1>
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <form onSubmit={onSubmit} className="w-full max-w-md space-y-5 border border-line bg-panel p-6 md:p-8">
+        <div>
+          <Eyebrow tone="lima">Acceso</Eyebrow>
+          <h1 className="mt-3 font-display text-[clamp(38px,9vw,60px)] font-extrabold leading-none tracking-[-0.03em]">
+            AgroOrbit
+          </h1>
+        </div>
         <p className="text-muted">Entra para ver tu parcela y comparar rotaciones de cultivos.</p>
         <label className="block">
           <span className="font-medium">Correo</span>
@@ -34,7 +40,7 @@ export function LoginPage() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-stone-400 px-3 py-2.5"
+            className={`${inputClass} mt-1`}
           />
         </label>
         <label className="block">
@@ -45,20 +51,17 @@ export function LoginPage() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-stone-400 px-3 py-2.5"
+            className={`${inputClass} mt-1`}
           />
         </label>
         {error && (
-          <p role="alert" className="rounded-xl border-l-8 border-danger-700 bg-danger-50 p-3 text-danger-900">
+          <Alert tone="danger" title="Error" role="alert">
             {error}
-          </p>
+          </Alert>
         )}
-        <button
-          disabled={busy}
-          className="w-full rounded-xl bg-brand-700 px-4 py-3.5 text-lg font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
-        >
-          {busy ? 'Entrando…' : 'Entrar'}
-        </button>
+        <Button size="lg" disabled={busy} className="w-full">
+          {busy ? 'Entrando…' : 'Entrar →'}
+        </Button>
       </form>
     </div>
   )

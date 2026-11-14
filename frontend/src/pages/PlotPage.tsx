@@ -1,15 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { MapFrame } from '../components/plot/MapFrame'
+import { Button, ButtonLink } from '../components/ui/Button'
 import { ErrorBox } from '../components/ui/ErrorBox'
+import { Eyebrow } from '../components/ui/Eyebrow'
+import { FormBlock } from '../components/ui/FormBlock'
 import { Loading } from '../components/ui/Loading'
+import { PageHeader } from '../components/ui/PageHeader'
+import { inputClass } from '../components/ui/styles'
 import { errorMessage } from '../hooks/useAsync'
 import { usePlot } from '../hooks/usePlot'
 import type { Irrigation, PlotPreferences, Priority } from '../types/api'
 
-const input = 'mt-1 w-full rounded-xl border border-stone-400 bg-white px-3 py-2.5 text-ink'
-const primaryBtn =
-  'rounded-xl bg-brand-700 px-5 py-3 font-semibold text-white hover:bg-brand-800 disabled:opacity-60'
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="font-medium text-ink">{label}</span>
+      <div className="mt-1">{children}</div>
+    </label>
+  )
+}
 
+/** Campos y botón para registrar una parcela nueva (se muestra dentro del bloque A). */
 function NewPlotForm({ onDone }: { onDone?: () => void }) {
   const { createPlot } = usePlot()
   const [name, setName] = useState('')
@@ -44,41 +55,40 @@ function NewPlotForm({ onDone }: { onDone?: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-line bg-white p-4 shadow-sm">
-      <h3 className="text-lg font-bold">Registrar parcela</h3>
-      <label className="block">
-        <span className="font-medium">Nombre de la parcela</span>
-        <input required value={name} onChange={(e) => setName(e.target.value)} className={input} />
-      </label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="font-medium">Latitud (grados)</span>
-          <input
-            required
-            inputMode="decimal"
-            placeholder="ej. -5.20"
-            value={lat}
-            onChange={(e) => setLat(e.target.value)}
-            className={input}
-          />
-        </label>
-        <label className="block">
-          <span className="font-medium">Longitud (grados)</span>
-          <input
-            required
-            inputMode="decimal"
-            placeholder="ej. -80.63"
-            value={lng}
-            onChange={(e) => setLng(e.target.value)}
-            className={input}
-          />
-        </label>
+    <form onSubmit={submit} className="grid gap-6 md:grid-cols-2">
+      <div className="space-y-5">
+        <Field label="Nombre de la parcela">
+          <input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+        </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Latitud (grados)">
+            <input
+              required
+              inputMode="decimal"
+              placeholder="ej. -5.20"
+              value={lat}
+              onChange={(e) => setLat(e.target.value)}
+              className={`${inputClass} font-mono`}
+            />
+          </Field>
+          <Field label="Longitud (grados)">
+            <input
+              required
+              inputMode="decimal"
+              placeholder="ej. -80.63"
+              value={lng}
+              onChange={(e) => setLng(e.target.value)}
+              className={`${inputClass} font-mono`}
+            />
+          </Field>
+        </div>
+        <p className="text-muted">Usa las coordenadas reales de tu parcela, no las del pueblo.</p>
+        {error && <ErrorBox message={error} />}
+        <Button size="lg" disabled={busy}>
+          {busy ? 'Guardando…' : 'Guardar parcela →'}
+        </Button>
       </div>
-      <p className="text-sm text-muted">Usa las coordenadas reales de tu parcela, no las del pueblo.</p>
-      {error && <ErrorBox message={error} />}
-      <button disabled={busy} className={primaryBtn}>
-        {busy ? 'Guardando…' : 'Guardar parcela'}
-      </button>
+      <MapFrame lat={lat.trim() === '' ? null : lat} lng={lng.trim() === '' ? null : lng} />
     </form>
   )
 }
@@ -88,11 +98,12 @@ const IRRIGATION: { value: Irrigation; label: string }[] = [
   { value: 'limited', label: 'Riego limitado' },
   { value: 'none', label: 'No tengo riego (solo lluvia)' },
 ]
-const PRIORITIES: { value: Priority; label: string }[] = [
-  { value: 'save_water', label: 'Ahorrar agua' },
-  { value: 'improve_soil', label: 'Mejorar el suelo' },
+const PRIORITIES: { value: Priority; label: string; hint: string }[] = [
+  { value: 'save_water', label: 'Ahorrar agua', hint: 'Da más peso al uso de agua al comparar.' },
+  { value: 'improve_soil', label: 'Mejorar el suelo', hint: 'Da más peso a la sucesión de cultivos.' },
 ]
 
+/** Bloques B (cultivos y fechas) y C (agua y prioridad): un solo formulario. */
 function PrefsForm() {
   const { plot, crops, prefs, savePrefs } = usePlot()
   const [form, setForm] = useState<PlotPreferences>(prefs)
@@ -112,7 +123,7 @@ function PrefsForm() {
   }
 
   const cropSelect = (value: string, onChange: (v: string) => void) => (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={input}>
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
       <option value="">No sé / no aplica</option>
       {crops.map((c) => (
         <option key={c.id} value={c.id}>
@@ -123,82 +134,83 @@ function PrefsForm() {
   )
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-line bg-white p-4 shadow-sm">
-      <h3 className="text-lg font-bold">Campaña de «{plot?.name}»</h3>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="font-medium">Cultivo anterior</span>
-          {cropSelect(form.previousCropId, (v) => set('previousCropId', v))}
-        </label>
-        <label className="block">
-          <span className="font-medium">Cultivo actual</span>
-          {cropSelect(form.currentCropId, (v) => set('currentCropId', v))}
-        </label>
-      </div>
-      <label className="block">
-        <span className="font-medium">Disponibilidad de riego</span>
-        <select
-          value={form.irrigation}
-          onChange={(e) => set('irrigation', e.target.value as Irrigation)}
-          className={input}
-        >
-          {IRRIGATION.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block">
-        <span className="font-medium">Fecha prevista de inicio de la siguiente campaña</span>
-        <input
-          type="date"
-          value={form.startOn}
-          onChange={(e) => set('startOn', e.target.value)}
-          className={input}
-        />
-      </label>
-      <fieldset>
-        <legend className="font-medium">¿Qué es más importante para ti?</legend>
-        <div className="mt-1 flex flex-wrap gap-2">
-          {PRIORITIES.map((p) => (
-            <label
-              key={p.value}
-              className={`cursor-pointer rounded-xl border-2 px-4 py-2 font-semibold ${
-                form.priority === p.value
-                  ? 'border-brand-700 bg-brand-100 text-brand-900'
-                  : 'border-line bg-white'
-              }`}
-            >
-              <input
-                type="radio"
-                name="priority"
-                className="sr-only"
-                checked={form.priority === p.value}
-                onChange={() => set('priority', p.value)}
-              />
-              {p.label}
-            </label>
-          ))}
+    <form onSubmit={submit}>
+      <FormBlock letter="B" name="Cultivos y fechas">
+        <div className="grid gap-5 md:grid-cols-2">
+          <Field label="Cultivo anterior">{cropSelect(form.previousCropId, (v) => set('previousCropId', v))}</Field>
+          <Field label="Cultivo actual">{cropSelect(form.currentCropId, (v) => set('currentCropId', v))}</Field>
         </div>
-      </fieldset>
-      <div className="flex flex-wrap items-center gap-3">
-        <button className={primaryBtn}>Guardar</button>
-        {saved && (
-          <>
-            <span role="status" className="text-brand-800">
-              Guardado en este navegador.
-            </span>
-            <Link to="/rotaciones" className="font-semibold text-brand-800 underline">
-              Ver rotaciones →
-            </Link>
-          </>
-        )}
-      </div>
+        <Field label="Inicio previsto de la siguiente campaña">
+          <input
+            type="date"
+            value={form.startOn}
+            onChange={(e) => set('startOn', e.target.value)}
+            className={`${inputClass} font-mono md:max-w-xs`}
+          />
+        </Field>
+      </FormBlock>
+
+      <FormBlock letter="C" name="Agua y prioridad">
+        <Field label="Disponibilidad de riego">
+          <select
+            value={form.irrigation}
+            onChange={(e) => set('irrigation', e.target.value as Irrigation)}
+            className={`${inputClass} md:max-w-md`}
+          >
+            {IRRIGATION.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <fieldset className="border-0 p-0">
+          <legend className="font-medium text-ink">¿Qué es más importante para ti?</legend>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            {PRIORITIES.map((p) => {
+              const on = form.priority === p.value
+              return (
+                <label
+                  key={p.value}
+                  className={`block min-h-[88px] cursor-pointer border-2 bg-panel p-4 ${
+                    on ? 'border-lima' : 'border-line hover:border-edge'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="priority"
+                    className="sr-only"
+                    checked={on}
+                    onChange={() => set('priority', p.value)}
+                  />
+                  <span className={`block font-display text-2xl font-extrabold tracking-[-0.02em] ${on ? 'text-lima' : 'text-ink'}`}>
+                    {p.label}
+                  </span>
+                  <span className="mt-1 block text-muted">{p.hint}</span>
+                </label>
+              )
+            })}
+          </div>
+        </fieldset>
+        <div className="flex flex-wrap items-center gap-4">
+          <Button size="lg">Guardar →</Button>
+          {saved && (
+            <>
+              <span role="status" className="font-mono text-base text-lima">
+                Guardado en este navegador.
+              </span>
+              <ButtonLink to="/rotaciones" variant="outline">
+                Ver rotaciones →
+              </ButtonLink>
+            </>
+          )}
+        </div>
+      </FormBlock>
     </form>
   )
 }
 
+/** 01 / Parcela */
 export function PlotPage() {
   const { plot, loading, error, reload } = usePlot()
   const [adding, setAdding] = useState(false)
@@ -207,29 +219,44 @@ export function PlotPage() {
   if (error) return <ErrorBox message={error} onRetry={reload} />
 
   return (
-    <div className="space-y-5">
-      <h2 className="text-2xl font-bold">Mi parcela</h2>
+    <div>
+      <PageHeader index="01" label="Parcela" title="Registra tu parcela" />
+
       {!plot ? (
-        <>
+        <FormBlock letter="A" name="Ubicación">
           <p className="text-muted">Aún no tienes parcelas. Registra la primera para empezar.</p>
           <NewPlotForm />
-        </>
+        </FormBlock>
       ) : (
         <>
-          <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
-            <p className="text-lg font-bold">{plot.name}</p>
-            <p className="text-muted">
-              Ubicación: {plot.latitude}°, {plot.longitude}°
-            </p>
-          </div>
+          <FormBlock letter="A" name="Ubicación">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <Eyebrow>Parcela registrada</Eyebrow>
+                <p className="mt-1 font-display text-3xl font-extrabold leading-none tracking-[-0.02em]">
+                  {plot.name}
+                </p>
+                <p className="mt-2 font-mono text-base text-muted">
+                  {plot.latitude}°, {plot.longitude}°
+                </p>
+                {!adding && (
+                  <Button variant="ghost" onClick={() => setAdding(true)} className="mt-3 !px-0">
+                    + Registrar otra parcela
+                  </Button>
+                )}
+              </div>
+              <MapFrame lat={plot.latitude} lng={plot.longitude} />
+            </div>
+            {adding && (
+              <div className="border-t border-line pt-5">
+                <Eyebrow tone="lima" className="mb-4">
+                  Nueva parcela
+                </Eyebrow>
+                <NewPlotForm onDone={() => setAdding(false)} />
+              </div>
+            )}
+          </FormBlock>
           <PrefsForm />
-          {adding ? (
-            <NewPlotForm onDone={() => setAdding(false)} />
-          ) : (
-            <button onClick={() => setAdding(true)} className="font-semibold text-brand-800 underline">
-              + Registrar otra parcela
-            </button>
-          )}
         </>
       )}
     </div>

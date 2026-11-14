@@ -1,7 +1,9 @@
+import { labelClass } from './styles'
+
 export function Loading({ label = 'Cargando…' }: { label?: string }) {
   return (
-    <div role="status" className="flex items-center gap-3 p-4 font-medium text-muted">
-      <span className="h-6 w-6 animate-spin rounded-full border-[3px] border-brand-600 border-t-transparent" />
+    <div role="status" className={`flex items-center gap-3 py-4 text-lima ${labelClass}`}>
+      <span aria-hidden className="h-3 w-3 animate-pulse bg-lima" />
       <span>{label}</span>
     </div>
   )

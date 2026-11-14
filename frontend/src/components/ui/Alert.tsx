@@ -1,14 +1,15 @@
 import type { ReactNode } from 'react'
+import { labelClass } from './styles'
 
 type AlertTone = 'warn' | 'danger' | 'nodata'
 
-const STYLES: Record<AlertTone, string> = {
-  warn: 'border-warn-700 bg-warn-50 text-warn-900',
-  danger: 'border-danger-700 bg-danger-50 text-danger-900',
-  nodata: 'border-nodata-700 bg-nodata-50 text-nodata-900',
+const STYLES: Record<AlertTone, { box: string; label: string }> = {
+  warn: { box: 'border-ambar bg-ambar-bg', label: 'text-ambar' },
+  nodata: { box: 'border-ambar bg-ambar-bg', label: 'text-ambar' },
+  danger: { box: 'border-error bg-error-bg', label: 'text-error' },
 }
 
-/** Aviso en línea con los colores de estado del sistema. */
+/** Aviso en línea: ámbar para avisos y datos insuficientes, coral para errores. */
 export function Alert({
   tone,
   title,
@@ -20,10 +21,11 @@ export function Alert({
   children?: ReactNode
   role?: 'status' | 'alert'
 }) {
+  const s = STYLES[tone]
   return (
-    <div role={role} className={`rounded-xl border-l-8 p-4 ${STYLES[tone]}`}>
-      {title && <p className="font-bold">{title}</p>}
-      {children && <div className={title ? 'mt-1' : ''}>{children}</div>}
+    <div role={role} className={`border border-l-4 p-4 ${s.box}`}>
+      {title && <p className={`${labelClass} font-medium ${s.label}`}>{title}</p>}
+      {children && <div className={title ? 'mt-2 text-ink' : 'text-ink'}>{children}</div>}
     </div>
   )
 }

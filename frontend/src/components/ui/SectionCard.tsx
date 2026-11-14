@@ -1,34 +1,29 @@
 import type { ReactNode } from 'react'
-import { SourceBadge } from './SourceBadge'
-import { TONES, type Tone } from './styles'
+import { TONES, labelClass, type Tone } from './styles'
 
 interface Props {
+  /** Etiqueta de sección en mayúsculas, p. ej. "SUELO · SENSOR ESP32". */
   title: string
   description?: string
-  /** Etiqueta de fuente junto al título. */
-  source?: Tone
-  /** Color del bloque: tierra (sensor), azul (NASA) o neutro. */
+  /** ámbar = sensor, cielo = NASA, lima = prototipo. */
   tone?: Tone
-  /** Botones u otros controles a la derecha del título. */
+  /** Botones u otros controles junto al título. */
   actions?: ReactNode
   children: ReactNode
 }
 
-export function SectionCard({ title, description, source, tone = 'prototype', actions, children }: Props) {
-  const t = TONES[tone]
+/** Panel plano (sin radio ni sombra) con etiqueta de sección coloreada por fuente. */
+export function SectionCard({ title, description, tone = 'prototype', actions, children }: Props) {
   return (
-    <section className={`rounded-2xl border border-t-8 p-4 shadow-sm sm:p-5 ${t.card} ${t.accent}`}>
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <section className="min-w-0 bg-panel p-6 md:p-8">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className={`text-xl font-bold ${t.title}`}>{title}</h3>
-            {source && <SourceBadge kind={source} />}
-          </div>
-          {description && <p className="mt-1 text-muted">{description}</p>}
+          <h2 className={`${labelClass} font-medium ${TONES[tone].text}`}>{title}</h2>
+          {description && <p className="mt-2 max-w-prose text-muted">{description}</p>}
         </div>
         {actions}
       </header>
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-6">{children}</div>
     </section>
   )
 }

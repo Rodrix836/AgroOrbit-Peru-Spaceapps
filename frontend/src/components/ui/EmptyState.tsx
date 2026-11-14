@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { labelClass } from './styles'
 
 interface Props {
   title: string
@@ -9,14 +10,16 @@ interface Props {
 }
 
 export function EmptyState({ title, message, action, tone = 'neutral' }: Props) {
-  const colors =
-    tone === 'insufficient'
-      ? 'border-nodata-700 bg-nodata-50 text-nodata-900'
-      : 'border-stone-400 bg-white text-ink'
+  const insufficient = tone === 'insufficient'
   return (
-    <div className={`rounded-2xl border-2 border-dashed p-5 ${colors}`}>
-      <p className="text-lg font-bold">{title}</p>
-      {message && <div className="mt-1">{message}</div>}
+    <div
+      className={`border p-5 ${
+        insufficient ? 'border-ambar bg-ambar-bg' : 'border-dashed border-edge bg-panel'
+      }`}
+    >
+      {insufficient && <p className={`${labelClass} mb-2 font-medium text-ambar`}>Datos insuficientes</p>}
+      <p className="text-lg font-semibold text-ink">{title}</p>
+      {message && <div className="mt-2 text-muted">{message}</div>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   )

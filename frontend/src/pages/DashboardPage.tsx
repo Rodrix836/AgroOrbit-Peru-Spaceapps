@@ -8,11 +8,14 @@ import { Button, ButtonLink } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBox } from '../components/ui/ErrorBox'
 import { Loading } from '../components/ui/Loading'
+import { PageHeader } from '../components/ui/PageHeader'
+import { PanelGrid } from '../components/ui/PanelGrid'
 import { SectionCard } from '../components/ui/SectionCard'
 import { useNasa } from '../hooks/useNasa'
 import { usePlot } from '../hooks/usePlot'
 import { useReadings } from '../hooks/useReadings'
 
+/** 02 / Diagnóstico: sensor ESP32 (ámbar) y contexto NASA POWER (azul), siempre separados. */
 export function DashboardPage() {
   const { plot, loading: plotLoading, error: plotError, reload } = usePlot()
   const readings = useReadings(plot?.id ?? null)
@@ -22,24 +25,25 @@ export function DashboardPage() {
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
   if (!plot) {
     return (
-      <EmptyState
-        title="Primero registra tu parcela"
-        action={<ButtonLink to="/parcela">Ir a Mi parcela</ButtonLink>}
-      />
+      <>
+        <PageHeader index="02" label="Diagnóstico" title="Tu parcela, hoy" />
+        <EmptyState
+          title="Primero registra tu parcela"
+          action={<ButtonLink to="/parcela">Ir a Parcela →</ButtonLink>}
+        />
+      </>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Resumen de la parcela + botón destacado a rotaciones */}
-      <PlotSummary />
+    <div>
+      <PageHeader index="02" label="Diagnóstico" title="Tu parcela, hoy" aside={<PlotSummary />} />
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <PanelGrid>
         {/* MEDICIÓN PUNTUAL: sensor ESP32. Nunca se mezcla con el contexto NASA. */}
         <SectionCard
-          title="Tu suelo (sensor)"
-          description="Lo que mide el sensor ESP32 enterrado en tu parcela, en un punto."
-          source="sensor"
+          title="Suelo · Sensor ESP32"
+          description="Lo que mide el sensor enterrado en tu parcela, en un punto."
           tone="sensor"
         >
           {readings.loading && <Loading label="Leyendo el sensor…" />}
@@ -52,20 +56,19 @@ export function DashboardPage() {
           )}
         </SectionCard>
 
-        {/* CONTEXTO REGIONAL: NASA POWER. No es una medición sobre la planta. */}
+        {/* CONTEXTO REGIONAL: NASA POWER. No es una medición sobre la parcela. */}
         <SectionCard
-          title="Clima de la zona (NASA POWER)"
-          description="Datos de modelo para tu zona. No son una medición sobre tus plantas."
-          source="nasa"
+          title="Clima de la zona · NASA POWER"
+          description="Contexto regional de modelos de NASA para tu zona. No es una medición sobre tu parcela."
           tone="nasa"
           actions={
-            <Button variant="nasa" onClick={() => void nasa.refresh()} disabled={nasa.refreshing}>
+            <Button variant="cielo" onClick={() => void nasa.refresh()} disabled={nasa.refreshing}>
               {nasa.refreshing ? 'Consultando NASA…' : 'Actualizar clima'}
             </Button>
           }
         >
           {nasa.refreshError && (
-            <Alert tone="warn" title="NASA no está disponible ahora" role="alert">
+            <Alert tone="warn" title="NASA no disponible" role="alert">
               {nasa.refreshError} Se muestran los últimos datos guardados, con su fecha.
             </Alert>
           )}
@@ -78,7 +81,17 @@ export function DashboardPage() {
             </>
           )}
         </SectionCard>
-      </div>
+      </PanelGrid>
+
+      {/* Franja final a todo el ancho */}
+      <section className="mt-px flex flex-wrap items-center justify-between gap-6 bg-lima p-6 text-bg md:p-8">
+        <h2 className="max-w-xl font-display text-[clamp(26px,4vw,40px)] font-extrabold leading-none tracking-[-0.03em]">
+          ¿Qué sembrar en las próximas dos campañas?
+        </h2>
+        <ButtonLink to="/rotaciones" variant="dark" size="lg">
+          Comparar rotaciones →
+        </ButtonLink>
+      </section>
     </div>
   )
 }

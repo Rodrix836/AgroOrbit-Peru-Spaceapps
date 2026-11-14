@@ -47,28 +47,22 @@ export function mockReadings(): SensorReading[] {
   return out
 }
 
-/** Observaciones de ejemplo: 30 días terminando hace 2 días (POWER tiene retraso). */
+/** Observaciones de ejemplo: 90 días terminando hace 2 días (POWER tiene retraso). */
 export function mockNasa(): NasaObservation[] {
   const out: NasaObservation[] = []
   const end = Date.now() - 2 * 24 * HOUR
-  for (let i = 29; i >= 0; i--) {
+  const r1 = (n: number) => Math.round(n * 10) / 10
+  for (let i = 89; i >= 0; i--) {
     const day = new Date(end - i * 24 * HOUR).toISOString().slice(0, 10)
-    out.push({
-      id: `t2m-${i}`,
-      variable: 'T2M',
-      observed_on: day,
-      value: Math.round((25 + 2.5 * Math.sin(i / 5)) * 10) / 10,
-      unit: '°C',
-      source: 'NASA POWER',
-    })
-    out.push({
-      id: `pr-${i}`,
-      variable: 'PRECTOTCORR',
-      observed_on: day,
-      value: i % 9 === 0 ? 4.2 : 0,
-      unit: 'mm/día',
-      source: 'NASA POWER',
-    })
+    const t = 25 + 2.5 * Math.sin(i / 5)
+    const add = (variable: string, value: number, unit: string) =>
+      out.push({ id: `${variable}-${i}`, variable, observed_on: day, value, unit, source: 'NASA POWER' })
+    add('T2M', r1(t), '°C')
+    add('T2M_MIN', r1(t - 4), '°C')
+    add('T2M_MAX', r1(t + 5), '°C')
+    add('PRECTOTCORR', i % 9 === 0 ? 4.2 : 0, 'mm/día')
+    add('RH2M', Math.round(70 + 8 * Math.cos(i / 6)), '%')
+    add('ALLSKY_SFC_SW_DWN', r1(5.5 + 0.8 * Math.sin(i / 7)), 'kWh/m²/día')
   }
   return out
 }

@@ -10,39 +10,47 @@ import {
 } from 'recharts'
 import type { SensorReading } from '../../types/api'
 import { formatShortTime } from '../../utils/format'
+import { Eyebrow } from '../ui/Eyebrow'
+import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
 
-/** Gráfico de lecturas del sensor: humedad (%) y temperatura del suelo (°C). */
+const DAY = 24 * 3600_000
+
+/** Gráfico de línea ámbar de las últimas 24 h de lecturas del sensor. */
 export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
+  const valid = readings.filter((r) => r.calibrated_value !== null)
+  if (valid.length === 0) return null
+  const newest = Math.max(...valid.map((r) => new Date(r.recorded_at).getTime()))
+
   const byTime = new Map<string, { t: string; humedad?: number; temperatura?: number }>()
-  for (const r of readings) {
-    if (r.calibrated_value === null) continue
+  for (const r of valid) {
+    if (newest - new Date(r.recorded_at).getTime() > DAY) continue
     const row = byTime.get(r.recorded_at) ?? { t: r.recorded_at }
-    if (r.sensor_type === 'soil_moisture') row.humedad = r.calibrated_value
-    else row.temperatura = r.calibrated_value
+    if (r.sensor_type === 'soil_moisture') row.humedad = r.calibrated_value as number
+    else row.temperatura = r.calibrated_value as number
     byTime.set(r.recorded_at, row)
   }
   const data = [...byTime.values()].sort((a, b) => a.t.localeCompare(b.t))
   if (data.length < 2) return null
 
   return (
-    <div className="rounded-2xl border border-soil-200 bg-white p-3">
-      <p className="mb-2 font-bold text-soil-800">Lecturas del sensor ESP32</p>
-      <div className="h-72 w-full">
+    <div className="border-t border-line pt-4">
+      <Eyebrow tone="ambar">Últimas 24 h · sensor ESP32</Eyebrow>
+      <div className="mt-3 h-64 w-full">
         <ResponsiveContainer>
-          <LineChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2cb9e" />
-            <XAxis dataKey="t" tickFormatter={formatShortTime} minTickGap={90} fontSize={16} />
-            <YAxis yAxisId="h" fontSize={16} width={45} unit="%" />
-            <YAxis yAxisId="t" orientation="right" fontSize={16} width={45} unit="°" />
-            <Tooltip labelFormatter={(v) => formatShortTime(String(v))} contentStyle={{ fontSize: 16 }} />
-            <Legend wrapperStyle={{ fontSize: 16 }} />
+          <LineChart data={data} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
+            <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+            <XAxis dataKey="t" tickFormatter={formatShortTime} minTickGap={90} tick={AXIS_TICK} stroke="#3a4b41" />
+            <YAxis yAxisId="h" tick={AXIS_TICK} width={44} unit="%" stroke="#3a4b41" />
+            <YAxis yAxisId="t" orientation="right" tick={AXIS_TICK} width={44} unit="°" stroke="#3a4b41" />
+            <Tooltip labelFormatter={(v) => formatShortTime(String(v))} contentStyle={TOOLTIP_STYLE} />
+            <Legend wrapperStyle={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13 }} />
             <Line
               yAxisId="h"
               type="monotone"
               dataKey="humedad"
               name="Humedad (%)"
-              stroke="#17623a"
-              strokeWidth={3}
+              stroke="#f2b35e"
+              strokeWidth={2.5}
               dot={false}
             />
             <Line
@@ -50,14 +58,15 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
               type="monotone"
               dataKey="temperatura"
               name="Temp. suelo (°C)"
-              stroke="#9a6a2e"
-              strokeWidth={3}
+              stroke="#f2b35e"
+              strokeWidth={1.5}
+              strokeDasharray="5 4"
               dot={false}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-1 text-muted">Fuente: sensor ESP32 en tu parcela. Horas en hora de Perú.</p>
+      <p className="mt-2 text-muted">Fuente: sensor ESP32 en tu parcela. Horas en hora de Perú.</p>
     </div>
   )
 }

@@ -8,10 +8,10 @@ interface Props {
 
 export function ErrorBox({ message, onRetry }: Props) {
   return (
-    <Alert tone="danger" title="Algo salió mal" role="alert">
+    <Alert tone="danger" title="Error" role="alert">
       <p>{message}</p>
       {onRetry && (
-        <Button variant="danger" onClick={onRetry} className="mt-3">
+        <Button variant="outline" onClick={onRetry} className="mt-3">
           Reintentar
         </Button>
       )}

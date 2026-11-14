@@ -2,18 +2,21 @@ import type { SourceRef } from '../../types/api'
 
 export function SourcesList({ sources }: { sources: SourceRef[] }) {
   if (sources.length === 0) {
-    return <p className="text-muted">Sin fuentes registradas para esta alternativa.</p>
+    return <p className="text-muted">Sin fuentes registradas.</p>
   }
   return (
-    <ul className="list-disc space-y-1 pl-5">
+    <ul className="space-y-1">
       {sources.map((s, i) => (
-        <li key={i}>
+        <li key={i} className="flex gap-3">
+          <span aria-hidden className="font-mono text-cielo">
+            ↗
+          </span>
           {s.url ? (
-            <a href={s.url} target="_blank" rel="noreferrer" className="font-medium text-nasa-700 underline">
+            <a href={s.url} target="_blank" rel="noreferrer" className="text-cielo underline">
               {s.title}
             </a>
           ) : (
-            s.title
+            <span className="text-ink">{s.title}</span>
           )}
         </li>
       ))}
