@@ -210,6 +210,7 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 
 | `missing[].field` | Aparece si… |
 |---|---|
+| `plot.next_sowing_date` | la petición no trae `start_on` y la parcela no tiene ciclo `planned` |
 | `plot.previous_crop` | la parcela no tiene ningún ciclo `finished` en `crop_cycle` |
 | `plot.water_availability` | la parcela no lo tiene (se guarda con `PATCH /api/plots/{id}`) |
 | `plot.soil_texture` | la parcela no lo tiene (igual) |
@@ -217,7 +218,8 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 | `climate.history` | no hay NASA POWER guardado anterior a `start_on`, o hay menos de 365 días con `T2M` válido |
 | `engine` | están todos los datos, pero el motor aún no está integrado |
 
-- `context.power` sale de `nasa_observation`: los días guardados del punto actual **anteriores a `start_on`**. `use` es `historico` con ≥ 365 días y `contexto_del_periodo` si hay menos. Es `null` si no hay datos.
+- `context.power` sale de `nasa_observation`: los días guardados del punto actual **anteriores a `start_on`** (todos, si no hay fecha). `use` es `historico` con ≥ 365 días y `contexto_del_periodo` si hay menos. Es `null` si no hay datos.
+- La disponibilidad de agua **no va en la petición**: se lee de la parcela guardada (`PATCH /api/plots/{id}`). En un escenario de demostración, si el motor la supone, la declara en `assumptions`.
 - `context.sensor` resume las lecturas del kit. Las `quality_flag: "test"` nunca se usan como evidencia.
 - **Para integrar el motor (Milene):** asigna `ROTATION_ENGINE` en `recommendation_service.py` a una función `motor(plot, request, context) -> (mode, assumptions, alternatives)`. La ruta ya rellena `status: "ok"`, `selected_id` y `engine_version` (atributo `version` de la función).
 
@@ -229,7 +231,7 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 |---|---|---|
 | `plot_id` | UUID | Parcela propia |
 | `priority` | `save_water` o `improve_soil` | Las dos que ofrece la interfaz |
-| `start_on` | `AAAA-MM-DD` | Inicio de la primera campaña |
+| `start_on` | `AAAA-MM-DD`, **opcional** | Inicio de la primera campaña. Si no viene, se usa la `sowing_date` del ciclo `planned`; si tampoco hay, sale en `missing` como `plot.next_sowing_date` |
 | `horizon_days` | entero | Por defecto 365 |
 
 **Respuesta** (siempre HTTP 200; el resultado del motor va en `status` y `mode`):
@@ -240,15 +242,17 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 | `mode` | `evaluacion` o `escenario_demostracion` | `escenario_demostracion` = hay datos supuestos; mostrarlo **claramente** como demo |
 | `engine_version` | texto | |
 | `plot_id` | UUID | |
+| `calculated_at` | ISO 8601 UTC | Momento del cálculo (para mostrar «Calculado: …») |
+| `context.start_on` | `AAAA-MM-DD` o `null` | Fecha de inicio usada (petición o ciclo `planned`) |
 | `context.notice` | texto | Aviso para mostrar (p. ej. «parcela representativa, no una chacra real») |
-| `context.power` | objeto | `source`, `time_standard`, `start`, `end`, `use` (`contexto_del_periodo` o `historico`) e `indicators` |
+| `context.power` | objeto o `null` | `source`, `time_standard`, `start`, `end`, `use` (`contexto_del_periodo` o `historico`) e `indicators`. Las claves de `indicators` son siempre las de `calcular_indicadores`, con cualquier `use`: `temperatura_promedio_c`, `temperatura_maxima_diaria_c`, `temperatura_minima_diaria_c`, `precipitacion_total_mm`, `dias_analizados`, `dias_temperatura_validos`, `dias_precipitacion_validos`, `cobertura_temperatura_pct`, `cobertura_precipitacion_pct` |
 | `context.sensor` | objeto | `quality_flag`, `used_as_evidence` y `reason`. Las lecturas `test` no se usan como evidencia |
-| `context.assumptions` | `[{ field, value, reason }]` | Solo con `escenario_demostracion`; vacío en otro caso |
+| `context.assumptions` | `[{ field, value, reason }]` | Solo con `escenario_demostracion`; vacío en otro caso. `value` es libre: puede ser un id de cultivo, `low`/`medium`/`high`, una fecha o un texto (p. ej. `soil_texture`). Si no es un id conocido, muéstralo tal cual |
 | `missing` | `[{ field, reason }]` | Con `insufficient_data` lista lo que falta; `[]` en otro caso |
 | `selected_id` | texto o `null` | `null` con `insufficient_data` |
 | `alternatives` | lista | **Vacía con `insufficient_data`** (sin `score`) |
 | `alternatives[].id`, `rank`, `score` | texto, entero, 0–100 | `score` según el criterio del motor |
-| `alternatives[].campaigns` | `[{ crop, starts_on, ends_on }]` | `crop` = id de `GET /api/crops` |
+| `alternatives[].campaigns` | `[{ crop, starts_on, ends_on }]` | `crop` = id de `GET /api/crops` (`maiz`, `frijol_caupi`, `camote`: fijos para la demo; están en la tabla `crop`) |
 | `alternatives[].reasons`, `limitations` | texto[] | |
 | `alternatives[].sources` | `[{ title, url }]` | Fuente de cada requisito usado |
 

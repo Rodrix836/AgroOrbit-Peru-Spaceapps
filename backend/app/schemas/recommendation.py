@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.common import UtcDatetime
+
 RecommendationPriority = Literal["save_water", "improve_soil"]
 
 
@@ -14,7 +16,10 @@ class RecommendationRequest(BaseModel):
 
     plot_id: UUID
     priority: RecommendationPriority
-    start_on: date = Field(description="Inicio de la primera campaña (AAAA-MM-DD)")
+    start_on: date | None = Field(
+        default=None,
+        description="Inicio de la primera campaña (AAAA-MM-DD). Si no viene, se usa la sowing_date del ciclo planned.",
+    )
     horizon_days: int = Field(default=365, ge=90, le=730)
 
 
@@ -46,6 +51,7 @@ class SensorContext(BaseModel):
 
 class RecommendationContext(BaseModel):
     notice: str
+    start_on: date | None = Field(description="Fecha de inicio usada (petición o ciclo planned)")
     power: PowerContext | None
     sensor: SensorContext
     assumptions: list[Assumption] = Field(default_factory=list)
@@ -77,6 +83,7 @@ class RecommendationResponse(BaseModel):
     mode: Literal["evaluacion", "escenario_demostracion"]
     engine_version: str
     plot_id: UUID
+    calculated_at: UtcDatetime
     context: RecommendationContext
     missing: list[MissingItem]
     selected_id: str | None
