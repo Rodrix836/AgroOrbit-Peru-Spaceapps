@@ -1,0 +1,71 @@
+{
+  "_nota": "PROPUESTA de formato (pendiente de confirmar con Milene). Los textos entre <...> y las puntuaciones son marcadores: NO son una recomendación agronómica.",
+  "request": {
+    "method": "POST",
+    "path": "/api/recommendations",
+    "headers": {
+      "Authorization": "Bearer <access_token>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "plot_id": "<plot_id con todos los datos esenciales declarados>",
+      "priority": "improve_soil",
+      "start_on": "2026-12-01",
+      "horizon_days": 365
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "status": "ok",
+      "mode": "evaluacion",
+      "engine_version": "<versión del motor>",
+      "plot_id": "<plot_id>",
+      "context": {
+        "notice": "Evaluación con datos declarados de la parcela y requisitos de cultivo con fuente.",
+        "power": {
+          "source": "NASA POWER",
+          "time_standard": "LST",
+          "start": "<inicio del histórico usado>",
+          "end": "<fin del histórico usado>",
+          "use": "historico",
+          "indicators": { "<indicador>": "<valor>" }
+        },
+        "sensor": {
+          "quality_flag": "ok",
+          "used_as_evidence": true,
+          "reason": "<cómo se usaron las lecturas del kit>"
+        },
+        "assumptions": []
+      },
+      "missing": [],
+      "selected_id": "rot-a",
+      "alternatives": [
+        {
+          "id": "rot-a",
+          "rank": 1,
+          "score": 0,
+          "campaigns": [
+            { "crop": "<crop id>", "starts_on": "2026-12-01", "ends_on": "<AAAA-MM-DD>" },
+            { "crop": "<crop id>", "starts_on": "<AAAA-MM-DD>", "ends_on": "<AAAA-MM-DD>" }
+          ],
+          "reasons": ["<razón respaldada por una fuente>"],
+          "limitations": ["<limitación>"],
+          "sources": [{ "title": "<título de la fuente>", "url": "<https://...>" }]
+        },
+        {
+          "id": "rot-b",
+          "rank": 2,
+          "score": 0,
+          "campaigns": [
+            { "crop": "<crop id>", "starts_on": "2026-12-01", "ends_on": "<AAAA-MM-DD>" },
+            { "crop": "<crop id>", "starts_on": "<AAAA-MM-DD>", "ends_on": "<AAAA-MM-DD>" }
+          ],
+          "reasons": ["<razón respaldada por una fuente>"],
+          "limitations": ["<limitación>"],
+          "sources": [{ "title": "<título de la fuente>", "url": "<https://...>" }]
+        }
+      ]
+    }
+  }
+}

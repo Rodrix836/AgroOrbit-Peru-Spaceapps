@@ -126,6 +126,67 @@ Catálogo de `app/data/crops.py` para los selectores. No requiere token. Coincid
 
 Los requisitos agronómicos no se exponen aquí. Mientras no tengan fuente, el motor no puede recomendar.
 
+## Recomendaciones de rotación
+
+> **PROPUESTA: aún no implementada.** Formato acordado con Luis (frontend), **pendiente de que Milene (motor) lo confirme**. Mientras no exista la ruta, el frontend sigue con sus datos de ejemplo.
+
+### `POST /api/recommendations` → 200
+
+Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot_not_found`; cuerpo inválido → **422** `validation_error`.
+
+```json
+{ "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6", "priority": "save_water", "start_on": "2026-12-01", "horizon_days": 365 }
+```
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `plot_id` | UUID | Parcela propia |
+| `priority` | `save_water` o `improve_soil` | Las dos que ofrece la interfaz |
+| `start_on` | `AAAA-MM-DD` | Inicio de la primera campaña |
+| `horizon_days` | entero | Por defecto 365 |
+
+**Respuesta** (siempre HTTP 200; el resultado del motor va en `status` y `mode`):
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `status` | `ok` o `insufficient_data` | |
+| `mode` | `evaluacion` o `escenario_demostracion` | `escenario_demostracion` = hay datos supuestos; mostrarlo **claramente** como demo |
+| `engine_version` | texto | |
+| `plot_id` | UUID | |
+| `context.notice` | texto | Aviso para mostrar (p. ej. «parcela representativa, no una chacra real») |
+| `context.power` | objeto | `source`, `time_standard`, `start`, `end`, `use` (`contexto_del_periodo` o `historico`) e `indicators` |
+| `context.sensor` | objeto | `quality_flag`, `used_as_evidence` y `reason`. Las lecturas `test` no se usan como evidencia |
+| `context.assumptions` | `[{ field, value, reason }]` | Solo con `escenario_demostracion`; vacío en otro caso |
+| `missing` | `[{ field, reason }]` | Con `insufficient_data` lista lo que falta; `[]` en otro caso |
+| `selected_id` | texto o `null` | `null` con `insufficient_data` |
+| `alternatives` | lista | **Vacía con `insufficient_data`** (sin `score`) |
+| `alternatives[].id`, `rank`, `score` | texto, entero, 0–100 | `score` según el criterio del motor |
+| `alternatives[].campaigns` | `[{ crop, starts_on, ends_on }]` | `crop` = id de `GET /api/crops` |
+| `alternatives[].reasons`, `limitations` | texto[] | |
+| `alternatives[].sources` | `[{ title, url }]` | Fuente de cada requisito usado |
+
+**Tres casos de ejemplo** (los de `ok` y escenario solo muestran la **forma**; sus textos `<...>` y puntuaciones no son recomendaciones):
+
+- [recommendations-post-insufficient-data.json](examples/recommendations-post-insufficient-data.json): `insufficient_data` con lo que hoy le falta de verdad a la parcela demostrativa.
+- [recommendations-post-escenario.json](examples/recommendations-post-escenario.json): `ok` + `escenario_demostracion`, con `assumptions`.
+- [recommendations-post-ok.json](examples/recommendations-post-ok.json): `ok` + `evaluacion`, con datos declarados y fuentes.
+
+```json
+{
+  "status": "insufficient_data",
+  "mode": "evaluacion",
+  "engine_version": "<versión>",
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "context": { "notice": "…", "power": { "start": "2026-11-01", "end": "2026-11-14", "use": "contexto_del_periodo", "…": "…" }, "sensor": { "quality_flag": "test", "used_as_evidence": false, "reason": "…" }, "assumptions": [] },
+  "missing": [
+    { "field": "plot.previous_crop", "reason": "La regla de rotación necesita el cultivo anterior; aún no se guarda en la base." },
+    { "field": "crops.maiz.requirements", "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo." }
+  ],
+  "selected_id": null,
+  "alternatives": []
+}
+```
+
 ### `GET /api/plots/{plot_id}/climate` → 200
 
 Requiere el token del propietario. `OwnedPlot` devuelve **404** `plot_not_found` si la parcela no existe o es ajena, antes de consultar NASA POWER. Las coordenadas proceden de la parcela guardada, no de parámetros del cliente.
