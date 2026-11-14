@@ -117,7 +117,7 @@ def _missing(session: Session, plot: Plot, power: PowerContext | None, valid_day
 
 
 def recommend(session: Session, plot: Plot, request: RecommendationRequest) -> RecommendationResponse:
-    calculated_at = datetime.now(timezone.utc)
+    created_at = datetime.now(timezone.utc)
     start_on = _resolve_start_on(session, plot, request)
     power, valid_days = _power_context(session, plot, start_on)
     context = RecommendationContext(
@@ -133,7 +133,7 @@ def recommend(session: Session, plot: Plot, request: RecommendationRequest) -> R
     if missing:
         return RecommendationResponse(
             status="insufficient_data", mode="evaluacion", engine_version=API_LAYER_VERSION,
-            plot_id=plot.id, calculated_at=calculated_at, context=context, missing=missing,
+            plot_id=plot.id, created_at=created_at, context=context, missing=missing,
             selected_id=None, alternatives=[],
         )
 
@@ -142,6 +142,6 @@ def recommend(session: Session, plot: Plot, request: RecommendationRequest) -> R
     context.assumptions = assumptions
     return RecommendationResponse(
         status="ok", mode=mode, engine_version=getattr(ROTATION_ENGINE, "version", API_LAYER_VERSION),
-        plot_id=plot.id, calculated_at=calculated_at, context=context, missing=[],
+        plot_id=plot.id, created_at=created_at, context=context, missing=[],
         selected_id=alternatives[0].id if alternatives else None, alternatives=alternatives,
     )

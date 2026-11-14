@@ -30,7 +30,7 @@ class MissingItem(BaseModel):
 
 class Assumption(BaseModel):
     field: str
-    value: Any
+    value: str = Field(description="Siempre texto: código (maiz, low), fecha AAAA-MM-DD u otro texto")
     reason: str
 
 
@@ -83,7 +83,7 @@ class RecommendationResponse(BaseModel):
     mode: Literal["evaluacion", "escenario_demostracion"]
     engine_version: str
     plot_id: UUID
-    calculated_at: UtcDatetime
+    created_at: UtcDatetime
     context: RecommendationContext
     missing: list[MissingItem]
     selected_id: str | None
