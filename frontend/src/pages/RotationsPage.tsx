@@ -1,5 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { AlternativeCard } from '../components/rotations/AlternativeCard'
+import { ContextPanel } from '../components/rotations/ContextPanel'
+import { InsufficientPanel } from '../components/rotations/InsufficientPanel'
+import { assumptionValue, cropName, fieldLabel } from '../components/rotations/labels'
 import { SourcesList } from '../components/rotations/SourcesList'
 import { Alert } from '../components/ui/Alert'
 import { Button, ButtonLink } from '../components/ui/Button'
@@ -12,15 +15,7 @@ import { PanelGrid } from '../components/ui/PanelGrid'
 import { SourceBadge } from '../components/ui/SourceBadge'
 import { usePlot } from '../hooks/usePlot'
 import { useRecommendation } from '../hooks/useRecommendation'
-import type {
-  Plot,
-  PlotPreferences,
-  Priority,
-  RecommendationContext,
-  RecommendationRequest,
-  SourceRef,
-} from '../types/api'
-import { formatDay, formatNumber } from '../utils/format'
+import type { Plot, PlotPreferences, Priority, RecommendationRequest, SourceRef } from '../types/api'
 
 const HORIZON_DAYS = 365 // hasta 12 meses, dos campañas
 const LETTERS = ['A', 'B', 'C', 'D']
@@ -40,59 +35,13 @@ function buildRequest(plot: Plot, priority: Priority, prefs: PlotPreferences): R
     plot_id: plot.id,
     horizon_days: HORIZON_DAYS,
     priority,
-    ...(plot.water_availability ? { water_availability: plot.water_availability } : {}),
     ...(prefs.startOn ? { start_on: prefs.startOn } : {}),
   }
 }
 
-/** PENDIENTE BACKEND: formato de `context` no cerrado; se muestra lo que llegue, todo opcional. */
-function ContextPanel({ context }: { context: RecommendationContext }) {
-  const indicators = Object.entries(context.indicadores ?? {})
-  const hasPeriod = Boolean(context.start && context.end)
-  if (!hasPeriod && indicators.length === 0 && !context.representative_plot) return null
-  return (
-    <section className="bg-panel p-6 md:p-8">
-      <Eyebrow tone="cielo" className="mb-4">
-        Con qué datos se calculó
-      </Eyebrow>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <SourceBadge kind="nasa" />
-        <span className="text-muted">Contexto regional, no una medición sobre la parcela</span>
-      </div>
-      {hasPeriod && (
-        <>
-          <p className="font-mono text-base text-ink">
-            Período: {formatDay(context.start as string)} a {formatDay(context.end as string)}
-          </p>
-          <p className="mt-1 text-muted">Días en hora solar local de NASA POWER.</p>
-        </>
-      )}
-      {indicators.length > 0 && (
-        <dl className="mt-4">
-          {indicators.map(([key, value]) => (
-            <div key={key} className="flex items-baseline justify-between gap-4 border-t border-line py-2">
-              <dt className="font-mono text-base text-muted">{key.replace(/_/g, ' ')}</dt>
-              <dd className="text-right font-mono text-base text-cielo">
-                {value === null ? 'Sin dato' : typeof value === 'number' ? formatNumber(value, 2) : value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {context.representative_plot && (
-        <div className="mt-4">
-          <Alert tone="warn" title="Parcela representativa">
-            {context.representative_plot_notice ?? 'La ubicación es representativa, no una chacra real.'}
-          </Alert>
-        </div>
-      )}
-    </section>
-  )
-}
-
 /** 03 / Rotaciones */
 export function RotationsPage() {
-  const { plot, loading: plotLoading, error: plotError, reload, prefs } = usePlot()
+  const { plot, crops, loading: plotLoading, error: plotError, reload, prefs } = usePlot()
   const rec = useRecommendation()
   const { run } = rec
 
@@ -101,14 +50,13 @@ export function RotationsPage() {
   const priority = override ?? plotPriority(plot)
 
   const plotId = plot?.id
-  const waterAvailability = plot?.water_availability
   useEffect(() => setOverride(null), [plotId])
 
   useEffect(() => {
     if (!plot) return
     void run(buildRequest(plot, priority, prefs))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plotId, priority, waterAvailability, prefs.startOn])
+  }, [plotId, priority, prefs.startOn])
 
   if (plotLoading) return <Loading label="Cargando tu parcela…" />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
@@ -127,10 +75,19 @@ export function RotationsPage() {
   const data = rec.data
   const insufficient = data?.status === 'insufficient_data'
   const missingStart = !prefs.startOn
-  // Con insufficient_data no llegan alternativas ni puntajes: no se muestran tarjetas.
+  // Con insufficient_data nunca se muestran alternativas ni puntajes, aunque vengan en la respuesta.
+  // El crop de cada campaña es un id de GET /api/crops: se muestra el nombre.
   const alternatives =
-    data?.status === 'ok' ? [...(data.alternatives ?? [])].sort((a, b) => a.rank - b.rank) : []
+    data?.status === 'ok'
+      ? [...(data.alternatives ?? [])]
+          .sort((a, b) => a.rank - b.rank)
+          .map((a) => ({
+            ...a,
+            campaigns: a.campaigns.map((c) => ({ ...c, crop: cropName(c.crop, crops) })),
+          }))
+      : []
   const demo = data?.mode === 'escenario_demostracion'
+  const assumptions = data?.context?.assumptions ?? []
 
   // Fuentes únicas de todas las alternativas.
   const sources: SourceRef[] = []
@@ -138,72 +95,6 @@ export function RotationsPage() {
     for (const s of a.sources) {
       if (!sources.some((x) => x.title === s.title && x.url === s.url)) sources.push(s)
     }
-  }
-
-  const calculated = data?.created_at ? (
-    <p className="mt-2 font-mono text-base text-muted">
-      Calculado: {new Date(data.created_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })}
-    </p>
-  ) : null
-
-  // Paneles de abajo: fuentes y método, con qué datos se calculó, y datos insuficientes.
-  const panels: ReactNode[] = []
-  if (data && alternatives.length > 0) {
-    panels.push(
-      <section key="sources" className="bg-panel p-6 md:p-8">
-        <Eyebrow tone="cielo" className="mb-4">
-          Fuentes y método
-        </Eyebrow>
-        <SourcesList sources={sources} />
-        <p className="mt-5 text-muted">
-          Reglas del prototipo (versión {data.engine_version}). Los puntajes son criterios de comparación, no
-          probabilidades de éxito ni rendimientos. Cambiar la prioridad cambia la ponderación; el ganador no
-          siempre cambia.
-        </p>
-        {calculated}
-      </section>,
-    )
-  }
-  if (data?.context) {
-    panels.push(<ContextPanel key="context" context={data.context} />)
-  }
-  if (data && (insufficient || missingStart)) {
-    panels.push(
-      <section key="missing" className="border-l-4 border-ambar bg-ambar-bg p-6 md:p-8">
-        <Eyebrow tone="ambar" className="mb-3">
-          Datos insuficientes
-        </Eyebrow>
-        {insufficient ? (
-          <>
-            <p className="text-ink">
-              No hay datos suficientes para recomendar. No inventamos valores para completar lo que falta.
-            </p>
-            {data.missing && data.missing.length > 0 && (
-              <ul className="mt-3 space-y-2">
-                {data.missing.map((m, i) => (
-                  <li key={`${m.field}-${i}`} className="flex gap-3">
-                    <span aria-hidden className="font-mono text-ambar">
-                      –
-                    </span>
-                    <span>
-                      {m.reason} <span className="font-mono text-base text-muted">({m.field})</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {alternatives.length === 0 && calculated}
-          </>
-        ) : (
-          <p className="text-ink">
-            Falta la fecha de inicio de la siguiente campaña: el calendario será más preciso cuando la agregues.
-          </p>
-        )}
-        <ButtonLink to="/parcela" variant="amber" size="lg" className="mt-5">
-          Completar datos →
-        </ButtonLink>
-      </section>,
-    )
   }
 
   return (
@@ -217,14 +108,35 @@ export function RotationsPage() {
       <div className="mb-8 flex flex-wrap items-center gap-3">
         <SourceBadge kind="prototype" label="Datos de ejemplo" />
         <span className="text-muted">
-          El motor de recomendaciones todavía no está conectado a la API: estas alternativas son de muestra.
+          El motor de recomendaciones todavía no está conectado a la API: lo que ves aquí es de muestra.
         </span>
       </div>
 
       {demo && (
         <div className="mb-8">
           <Alert tone="warn" title="Escenario de demostración">
-            Escenario de demostración: no es una recomendación para una parcela real.
+            <p className="text-lg font-semibold">
+              Escenario de demostración: no es una recomendación para una parcela real.
+            </p>
+            {assumptions.length > 0 && (
+              <>
+                <p className="mt-3">Se usaron estos supuestos, que no declaró ningún agricultor:</p>
+                <ul className="mt-2 space-y-2">
+                  {assumptions.map((a, i) => (
+                    <li key={`${a.field}-${i}`} className="flex gap-3">
+                      <span aria-hidden className="font-mono text-ambar">
+                        –
+                      </span>
+                      <span>
+                        <span className="font-medium">{fieldLabel(a.field, crops)}:</span>{' '}
+                        {assumptionValue(a.field, a.value, crops)}.{' '}
+                        <span className="text-muted">{a.reason}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </Alert>
         </div>
       )}
@@ -247,6 +159,11 @@ export function RotationsPage() {
       {rec.loading && <Loading label="Calculando alternativas…" />}
       {rec.error && <ErrorBox message={rec.error} onRetry={() => void run(buildRequest(plot, priority, prefs))} />}
 
+      {/* Siempre visible, encima del resultado */}
+      {!rec.loading && data?.context && <ContextPanel context={data.context} />}
+
+      {!rec.loading && insufficient && <InsufficientPanel missing={data?.missing ?? []} crops={crops} />}
+
       {!rec.loading && data?.status === 'ok' && alternatives.length === 0 && (
         <EmptyState title="No hay alternativas para mostrar" />
       )}
@@ -264,14 +181,35 @@ export function RotationsPage() {
         </PanelGrid>
       )}
 
-      {!rec.loading && panels.length > 0 && (
+      {/* Abajo: fuentes y método, y aviso de fecha de inicio faltante */}
+      {!rec.loading && data?.status === 'ok' && (
         <div className="mt-6">
-          <PanelGrid
-            className={
-              panels.length > 1 ? 'lg:grid-cols-2 lg:[&>*:last-child:nth-child(odd)]:col-span-2' : 'lg:grid-cols-1'
-            }
-          >
-            {panels}
+          <PanelGrid className={missingStart ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}>
+            <section className="bg-panel p-6 md:p-8">
+              <Eyebrow tone="cielo" className="mb-4">
+                Fuentes y método
+              </Eyebrow>
+              <SourcesList sources={sources} />
+              <p className="mt-5 text-muted">
+                Reglas del prototipo (versión {data.engine_version}). Los puntajes son criterios de comparación
+                del prototipo, no probabilidades de éxito ni rendimientos. Cambiar la prioridad cambia la
+                ponderación; el ganador no siempre cambia.
+              </p>
+            </section>
+            {missingStart && (
+              <section className="border-l-4 border-ambar bg-ambar-bg p-6 md:p-8">
+                <Eyebrow tone="ambar" className="mb-3">
+                  Falta un dato
+                </Eyebrow>
+                <p className="text-ink">
+                  Falta la fecha de inicio de la siguiente campaña: el calendario será más preciso cuando la
+                  agregues.
+                </p>
+                <ButtonLink to="/parcela" variant="amber" size="lg" className="mt-5">
+                  Completar datos →
+                </ButtonLink>
+              </section>
+            )}
           </PanelGrid>
         </div>
       )}

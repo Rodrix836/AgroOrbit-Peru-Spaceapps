@@ -1,0 +1,61 @@
+{
+  "status": "insufficient_data",
+  "mode": "evaluacion",
+  "engine_version": "<versión del motor>",
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "context": {
+    "notice": "Parcela demostrativa: ubicación representativa (Valle del Chira, Sullana), no una chacra real.",
+    "power": {
+      "source": "NASA POWER",
+      "time_standard": "LST",
+      "start": "2026-11-01",
+      "end": "2026-11-14",
+      "use": "contexto_del_periodo",
+      "indicators": {
+        "temperatura_promedio_c": 27.15,
+        "precipitacion_total_mm": 107.57,
+        "dias_analizados": 14,
+        "dias_temperatura_validos": 11,
+        "dias_precipitacion_validos": 11
+      }
+    },
+    "sensor": {
+      "quality_flag": "test",
+      "used_as_evidence": false,
+      "reason": "Lecturas del ESP32 tomadas fuera del campo."
+    },
+    "assumptions": []
+  },
+  "missing": [
+    {
+      "field": "plot.previous_crop",
+      "reason": "La regla de rotación necesita el cultivo anterior; aún no se guarda en la base."
+    },
+    {
+      "field": "plot.water_availability",
+      "reason": "Necesario para estimar si el agua cubre la campaña."
+    },
+    {
+      "field": "plot.soil_texture",
+      "reason": "Necesario para la regla de suelo."
+    },
+    {
+      "field": "crops.maiz.requirements",
+      "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo."
+    },
+    {
+      "field": "crops.frijol_caupi.requirements",
+      "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo."
+    },
+    {
+      "field": "crops.camote.requirements",
+      "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo."
+    },
+    {
+      "field": "climate.history",
+      "reason": "14 días de POWER no bastan para evaluar campañas futuras; falta un histórico."
+    }
+  ],
+  "selected_id": null,
+  "alternatives": []
+}

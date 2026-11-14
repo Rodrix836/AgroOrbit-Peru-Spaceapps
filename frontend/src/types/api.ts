@@ -5,9 +5,8 @@
 //
 // CONFIRMADO también: GET /api/crops y PATCH /api/plots/{id}.
 //
-// PENDIENTE BACKEND (no existe en la API todavía): POST /api/recommendations. Sus tipos
-// (RecommendationRequest/Response, incl. `mode`, `context` y `missing`) son SUPUESTOS y la
-// respuesta sale de mocks (DATOS DE EJEMPLO) hasta que Rodrigo los confirme.
+// PENDIENTE BACKEND (sin ruta todavía): POST /api/recommendations. Sus tipos siguen la propuesta
+// del PR #7 (pendiente de confirmar por Milene) y la respuesta sale de mocks (DATOS DE EJEMPLO).
 
 // ---------- Formato de error (todas las rutas) ----------
 
@@ -157,42 +156,63 @@ export interface NasaImportResult {
 
 // ---------- Recomendaciones (PENDIENTE BACKEND: POST /api/recommendations) ----------
 
-/** "evaluacion" = cálculo para la parcela; "escenario_demostracion" = datos de demostración. */
+// ---------- Recomendaciones: POST /api/recommendations ----------
+// PROPUESTA del PR #7 (backend/docs/api-contract.md, "Recomendaciones de rotación"): sin ruta
+// todavía y pendiente de que Milene la confirme. PENDIENTE BACKEND: la pantalla usa mocks.
+
+/** "evaluacion" = cálculo para la parcela; "escenario_demostracion" = hay datos supuestos (demo). */
 export type RecommendationMode = 'evaluacion' | 'escenario_demostracion'
 
-/** Dato que falta para recomendar (status = insufficient_data). */
+export type RecommendationStatus = 'ok' | 'insufficient_data'
+
+/** Cuerpo de la petición (`start_on` es el inicio de la primera campaña, AAAA-MM-DD). */
+export interface RecommendationRequest {
+  plot_id: string
+  priority: Priority
+  start_on?: string
+  /** Por defecto 365. */
+  horizon_days?: number
+}
+
+/** Dato que falta para recomendar. `field` es del tipo "plot.…", "crops.<id>.requirements" o "climate.…". */
 export interface MissingItem {
-  /** Nombre del campo que falta. */
   field: string
-  /** Por qué hace falta o por qué no se pudo usar. */
   reason: string
 }
 
-/**
- * PENDIENTE BACKEND: formato de `context` no cerrado; todos los campos internos son opcionales.
- * Con qué datos se calculó la recomendación.
- */
-export interface RecommendationContext {
-  /** Período de NASA POWER usado (AAAA-MM-DD, LST). */
-  start?: string
-  end?: string
-  /** Indicadores del período (nombres por confirmar). */
-  indicadores?: Record<string, number | string | null>
-  /** true = la parcela es una ubicación representativa, no una chacra real. */
-  representative_plot?: boolean
-  representative_plot_notice?: string
+/** Dato supuesto en un escenario de demostración. */
+export interface Assumption {
+  field: string
+  value: string
+  reason: string
 }
 
-export interface RecommendationRequest {
-  plot_id: string
-  horizon_days: number
-  priority: Priority
-  /** PENDIENTE de confirmar en el contrato. */
-  start_on?: string
-  water_availability?: WaterAvailability
+export interface RecommendationContext {
+  /** Aviso para mostrar (p. ej. «parcela representativa, no una chacra real»). */
+  notice: string
+  power: {
+    source: string
+    /** "LST": hora solar local de POWER. */
+    time_standard: string
+    start: string
+    end: string
+    /** contexto_del_periodo = clima reciente, no un histórico. */
+    use: 'contexto_del_periodo' | 'historico'
+    /** temperatura_promedio_c, precipitacion_total_mm, dias_analizados, dias_temperatura_validos, dias_precipitacion_validos… */
+    indicators: Record<string, number | string | null>
+  }
+  sensor: {
+    quality_flag: string
+    /** Las lecturas `test` no se usan como evidencia. */
+    used_as_evidence: boolean
+    reason: string
+  }
+  /** Solo con escenario_demostracion; vacío en otro caso. */
+  assumptions: Assumption[]
 }
 
 export interface Campaign {
+  /** Id de GET /api/crops (se muestra el nombre, no el id). */
   crop: string
   starts_on: string
   ends_on: string
@@ -215,16 +235,15 @@ export interface Alternative {
 }
 
 export interface RecommendationResponse {
-  status: 'ok' | 'insufficient_data'
-  /** PENDIENTE BACKEND. Con "escenario_demostracion" la pantalla avisa que no es para una parcela real. */
-  mode?: RecommendationMode
+  status: RecommendationStatus
+  mode: RecommendationMode
   engine_version: string
-  /** PENDIENTE BACKEND: período NASA POWER usado y aviso de parcela representativa. */
-  context?: RecommendationContext
-  /** Datos que faltan cuando status = insufficient_data. */
-  missing?: MissingItem[]
-  selected_id?: string
-  /** Con insufficient_data no llegan alternativas (ni puntajes). */
-  alternatives?: Alternative[]
-  created_at?: string
+  plot_id: string
+  context: RecommendationContext
+  /** Con insufficient_data lista lo que falta; [] en otro caso. */
+  missing: MissingItem[]
+  /** null con insufficient_data. */
+  selected_id: string | null
+  /** Vacía con insufficient_data (sin score). */
+  alternatives: Alternative[]
 }

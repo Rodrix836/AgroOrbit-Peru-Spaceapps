@@ -29,7 +29,7 @@ Variables (`.env`, no se sube a git):
 - `GET /api/crops` (catálogo público) llena los selectores de cultivo de 01 Parcela.
 - `PATCH /api/plots/{id}` guarda **agua y prioridad** al pulsar «Guardar» en 01 Parcela; la cabecera de 02 Diagnóstico lee el agua de la parcela. «Sin indicar» envía `null` y borra el campo.
 - **Cultivo anterior, cultivo actual y fecha de inicio** todavía no tienen dónde guardarse en la API (falta la tabla `crop_cycle`): se guardan solo en este navegador, y la pantalla lo dice.
-- **PENDIENTE BACKEND:** `POST /api/recommendations` no existe. `createRecommendation` usa **siempre** datos de ejemplo, aunque `VITE_USE_MOCKS` sea `false`, y Rotaciones lo avisa con la etiqueta **DATOS DE EJEMPLO**. Los tipos ya incluyen lo que viene en el contrato final: `mode` (`evaluacion` | `escenario_demostracion`), `context` (período NASA POWER, indicadores y aviso de parcela representativa; formato aún abierto, todo opcional) y `missing` como `[{ field, reason }]`. Con `insufficient_data` no llegan alternativas ni puntajes y la pantalla no muestra tarjetas.
+- **PENDIENTE BACKEND:** `POST /api/recommendations` no tiene ruta todavía. `createRecommendation` usa **siempre** datos de ejemplo, aunque `VITE_USE_MOCKS` sea `false`, y Rotaciones lo avisa con la etiqueta **DATOS DE EJEMPLO**. Los tipos siguen la **propuesta del PR #7** (`backend/docs/api-contract.md`, pendiente de que Milene la confirme): `status`, `mode`, `context` (`notice`, `power`, `sensor`, `assumptions`), `missing: [{ field, reason }]`, `selected_id` y `alternatives`. El `crop` de cada campaña es un id de `GET /api/crops` y la pantalla muestra el nombre. Con `insufficient_data` nunca se muestran alternativas ni puntajes, aunque vengan en la respuesta.
 - En Rotaciones, la prioridad parte de la guardada en la parcela; cambiarla ahí solo recalcula, no guarda.
 
 ## Probar cada estado con datos de ejemplo
@@ -42,8 +42,9 @@ Pon `VITE_USE_MOCKS=true` y cambia `VITE_MOCK_SCENARIO` en `.env`. **Reinicia `n
 | `sensor_stale` | Aviso **Sensor sin actualización** con la hora de la última lectura (hace 3 h; el umbral es `SENSOR_STALE_MINUTES = 15`) | Diagnóstico → Suelo |
 | `sensor_empty` | Estado vacío **Aún no hay lecturas del sensor** | Diagnóstico → Suelo |
 | `nasa_down` | Aviso **NASA no disponible** (503 `nasa_power_unavailable`) y, debajo, los datos guardados antiguos con su fecha | Diagnóstico → Clima |
-| `insufficient_data` | Respuesta `insufficient_data`: sin tarjetas, panel **Datos insuficientes** con cada dato que falta y su motivo (`missing: [{ field, reason }]`) y el botón «Completar datos» | Rotaciones |
-| `demo_mode` | Aviso ámbar **Escenario de demostración: no es una recomendación para una parcela real** (`mode: escenario_demostracion`) y bloque «Con qué datos se calculó» con aviso de parcela representativa | Rotaciones |
+| `normal` (Rotaciones) | `status: ok` + `mode: evaluacion`: bloque «Con qué datos se calculó» (NASA como histórico, sensor usado como evidencia), dos alternativas de ejemplo con nombres de cultivo | Rotaciones |
+| `demo_mode` | `status: ok` + `mode: escenario_demostracion`: aviso ámbar **Escenario de demostración: no es una recomendación para una parcela real** con la lista de supuestos (cultivo anterior, disponibilidad de agua), contexto reciente de NASA y sensor de prueba no usado como evidencia | Rotaciones |
+| `insufficient_data` | Ejemplo real del PR #7: **Todavía no podemos comparar rotaciones**, sin tarjetas ni puntajes, con lo que falta agrupado en datos de la parcela (con enlace a Parcela), requisitos de cultivos y clima | Rotaciones |
 | `sensor_test` | Etiqueta ámbar **DATO DE PRUEBA** junto a las lecturas y en el gráfico (`quality_flag = test`) | Diagnóstico → Suelo |
 | `sensor_dry` | Humedad en 0 % (`clamped_dry`): la barra queda vacía y una marca fina en el 0 muestra que es un valor, no «sin dato» | Diagnóstico → Suelo |
 | `sensor_suspect` | Aviso **Lectura dudosa** en la humedad (`quality_flag = suspect`) | Diagnóstico → Suelo |

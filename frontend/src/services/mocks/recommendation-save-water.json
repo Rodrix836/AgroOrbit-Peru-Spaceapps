@@ -8,8 +8,8 @@
       "rank": 1,
       "score": 72,
       "campaigns": [
-        { "crop": "Caupí (ejemplo)", "starts_on": "2027-01-15", "ends_on": "2027-04-10" },
-        { "crop": "Maíz (ejemplo)", "starts_on": "2027-05-01", "ends_on": "2027-09-15" }
+        { "crop": "frijol_caupi", "starts_on": "2027-01-15", "ends_on": "2027-04-10" },
+        { "crop": "maiz", "starts_on": "2027-05-01", "ends_on": "2027-09-15" }
       ],
       "reasons": [
         "[Ejemplo] Primera campaña con un cultivo de ciclo corto, para priorizar menor uso de agua.",
@@ -32,8 +32,8 @@
       "rank": 2,
       "score": 58,
       "campaigns": [
-        { "crop": "Maíz (ejemplo)", "starts_on": "2027-01-15", "ends_on": "2027-06-01" },
-        { "crop": "Caupí (ejemplo)", "starts_on": "2027-06-20", "ends_on": "2027-09-15" }
+        { "crop": "maiz", "starts_on": "2027-01-15", "ends_on": "2027-06-01" },
+        { "crop": "frijol_caupi", "starts_on": "2027-06-20", "ends_on": "2027-09-15" }
       ],
       "reasons": ["[Ejemplo] Alternativa con el orden de cultivos invertido, para comparar."],
       "limitations": ["[Ejemplo] Respuesta de muestra: no proviene del motor de reglas."],

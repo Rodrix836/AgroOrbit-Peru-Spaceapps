@@ -18,6 +18,7 @@ import type {
 } from '../../types/api'
 import crops from './crops.json'
 import recommendationSoil from './recommendation-improve-soil.json'
+import recommendationInsufficient from './recommendation-insufficient-data.json'
 import recommendationSave from './recommendation-save-water.json'
 import { MOCK_SCENARIO } from './scenario'
 
@@ -168,46 +169,79 @@ export function mockNasa(): NasaObservation[] {
 export const mockCrops = crops as Crop[]
 
 // ---------- PENDIENTE BACKEND: POST /api/recommendations ----------
+// Forma de la propuesta del PR #7. `insufficient_data` es el ejemplo real del PR, tal cual.
+// `normal` y `demo_mode` son nuestros ejemplos (los del PR traen marcadores <...> y puntaje 0).
 
-/** Contexto de ejemplo: período NASA POWER de 90 días y aviso de parcela representativa. */
-function mockContext(): RecommendationContext {
-  const end = todayLima().getTime()
-  const day = (ms: number) => new Date(ms).toISOString().slice(0, 10)
-  return {
-    start: day(end - 89 * DAY),
-    end: day(end),
-    indicadores: {
-      temperatura_promedio_c: 25,
-      precipitacion_total_mm: 37.8,
-      dias_analizados: 90,
+const POWER_EXAMPLE = {
+  source: 'NASA POWER',
+  time_standard: 'LST',
+  start: '2026-11-01',
+  end: '2026-11-14',
+  use: 'contexto_del_periodo' as const,
+  indicators: {
+    temperatura_promedio_c: 27.15,
+    precipitacion_total_mm: 107.57,
+    dias_analizados: 14,
+    dias_temperatura_validos: 11,
+    dias_precipitacion_validos: 11,
+  },
+}
+
+/** Evaluación de ejemplo: histórico de NASA POWER y sensor usado como evidencia (valores de muestra). */
+const CONTEXT_OK: RecommendationContext = {
+  notice: '[Ejemplo] Evaluación de muestra con datos declarados de la parcela; no proviene del motor de reglas.',
+  power: {
+    source: 'NASA POWER',
+    time_standard: 'LST',
+    start: '2025-11-01',
+    end: '2026-10-31',
+    use: 'historico',
+    indicators: {
+      temperatura_promedio_c: 26.4,
+      precipitacion_total_mm: 180.2,
+      dias_analizados: 365,
+      dias_temperatura_validos: 360,
+      dias_precipitacion_validos: 360,
     },
-    representative_plot: true,
-    representative_plot_notice:
-      '[Ejemplo] La parcela demostrativa es una ubicación representativa, no una chacra real.',
-  }
+  },
+  sensor: {
+    quality_flag: 'ok',
+    used_as_evidence: true,
+    reason: '[Ejemplo] Se usaron las lecturas de humedad del kit como evidencia.',
+  },
+  assumptions: [],
+}
+
+/** Escenario de demostración: lecturas de prueba (no son evidencia) y supuestos explícitos. */
+const CONTEXT_DEMO: RecommendationContext = {
+  notice:
+    'Escenario de demostración: los datos marcados en assumptions son supuestos, no declarados por un agricultor. Parcela representativa, no una chacra real.',
+  power: POWER_EXAMPLE,
+  sensor: {
+    quality_flag: 'test',
+    used_as_evidence: false,
+    reason: 'Lecturas del ESP32 tomadas fuera del campo.',
+  },
+  assumptions: [
+    { field: 'plot.previous_crop', value: 'maiz', reason: 'Supuesto del escenario de demostración.' },
+    { field: 'plot.water_availability', value: 'low', reason: 'Supuesto del escenario de demostración.' },
+  ],
 }
 
 export function mockRecommendation(req: RecommendationRequest): RecommendationResponse {
-  const created_at = new Date().toISOString()
   if (MOCK_SCENARIO === 'insufficient_data') {
-    // Sin alternativas ni puntajes, y `missing` como lista de { field, reason }.
-    return {
-      status: 'insufficient_data',
-      mode: 'evaluacion',
-      engine_version: 'ejemplo-0.0',
-      context: mockContext(),
-      missing: [
-        { field: 'current_crop', reason: '[Ejemplo] No se indicó el cultivo actual de la parcela.' },
-        { field: 'start_on', reason: '[Ejemplo] Falta la fecha de inicio de la siguiente campaña.' },
-      ],
-      created_at,
-    }
+    return recommendationInsufficient as RecommendationResponse
   }
   const base = req.priority === 'improve_soil' ? recommendationSoil : recommendationSave
+  const demo = MOCK_SCENARIO === 'demo_mode'
   return {
-    ...(base as RecommendationResponse),
-    mode: MOCK_SCENARIO === 'demo_mode' ? 'escenario_demostracion' : 'evaluacion',
-    context: mockContext(),
-    created_at,
+    status: 'ok',
+    mode: demo ? 'escenario_demostracion' : 'evaluacion',
+    engine_version: base.engine_version,
+    plot_id: req.plot_id,
+    context: demo ? CONTEXT_DEMO : CONTEXT_OK,
+    missing: [],
+    selected_id: base.selected_id,
+    alternatives: base.alternatives as RecommendationResponse['alternatives'],
   }
 }
