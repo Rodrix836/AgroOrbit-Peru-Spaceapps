@@ -1,0 +1,59 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/devices/readings",
+    "headers": {
+      "X-Device-Key": "<device_key>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "readings": [
+        {
+          "sensor_type": "soil_moisture",
+          "raw_value": 2100,
+          "calibrated_value": 41.5,
+          "unit": "%",
+          "recorded_at": "2026-11-14T12:00:00Z"
+        },
+        {
+          "sensor_type": "soil_temperature",
+          "raw_value": 27.31,
+          "calibrated_value": 27.31,
+          "unit": "°C",
+          "recorded_at": "2026-11-14T12:00:00Z"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 201,
+    "body": {
+      "device_id": "dca83203-c87b-41d5-bfb3-1c5cc7ee5c0b",
+      "inserted": 2,
+      "readings": [
+        {
+          "id": "41a43fcf-00e2-4c8d-bbdc-29d63b1027f6",
+          "device_id": "dca83203-c87b-41d5-bfb3-1c5cc7ee5c0b",
+          "sensor_type": "soil_moisture",
+          "raw_value": 2100.0,
+          "calibrated_value": 41.5,
+          "unit": "%",
+          "quality_flag": "ok",
+          "recorded_at": "2026-11-14T12:00:00Z",
+          "received_at": "2026-11-14T17:33:30.280997Z"
+        },
+        {
+          "id": "f38dfbdf-589e-4205-8159-a55d1b4d96c6",
+          "device_id": "dca83203-c87b-41d5-bfb3-1c5cc7ee5c0b",
+          "sensor_type": "soil_temperature",
+          "raw_value": 27.31,
+          "calibrated_value": 27.31,
+          "unit": "°C",
+          "quality_flag": "ok",
+          "recorded_at": "2026-11-14T12:00:00Z",
+          "received_at": "2026-11-14T17:33:30.280997Z"
+        }
+      ]
+    }
+  }
+}

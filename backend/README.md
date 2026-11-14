@@ -1,0 +1,89 @@
+# AgroOrbit Perú: backend (FastAPI)
+
+API de usuarios, parcelas, dispositivos ESP32 y lecturas de suelo. El contrato está en [`docs/api-contract.md`](docs/api-contract.md).
+
+## Requisitos
+
+- Python 3.11 o superior
+- Proyecto de Supabase con las migraciones de `supabase/migrations` aplicadas (tablas `app_user`, `plot`, `device` y `sensor_reading`). Las migraciones las gestiona otra parte del equipo; esta API no crea tablas.
+
+## Instalación
+
+```bash
+cd backend
+python -m venv .venv
+# Windows:      .venv\Scripts\activate
+# Linux/macOS:  source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # y completa los valores
+```
+
+### Variables de `.env`
+
+| Variable | Descripción |
+|---|---|
+| `DATABASE_URL` | Cadena PostgreSQL de Supabase (Connect → pooler). Se usa psycopg 3 |
+| `SUPABASE_URL` | `https://<ref>.supabase.co`. Con claves JWT asimétricas (ES256/RS256) basta esta variable: se usa el JWKS público |
+| `SUPABASE_JWT_SECRET` | Solo para proyectos con secreto HS256 (Settings → API → JWT Secret) |
+| `SUPABASE_JWT_AUDIENCE` | Por defecto `authenticated` |
+| `CORS_ORIGINS` | Orígenes separados por comas. Por defecto `http://localhost:5173` |
+
+**Nunca subas `.env`**: está en `.gitignore`.
+
+## Ejecutar
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+- Estado: `GET http://localhost:8000/health`
+- Documentación interactiva: `http://localhost:8000/docs`
+
+## Pruebas
+
+```bash
+pytest
+```
+
+Las pruebas usan SQLite en memoria y JWT firmados localmente. **No tocan Supabase.**
+
+## Flujo con la parcela de prueba
+
+```bash
+TOKEN="<access_token de Supabase>"
+API=http://localhost:8000
+
+curl -X POST $API/api/users/me -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"display_name":"Agricultor Sullana"}'
+
+curl -X POST $API/api/plots -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"Parcela piloto Sullana","latitude":-4.90,"longitude":-80.70}'
+# -> copia el "id" en PLOT_ID
+
+curl -X POST $API/api/plots/$PLOT_ID/devices -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"external_id":"esp32-sullana-01"}'
+# -> guarda "device_key" (solo se muestra una vez) en DEVICE_KEY
+
+curl -X POST $API/api/devices/readings -H "X-Device-Key: $DEVICE_KEY" -H "Content-Type: application/json" \
+  -d '{"readings":[{"sensor_type":"soil_moisture","raw_value":2100,"calibrated_value":41.5,"unit":"%","recorded_at":"2026-11-14T12:00:00Z"}]}'
+
+curl "$API/api/plots/$PLOT_ID/sensors/readings?sensor_type=soil_moisture&limit=50" -H "Authorization: Bearer $TOKEN"
+```
+
+## Estructura
+
+```
+app/
+  main.py               FastAPI, CORS, manejadores de error, /health
+  core/config.py        configuración (.env)
+  core/exceptions.py    errores JSON {"error": {code, message, details}}
+  api/router.py         rutas bajo /api
+  api/deps.py           usuario actual, sesión de BD, parcela propia (404 si es ajena)
+  api/routes/           users, plots (incluye devices e historial), devices (ingesta)
+  services/auth.py      validación del JWT de Supabase (HS256 o JWKS)
+  services/sensor_service.py  registro de dispositivos, ingesta e historial
+  schemas/              modelos Pydantic de entrada y salida
+  database/             motor, sesión y modelos ORM (app_user, plot, device, sensor_reading)
+tests/                  pytest con SQLite en memoria
+docs/                   contrato de API y ejemplos JSON
+```

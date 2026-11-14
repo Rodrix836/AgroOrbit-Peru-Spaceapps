@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/plots"
+  },
+  "response": {
+    "status": 401,
+    "body": {
+      "error": {
+        "code": "missing_token",
+        "message": "Se requiere un token de acceso.",
+        "details": null
+      }
+    }
+  }
+}
