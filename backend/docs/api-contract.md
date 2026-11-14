@@ -108,7 +108,21 @@ Actualiza **solo los campos enviados** y devuelve el `PlotRead` completo. Acepta
 - `{}` no cambia nada. Campos desconocidos, `id` o `user_id` → **422** `validation_error`.
 - Parcela ajena o inexistente → **404** `plot_not_found`.
 - Si cambian `latitude`/`longitude`, el historial NASA del punto anterior deja de mostrarse: vuelve a importar con `POST /api/plots/{plot_id}/nasa/power`.
-- El cultivo anterior, el actual y la fecha de la próxima campaña **aún no tienen columna en la base**. Necesitan una migración (propuesta: tabla `crop_cycle`).
+- El historial de cultivos y la fecha de la próxima campaña se guardan en `crop_cycle`. La migración `20261114222638_create_crop_cycles.sql` prepara las tablas. La API de campañas queda pendiente.
+
+#### Persistencia para las rutas de campañas
+
+| Campo del formulario | Registro en `crop_cycle` |
+| --- | --- |
+| Cultivo anterior | Último ciclo `finished`, con `crop_code`. Orden sugerido: `coalesce(harvest_date, sowing_date) DESC NULLS LAST, created_at DESC, id DESC`. |
+| Cultivo actual | Único ciclo `active` de la parcela, con `crop_code`. |
+| Inicio previsto de la próxima campaña | `sowing_date` del único ciclo `planned` de la parcela. El cultivo puede quedar pendiente (`crop_code = null`). |
+
+Las fechas de ciclos activos y terminados pueden quedar en `null` si el usuario no las conoce. Si se informan ambas fechas, la cosecha debe ser igual o posterior a la siembra. Usa `origin: "farmer"` para datos declarados y `"recommendation"` para una campaña que se registra a partir de una recomendación.
+
+Usa la dependencia `OwnedPlot` para limitar las lecturas y escrituras al propietario. Al corregir los datos del formulario, actualiza el ciclo seleccionado por su ID. La base admite varios ciclos terminados y limita los ciclos activos y planificados a uno de cada tipo por parcela.
+
+Los códigos del catálogo inicial son `maiz`, `frijol_caupi` y `camote`, iguales a los IDs de `GET /api/crops`. Esa ruta sigue leyendo el catálogo de Python. Al añadir un código allí, inclúyelo también en el catálogo SQL antes de registrarlo en `crop_cycle`.
 
 ## Cultivos
 
