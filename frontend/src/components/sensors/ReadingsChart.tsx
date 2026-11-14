@@ -25,23 +25,23 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
   if (data.length < 2) return null
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-3">
-      <p className="mb-2 font-semibold">Lecturas del sensor ESP32</p>
-      <div className="h-64 w-full">
+    <div className="rounded-2xl border border-soil-200 bg-white p-3">
+      <p className="mb-2 font-bold text-soil-800">Lecturas del sensor ESP32</p>
+      <div className="h-72 w-full">
         <ResponsiveContainer>
-          <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="t" tickFormatter={formatShortTime} minTickGap={50} fontSize={12} />
-            <YAxis yAxisId="h" fontSize={12} unit="%" />
-            <YAxis yAxisId="t" orientation="right" fontSize={12} unit="°" />
-            <Tooltip labelFormatter={(v) => formatShortTime(String(v))} />
-            <Legend />
+          <LineChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2cb9e" />
+            <XAxis dataKey="t" tickFormatter={formatShortTime} minTickGap={90} fontSize={16} />
+            <YAxis yAxisId="h" fontSize={16} width={45} unit="%" />
+            <YAxis yAxisId="t" orientation="right" fontSize={16} width={45} unit="°" />
+            <Tooltip labelFormatter={(v) => formatShortTime(String(v))} contentStyle={{ fontSize: 16 }} />
+            <Legend wrapperStyle={{ fontSize: 16 }} />
             <Line
               yAxisId="h"
               type="monotone"
               dataKey="humedad"
-              name="Humedad del suelo (%)"
-              stroke="#15803d"
+              name="Humedad (%)"
+              stroke="#17623a"
               strokeWidth={3}
               dot={false}
             />
@@ -49,17 +49,15 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
               yAxisId="t"
               type="monotone"
               dataKey="temperatura"
-              name="Temp. del suelo (°C)"
-              stroke="#a16207"
+              name="Temp. suelo (°C)"
+              stroke="#9a6a2e"
               strokeWidth={3}
               dot={false}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-1 text-xs text-stone-600">
-        Fuente: sensor ESP32 en tu parcela. Horas en hora de Perú.
-      </p>
+      <p className="mt-1 text-muted">Fuente: sensor ESP32 en tu parcela. Horas en hora de Perú.</p>
     </div>
   )
 }

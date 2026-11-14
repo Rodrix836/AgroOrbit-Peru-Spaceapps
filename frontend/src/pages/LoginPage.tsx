@@ -19,13 +19,13 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-campo-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-brand-50 p-4">
       <form
         onSubmit={onSubmit}
         className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-md"
       >
-        <h1 className="text-2xl font-bold text-campo-900">AgroOrbit</h1>
-        <p className="text-stone-700">Entra para ver tu parcela y comparar rotaciones de cultivos.</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-brand-900">AgroOrbit</h1>
+        <p className="text-muted">Entra para ver tu parcela y comparar rotaciones de cultivos.</p>
         <label className="block">
           <span className="font-medium">Correo</span>
           <input
@@ -34,7 +34,7 @@ export function LoginPage() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-stone-400 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-stone-400 px-3 py-2.5"
           />
         </label>
         <label className="block">
@@ -45,17 +45,17 @@ export function LoginPage() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-stone-400 px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-stone-400 px-3 py-2.5"
           />
         </label>
         {error && (
-          <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">
+          <p role="alert" className="rounded-xl border-l-8 border-danger-700 bg-danger-50 p-3 text-danger-900">
             {error}
           </p>
         )}
         <button
           disabled={busy}
-          className="w-full rounded-lg bg-campo-700 px-4 py-3 font-semibold text-white hover:bg-campo-800 disabled:opacity-60"
+          className="w-full rounded-xl bg-brand-700 px-4 py-3.5 text-lg font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
         >
           {busy ? 'Entrando…' : 'Entrar'}
         </button>

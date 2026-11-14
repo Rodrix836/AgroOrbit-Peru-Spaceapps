@@ -28,31 +28,31 @@ export function NasaChart({ observations }: { observations: NasaObservation[] })
   if (data.length < 2) return null
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-3">
-      <p className="mb-2 font-semibold">Clima regional diario</p>
-      <div className="h-64 w-full">
+    <div className="rounded-2xl border border-nasa-200 bg-white p-3">
+      <p className="mb-2 font-bold text-nasa-800">Clima regional diario</p>
+      <div className="h-72 w-full">
         <ResponsiveContainer>
-          <ComposedChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="d" tickFormatter={formatDay} minTickGap={50} fontSize={12} />
-            <YAxis yAxisId="l" fontSize={12} unit=" mm" />
-            <YAxis yAxisId="t" orientation="right" fontSize={12} unit="°" />
-            <Tooltip labelFormatter={(v) => formatDay(String(v))} />
-            <Legend />
+          <ComposedChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#b9cffc" />
+            <XAxis dataKey="d" tickFormatter={formatDay} minTickGap={90} fontSize={16} />
+            <YAxis yAxisId="l" fontSize={16} width={45} />
+            <YAxis yAxisId="t" orientation="right" fontSize={16} width={45} unit="°" />
+            <Tooltip labelFormatter={(v) => formatDay(String(v))} contentStyle={{ fontSize: 16 }} />
+            <Legend wrapperStyle={{ fontSize: 16 }} />
             <Bar yAxisId="l" dataKey="lluvia" name="Lluvia (mm/día)" fill="#1d4ed8" />
             <Line
               yAxisId="t"
               type="monotone"
               dataKey="temperatura"
-              name="Temp. del aire (°C)"
-              stroke="#dc2626"
+              name="Temp. aire (°C)"
+              stroke="#b42318"
               strokeWidth={3}
               dot={false}
             />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-1 text-xs text-stone-600">
+      <p className="mt-1 text-muted">
         Fuente: NASA POWER. Datos de modelo con escala regional; fechas en tiempo solar local de POWER.
       </p>
     </div>

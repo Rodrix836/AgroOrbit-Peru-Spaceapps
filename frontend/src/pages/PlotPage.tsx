@@ -6,9 +6,9 @@ import { errorMessage } from '../hooks/useAsync'
 import { usePlot } from '../hooks/usePlot'
 import type { Irrigation, PlotPreferences, Priority } from '../types/api'
 
-const input = 'mt-1 w-full rounded-lg border border-stone-400 bg-white px-3 py-2'
+const input = 'mt-1 w-full rounded-xl border border-stone-400 bg-white px-3 py-2.5 text-ink'
 const primaryBtn =
-  'rounded-lg bg-campo-700 px-5 py-3 font-semibold text-white hover:bg-campo-800 disabled:opacity-60'
+  'rounded-xl bg-brand-700 px-5 py-3 font-semibold text-white hover:bg-brand-800 disabled:opacity-60'
 
 function NewPlotForm({ onDone }: { onDone?: () => void }) {
   const { createPlot } = usePlot()
@@ -44,7 +44,7 @@ function NewPlotForm({ onDone }: { onDone?: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-stone-200 bg-white p-4">
+    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-line bg-white p-4 shadow-sm">
       <h3 className="text-lg font-bold">Registrar parcela</h3>
       <label className="block">
         <span className="font-medium">Nombre de la parcela</span>
@@ -74,7 +74,7 @@ function NewPlotForm({ onDone }: { onDone?: () => void }) {
           />
         </label>
       </div>
-      <p className="text-sm text-stone-600">Usa las coordenadas reales de tu parcela, no las del pueblo.</p>
+      <p className="text-sm text-muted">Usa las coordenadas reales de tu parcela, no las del pueblo.</p>
       {error && <ErrorBox message={error} />}
       <button disabled={busy} className={primaryBtn}>
         {busy ? 'Guardando…' : 'Guardar parcela'}
@@ -123,7 +123,7 @@ function PrefsForm() {
   )
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-stone-200 bg-white p-4">
+    <form onSubmit={submit} className="space-y-4 rounded-2xl border border-line bg-white p-4 shadow-sm">
       <h3 className="text-lg font-bold">Campaña de «{plot?.name}»</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
@@ -164,10 +164,10 @@ function PrefsForm() {
           {PRIORITIES.map((p) => (
             <label
               key={p.value}
-              className={`cursor-pointer rounded-lg border-2 px-4 py-2 font-semibold ${
+              className={`cursor-pointer rounded-xl border-2 px-4 py-2 font-semibold ${
                 form.priority === p.value
-                  ? 'border-campo-700 bg-campo-100 text-campo-900'
-                  : 'border-stone-300 bg-white'
+                  ? 'border-brand-700 bg-brand-100 text-brand-900'
+                  : 'border-line bg-white'
               }`}
             >
               <input
@@ -186,10 +186,10 @@ function PrefsForm() {
         <button className={primaryBtn}>Guardar</button>
         {saved && (
           <>
-            <span role="status" className="text-campo-800">
+            <span role="status" className="text-brand-800">
               Guardado en este navegador.
             </span>
-            <Link to="/rotaciones" className="font-semibold text-campo-800 underline">
+            <Link to="/rotaciones" className="font-semibold text-brand-800 underline">
               Ver rotaciones →
             </Link>
           </>
@@ -211,14 +211,14 @@ export function PlotPage() {
       <h2 className="text-2xl font-bold">Mi parcela</h2>
       {!plot ? (
         <>
-          <p className="text-stone-700">Aún no tienes parcelas. Registra la primera para empezar.</p>
+          <p className="text-muted">Aún no tienes parcelas. Registra la primera para empezar.</p>
           <NewPlotForm />
         </>
       ) : (
         <>
-          <div className="rounded-2xl border border-stone-200 bg-white p-4">
+          <div className="rounded-2xl border border-line bg-white p-4 shadow-sm">
             <p className="text-lg font-bold">{plot.name}</p>
-            <p className="text-stone-700">
+            <p className="text-muted">
               Ubicación: {plot.latitude}°, {plot.longitude}°
             </p>
           </div>
@@ -226,7 +226,7 @@ export function PlotPage() {
           {adding ? (
             <NewPlotForm onDone={() => setAdding(false)} />
           ) : (
-            <button onClick={() => setAdding(true)} className="font-semibold text-campo-800 underline">
+            <button onClick={() => setAdding(true)} className="font-semibold text-brand-800 underline">
               + Registrar otra parcela
             </button>
           )}

@@ -40,7 +40,7 @@ export function RotationsPage() {
       <EmptyState
         title="Primero registra tu parcela"
         action={
-          <Link to="/parcela" className="font-semibold text-campo-800 underline">
+          <Link to="/parcela" className="font-semibold text-brand-800 underline">
             Ir a Mi parcela
           </Link>
         }
@@ -53,7 +53,7 @@ export function RotationsPage() {
   return (
     <div className="space-y-5">
       <h2 className="text-2xl font-bold">Comparar rotaciones</h2>
-      <p className="text-stone-700">
+      <p className="text-muted">
         Dos campañas seguidas dentro de los próximos 12 meses. Elige qué te importa más y compara.
       </p>
 
@@ -63,10 +63,10 @@ export function RotationsPage() {
             key={p.value}
             aria-pressed={prefs.priority === p.value}
             onClick={() => savePrefs({ ...prefs, priority: p.value })}
-            className={`rounded-lg border-2 px-4 py-2 font-semibold ${
+            className={`rounded-xl border-2 px-4 py-2.5 font-semibold ${
               prefs.priority === p.value
-                ? 'border-campo-700 bg-campo-100 text-campo-900'
-                : 'border-stone-300 bg-white hover:bg-stone-50'
+                ? 'border-brand-700 bg-brand-100 text-brand-900'
+                : 'border-line bg-white hover:bg-brand-50'
             }`}
           >
             {p.label}
@@ -75,7 +75,7 @@ export function RotationsPage() {
       </div>
 
       {!prefs.startOn && (
-        <p className="rounded-lg bg-amber-50 p-3 text-amber-900">
+        <p className="rounded-xl border-l-8 border-warn-700 bg-warn-50 p-4 text-warn-900">
           Falta la fecha de inicio de la siguiente campaña.{' '}
           <Link to="/parcela" className="font-semibold underline">
             Agrégala en Mi parcela
@@ -102,7 +102,7 @@ export function RotationsPage() {
 
       {!rec.loading && data?.status === 'insufficient_data' && (
         <EmptyState
-          tone="warning"
+          tone="insufficient"
           title="Datos insuficientes para recomendar"
           message={
             <>
@@ -132,7 +132,7 @@ export function RotationsPage() {
                 ))}
             </div>
           )}
-          <p className="text-xs text-stone-600">
+          <p className="text-sm text-muted">
             Versión del motor: {data.engine_version}
             {data.created_at ? ` · Calculado: ${new Date(data.created_at).toLocaleString('es-PE', { timeZone: 'America/Lima' })}` : ''}
             . Cambiar la prioridad no siempre cambia la mejor alternativa.
