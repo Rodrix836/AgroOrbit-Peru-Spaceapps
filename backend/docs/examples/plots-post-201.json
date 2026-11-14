@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/plots",
+    "headers": {
+      "Authorization": "Bearer <access_token de Supabase>"
+    },
+    "body": {
+      "name": "Parcela piloto Sullana",
+      "latitude": -4.9,
+      "longitude": -80.7,
+      "area_ha": 1.5,
+      "water_availability": "medium",
+      "priority": "save_water"
+    }
+  },
+  "response": {
+    "status": 201,
+    "body": {
+      "id": "c4645fb7-03cc-425a-872b-7c7e88d06c90",
+      "user_id": "6d729673-640c-4527-b7fe-42d32fd949d9",
+      "name": "Parcela piloto Sullana",
+      "latitude": -4.9,
+      "longitude": -80.7,
+      "area_ha": 1.5,
+      "water_source": null,
+      "water_availability": "medium",
+      "soil_texture": null,
+      "soil_ph": null,
+      "soil_salinity_ds_m": null,
+      "priority": "save_water",
+      "declared_irrigated": null,
+      "created_at": "2026-11-14T17:33:30Z"
+    }
+  }
+}
