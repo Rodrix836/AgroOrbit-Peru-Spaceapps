@@ -165,3 +165,30 @@ def test_non_utf8_body_gives_clear_error(client, test_device):
     response = client.post(INGEST_URL, content=raw, headers={
         "X-Device-Key": test_device["device_key"], "Content-Type": "application/json"})
     assert_error(response, 400, "invalid_body")
+def test_flat_esp32_payload(client, test_plot, owner_headers):
+    kit = client.post(
+        f"/api/plots/{test_plot['id']}/devices",
+        json={"external_id": "kit-lote4b-01"}, headers=owner_headers,
+    ).json()
+    payload = {
+        "device_id": "kit-lote4b-01", "soil_moisture_pct": 0.0,
+        "soil_moisture_raw": 2926, "soil_temp_c": 30.12,
+    }
+    url = "/api/sensors/readings"
+    key = {"X-Device-Key": kit["device_key"]}
+
+    assert_error(client.post(url, json=payload), 401, "missing_device_key")
+    assert_error(client.post(url, json={**payload, "device_id": "otro-kit"}, headers=key),
+                 403, "device_id_mismatch")
+
+    response = client.post(url, json=payload, headers=key)
+    assert response.status_code == 201, response.text
+    assert response.json()["inserted"] == 2
+    history = client.get(history_url(test_plot), headers=owner_headers)
+    assert history.status_code == 200, history.text
+    rows = {row["sensor_type"]: row for row in history.json()}
+    moisture = rows["soil_moisture"]
+    temperature = rows["soil_temperature"]
+    assert (moisture["raw_value"], moisture["calibrated_value"]) == (2926, 0.0)
+    assert temperature["raw_value"] == 30.12
+    assert moisture["recorded_at"] == moisture["received_at"] == temperature["recorded_at"]

@@ -76,7 +76,9 @@ def _duplicate_details(rows: list[tuple[str, datetime]]) -> list[dict[str, str]]
     ]
 
 
-def ingest_readings(session: Session, device: Device, readings: list[ReadingIn]) -> list[SensorReading]:
+def ingest_readings(
+    session: Session, device: Device, readings: list[ReadingIn], *, received_at: datetime | None = None,
+) -> list[SensorReading]:
     """Inserta el lote completo o nada. Rechaza duplicados (mismo tipo y fecha) con 409."""
     keys = [(r.sensor_type, r.recorded_at) for r in readings]
 
@@ -99,7 +101,8 @@ def ingest_readings(session: Session, device: Device, readings: list[ReadingIn])
             details=_duplicate_details([(row[0], row[1]) for row in existing]),
         )
 
-    received_at = datetime.now(timezone.utc)
+    if received_at is None:
+        received_at = datetime.now(timezone.utc)
     rows = [
         SensorReading(
             device_id=device.id,
