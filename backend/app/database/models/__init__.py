@@ -12,9 +12,10 @@ class Base(DeclarativeBase):
 
 
 from app.database.models.device import Device  # noqa: E402
+from app.database.models.crop_cycle import CropCycle  # noqa: E402
 from app.database.models.nasa_observation import NasaObservation  # noqa: E402
 from app.database.models.plot import Plot  # noqa: E402
 from app.database.models.sensor_reading import SensorReading  # noqa: E402
 from app.database.models.user import AppUser  # noqa: E402
 
-__all__ = ["Base", "AppUser", "Plot", "Device", "SensorReading", "NasaObservation"]
+__all__ = ["Base", "AppUser", "Plot", "Device", "SensorReading", "NasaObservation", "CropCycle"]

@@ -25,15 +25,18 @@ Los ejemplos completos (petición y respuesta reales) están en [`examples/`](ex
 | HTTP | `code` | Cuándo |
 |---|---|---|
 | 400 | `invalid_date_range` | `from` posterior a `to` en el historial |
+| 400 | `invalid_crop_cycle_dates` | Una actualización parcial deja `start_on` posterior a `end_on` |
 | 400 | `invalid_body` | El cuerpo no es JSON en UTF-8 (típico: `°C` enviado en latin-1; el ESP32 debe mandar UTF-8) |
 | 401 | `missing_token`, `invalid_token`, `token_expired` | Token de usuario ausente, inválido o vencido |
 | 401 | `missing_device_key`, `invalid_device_key` | Falta `X-Device-Key` o no coincide |
 | 403 | `device_inactive` | Clave válida, pero el dispositivo está desactivado |
 | 404 | `profile_not_found` | Se intenta crear una parcela sin perfil (hay que llamar antes a `POST /api/users/me`) |
 | 404 | `plot_not_found` | La parcela no existe **o es de otro usuario** (no se distingue a propósito) |
+| 404 | `crop_cycle_not_found` | La campaña no existe o no pertenece a la parcela |
 | 404 | `not_found` | Ruta inexistente |
 | 409 | `device_already_exists` | `external_id` ya registrado |
 | 409 | `duplicate_reading` | Ya existe una lectura con el mismo dispositivo, `sensor_type` y `recorded_at`, o el lote la repite. `details` lista las repetidas |
+| 409 | `active_crop_cycle_overlap`, `active_crop_cycle_exists` | Las fechas de una nueva campaña activa se solapan con otra o la parcela ya tiene una activa |
 | 422 | `validation_error` | Cuerpo, query o path inválidos. `details` es una lista de `{field, message, type}` y no incluye el valor enviado |
 | 500 | `internal_error` | Error inesperado (sin traza ni datos internos) |
 | 502 | `nasa_power_invalid_response` | NASA POWER respondió con datos incompletos, unidades inesperadas o valores inválidos |
@@ -108,7 +111,45 @@ Actualiza **solo los campos enviados** y devuelve el `PlotRead` completo. Acepta
 - `{}` no cambia nada. Campos desconocidos, `id` o `user_id` → **422** `validation_error`.
 - Parcela ajena o inexistente → **404** `plot_not_found`.
 - Si cambian `latitude`/`longitude`, el historial NASA del punto anterior deja de mostrarse: vuelve a importar con `POST /api/plots/{plot_id}/nasa/power`.
-- El cultivo anterior, el actual y la fecha de la próxima campaña **aún no tienen columna en la base**. Necesitan una migración (propuesta: tabla `crop_cycle`).
+- `water_availability` se conserva en `plot`. El cultivo anterior y el actual se derivan de `crop_cycle`; no se duplican en `plot`.
+
+### `GET /api/plots/{plot_id}/crop-cycles` → 200
+
+Devuelve el historial y la selección actual/anterior de la parcela autenticada:
+
+```json
+{
+  "plot_id": "<UUID>",
+  "current": null,
+  "previous": null,
+  "campaigns": []
+}
+```
+
+- `current` es la única campaña con `status: "active"`.
+- `previous` es la campaña `completed` más reciente que termina antes del inicio de `current`. Si no hay campaña activa, `previous` es la campaña `completed` más reciente.
+- Sin campañas, `current` y `previous` son `null` y `campaigns` es `[]`.
+
+### `POST /api/plots/{plot_id}/crop-cycles` → 201
+
+Registra una campaña. `crop_id` debe existir en `GET /api/crops`; las fechas son inclusivas y `start_on` no puede ser posterior a `end_on`.
+
+```json
+{
+  "crop_id": "maiz",
+  "start_on": "2026-10-01",
+  "end_on": "2027-01-31",
+  "status": "active"
+}
+```
+
+`status` acepta `planned`, `active` o `completed` (por defecto `planned`). Una parcela puede tener como máximo una campaña activa. Crear o actualizar una campaña activa que se solape con otra devuelve **409** `active_crop_cycle_overlap`; una segunda activa con fechas distintas devuelve **409** `active_crop_cycle_exists`.
+
+### `PATCH /api/plots/{plot_id}/crop-cycles/{cycle_id}` → 200
+
+Actualiza solo los campos enviados (`crop_id`, `start_on`, `end_on`, `status`). No admite `null`; fechas inválidas devuelven **422** si se envían juntas o **400** `invalid_crop_cycle_dates` si una fecha parcial queda antes/después de la existente. Una campaña ajena a la parcela devuelve **404** `crop_cycle_not_found`.
+
+Las tres rutas requieren el token del propietario. El historial se elimina en cascada al borrar la parcela. `water_availability` permanece en `plot` y continúa actualizándose mediante `PATCH /api/plots/{plot_id}`.
 
 ## Cultivos
 
@@ -124,7 +165,7 @@ Catálogo de `app/data/crops.py` para los selectores. No requiere token. Coincid
 ]
 ```
 
-Los requisitos agronómicos no se exponen aquí. Mientras no tengan fuente, el motor no puede recomendar.
+Los requisitos agronómicos no se exponen aquí. El catálogo incluye campos para temperatura, agua por campaña, duración, pH, salinidad y textura, pero sus valores y `fuentes` permanecen vacíos/null hasta contar con evidencia aplicable al cultivo y al contexto.
 
 ### `GET /api/plots/{plot_id}/climate` → 200
 
@@ -165,6 +206,39 @@ Requiere el token del propietario. `OwnedPlot` devuelve **404** `plot_not_found`
 ```
 
 El cálculo reutiliza `normalizar_datos` y `calcular_indicadores`. El motor de rotaciones y `evaluar_temperatura` pueden consumir los indicadores, pero el catálogo actual tiene límites agronómicos sin completar; la API no infiere compatibilidad ni genera puntuaciones sin esos datos.
+
+## Recomendaciones de rotación
+
+### `POST /api/recommendations` → 200
+
+Requiere el token del propietario de `plot_id`.
+
+```json
+{
+  "plot_id": "<UUID de la parcela>",
+  "priority": "save_water",
+  "start_on": "2026-11-14",
+  "horizon_days": 365
+}
+```
+
+`priority` acepta `save_water` o `improve_soil`; `horizon_days` debe ser mayor que cero. Si faltan datos, la respuesta conserva el contrato de recomendación pero no inventa alternativas ni puntuaciones:
+
+```json
+{
+  "status": "insufficient_data",
+  "engine_version": "1.0",
+  "selected_id": null,
+  "alternatives": [],
+  "missing": [
+    {"field": "current_crop_cycle", "reason": "Registra una campaña active para identificar el cultivo actual."}
+  ]
+}
+```
+
+La respuesta `ok` acepta hasta tres alternativas, cada una con exactamente dos campañas, puntuación de 0 a 100, razones, limitaciones y fuentes. La puntuación existente solo agrega cuatro puntuaciones documentadas (`clima`, `agua`, `suelo`, `diversificacion`) con pesos cuya suma sea 1; no deduce esas puntuaciones. En el catálogo actual los requisitos y fuentes de maíz, frijol caupí y camote están pendientes, así como una metodología de compatibilidad/climatología de campaña. Por ello, esta versión informa faltantes en vez de calcular un `ok` no sustentado.
+
+La metodología de evapotranspiración de referencia puede consultarse en [FAO Irrigation and Drainage Paper 56](https://www.fao.org/4/x0490e/x0490e00.htm). Es una referencia metodológica, no una fuente de valores de campaña específicos para estos tres cultivos ni para esta parcela; los umbrales permanecen `null`.
 
 ## NASA POWER guardado (`nasa_observation`)
 

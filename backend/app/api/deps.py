@@ -25,10 +25,15 @@ def get_owned_plot(
 
     Se responde 404 (no 403) para no revelar la existencia de parcelas ajenas.
     """
+    return get_owned_plot_for_user(session, user.id, plot_id)
+
+
+def get_owned_plot_for_user(session: Session, user_id: UUID, plot_id: UUID) -> Plot:
+    """Reutiliza la comprobación de propiedad en rutas con plot_id en el cuerpo."""
     plot = session.scalar(
         select(Plot)
         .join(AppUser, AppUser.id == Plot.user_id)
-        .where(Plot.id == plot_id, AppUser.auth_user_id == user.id)
+        .where(Plot.id == plot_id, AppUser.auth_user_id == user_id)
     )
     if plot is None:
         raise NotFoundError("Parcela no encontrada.", code="plot_not_found")
