@@ -200,11 +200,26 @@ Los requisitos agronómicos no se exponen aquí. Mientras no tengan fuente, el m
 
 ## Recomendaciones de rotación
 
-> **PROPUESTA: aún no implementada.** Formato acordado con Luis (frontend), **pendiente de que Milene (motor) lo confirme**. Mientras no exista la ruta, el frontend sigue con sus datos de ejemplo.
+> **Estado:** la ruta **ya responde**, pero **sin motor de rotaciones**: devuelve siempre `insufficient_data` con lo que falta de verdad, nunca alternativas. El formato está acordado con Luis (frontend) y **pendiente de que Milene (motor) lo confirme**.
 
 ### `POST /api/recommendations` → 200
 
-Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot_not_found`; cuerpo inválido → **422** `validation_error`.
+Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot_not_found`; cuerpo inválido (`priority` distinta de las dos, `horizon_days` fuera de 90–730, campos extra) → **422** `validation_error`.
+
+**Cómo se calcula hoy** (`app/services/recommendation_service.py`; criterios provisionales):
+
+| `missing[].field` | Aparece si… |
+|---|---|
+| `plot.previous_crop` | la parcela no tiene ningún ciclo `finished` en `crop_cycle` |
+| `plot.water_availability` | la parcela no lo tiene (se guarda con `PATCH /api/plots/{id}`) |
+| `plot.soil_texture` | la parcela no lo tiene (igual) |
+| `crops.<id>.requirements` | el cultivo del catálogo tiene algún rango de temperatura o agua en `null` o no tiene `fuentes` |
+| `climate.history` | no hay NASA POWER guardado anterior a `start_on`, o hay menos de 365 días con `T2M` válido |
+| `engine` | están todos los datos, pero el motor aún no está integrado |
+
+- `context.power` sale de `nasa_observation`: los días guardados del punto actual **anteriores a `start_on`**. `use` es `historico` con ≥ 365 días y `contexto_del_periodo` si hay menos. Es `null` si no hay datos.
+- `context.sensor` resume las lecturas del kit. Las `quality_flag: "test"` nunca se usan como evidencia.
+- **Para integrar el motor (Milene):** asigna `ROTATION_ENGINE` en `recommendation_service.py` a una función `motor(plot, request, context) -> (mode, assumptions, alternatives)`. La ruta ya rellena `status: "ok"`, `selected_id` y `engine_version` (atributo `version` de la función).
 
 ```json
 { "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6", "priority": "save_water", "start_on": "2026-12-01", "horizon_days": 365 }
