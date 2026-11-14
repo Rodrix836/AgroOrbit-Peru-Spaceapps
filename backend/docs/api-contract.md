@@ -108,7 +108,7 @@ Actualiza **solo los campos enviados** y devuelve el `PlotRead` completo. Acepta
 - `{}` no cambia nada. Campos desconocidos, `id` o `user_id` → **422** `validation_error`.
 - Parcela ajena o inexistente → **404** `plot_not_found`.
 - Si cambian `latitude`/`longitude`, el historial NASA del punto anterior deja de mostrarse: vuelve a importar con `POST /api/plots/{plot_id}/nasa/power`.
-- El historial de cultivos y la fecha de la próxima campaña se guardan en `crop_cycle`. La migración `20261114222638_create_crop_cycles.sql` prepara las tablas. La API de campañas queda pendiente.
+- El historial de cultivos y la fecha de la próxima campaña se guardan en `crop_cycle`. La migración `20261114222638_create_crop_cycles.sql` prepara las tablas. Las rutas están en [Ciclos de cultivo](#ciclos-de-cultivo-cultivo-anterior-actual-y-próxima-campaña).
 
 #### Persistencia para las rutas de campañas
 
@@ -123,6 +123,64 @@ Las fechas de ciclos activos y terminados pueden quedar en `null` si el usuario 
 Usa la dependencia `OwnedPlot` para limitar las lecturas y escrituras al propietario. Al corregir los datos del formulario, actualiza el ciclo seleccionado por su ID. La base admite varios ciclos terminados y limita los ciclos activos y planificados a uno de cada tipo por parcela.
 
 Los códigos del catálogo inicial son `maiz`, `frijol_caupi` y `camote`, iguales a los IDs de `GET /api/crops`. Esa ruta sigue leyendo el catálogo de Python. Al añadir un código allí, inclúyelo también en el catálogo SQL antes de registrarlo en `crop_cycle`.
+
+## Ciclos de cultivo: cultivo anterior, actual y próxima campaña
+
+Todas requieren el token del propietario (`OwnedPlot`): parcela ajena o inexistente → **404** `plot_not_found`.
+
+### `GET /api/plots/{plot_id}/crop-cycles` → 200
+
+Lo que necesita el formulario, más el historial (del más reciente al más antiguo):
+
+```json
+{
+  "previous": { "id": "…", "plot_id": "…", "crop_code": "maiz", "sowing_date": "2026-03-01", "harvest_date": "2026-07-15", "status": "finished", "origin": "farmer", "created_at": "2026-11-14T22:40:00Z" },
+  "current":  { "id": "…", "plot_id": "…", "crop_code": "frijol_caupi", "sowing_date": null, "harvest_date": null, "status": "active", "origin": "farmer", "created_at": "…" },
+  "planned":  { "id": "…", "plot_id": "…", "crop_code": null, "sowing_date": "2026-12-01", "harvest_date": null, "status": "planned", "origin": "farmer", "created_at": "…" },
+  "cycles":   [ "…los tres anteriores y cualquier otro finished…" ]
+}
+```
+
+`previous` es el último `finished` (orden: `coalesce(harvest_date, sowing_date)` descendente con nulos al final, luego `created_at` e `id`). Si no hay, cada campo es `null` y `cycles` es `[]`.
+
+### `POST /api/plots/{plot_id}/crop-cycles` → 201
+
+```json
+{ "status": "finished", "crop_code": "maiz", "sowing_date": "2026-03-01", "harvest_date": "2026-07-15" }
+{ "status": "active", "crop_code": "frijol_caupi" }
+{ "status": "planned", "sowing_date": "2026-12-01" }
+```
+
+| Campo | Obligatorio | Notas |
+|---|---|---|
+| `status` | sí | `active`, `finished` o `planned` |
+| `crop_code` | en `active` y `finished` | ID de `GET /api/crops`; opcional en `planned` |
+| `sowing_date` | en `planned` | `AAAA-MM-DD`; opcional en los demás |
+| `harvest_date` | no | ≥ `sowing_date` si ambas existen |
+| `origin` | no | `farmer` (por defecto) o `recommendation` |
+
+Devuelve el ciclo (`CropCycleRead`). Errores:
+- **422** `validation_error`: falta `crop_code` o `sowing_date` según el estado, cosecha antes de la siembra, cultivo desconocido o campos extra. `details[].field` indica el campo.
+- **409** `active_cycle_exists` / `planned_cycle_exists`: la parcela ya tiene uno; `details.cycle_id` es su ID para corregirlo con PATCH.
+
+### `PATCH /api/plots/{plot_id}/crop-cycles/{cycle_id}` → 200
+
+Corrige un ciclo **por su ID**: solo los campos enviados, con las mismas reglas sobre el resultado. Ejemplos:
+- Cambiar el cultivo actual: `{ "crop_code": "camote" }` sobre el ciclo `active`.
+- Cerrar la campaña actual: `{ "status": "finished", "harvest_date": "2026-12-20" }`. Pasa a ser el cultivo anterior y deja libre el `active`.
+- Mover la próxima siembra: `{ "sowing_date": "2027-01-10" }` sobre el ciclo `planned`.
+
+Un ID que no es de esta parcela → **404** `cycle_not_found`.
+
+### `DELETE /api/plots/{plot_id}/crop-cycles/{cycle_id}` → 204
+
+Borra el ciclo (por ejemplo, para quitar la próxima campaña). ID ajeno o ya borrado → **404** `cycle_not_found`.
+
+> **Para Luis, cómo guardar el formulario:** lee `GET …/crop-cycles`.
+> - **`currentCropId`:** si `current` existe, `PATCH` su `crop_code`; si no, `POST` con `status: "active"`.
+> - **`previousCropId`:** igual sobre `previous`, con `status: "finished"`.
+> - **`startOn`:** igual sobre `planned`, con `status: "planned"` y `sowing_date`.
+> - **`waterAvailability` y `priority`:** van con `PATCH /api/plots/{plot_id}`.
 
 ## Cultivos
 
@@ -193,7 +251,7 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
   "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
   "context": { "notice": "…", "power": { "start": "2026-11-01", "end": "2026-11-14", "use": "contexto_del_periodo", "…": "…" }, "sensor": { "quality_flag": "test", "used_as_evidence": false, "reason": "…" }, "assumptions": [] },
   "missing": [
-    { "field": "plot.previous_crop", "reason": "La regla de rotación necesita el cultivo anterior; aún no se guarda en la base." },
+    { "field": "plot.previous_crop", "reason": "La regla de rotación necesita el cultivo anterior; la parcela aún no tiene un ciclo finished." },
     { "field": "crops.maiz.requirements", "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo." }
   ],
   "selected_id": null,
