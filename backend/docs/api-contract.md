@@ -36,9 +36,11 @@ Los ejemplos completos (petición y respuesta reales) están en [`examples/`](ex
 | 409 | `duplicate_reading` | Ya existe una lectura con el mismo dispositivo, `sensor_type` y `recorded_at`, o el lote la repite. `details` lista las repetidas |
 | 422 | `validation_error` | Cuerpo, query o path inválidos. `details` es una lista de `{field, message, type}` y no incluye el valor enviado |
 | 500 | `internal_error` | Error inesperado (sin traza ni datos internos) |
+| 502 | `nasa_power_invalid_response` | NASA POWER respondió con datos incompletos, unidades inesperadas o valores inválidos |
 | 503 | `database_not_configured`, `auth_not_configured`, `auth_unavailable` | Falta configuración en `.env` o Supabase Auth no responde |
+| 503 | `nasa_power_unavailable` | Error de red, timeout o respuesta HTTP fallida de NASA POWER |
 
-Todas las fechas van en **ISO 8601 UTC** (`2026-11-14T12:00:00Z`).
+Las marcas de tiempo van en **ISO 8601 UTC** (`2026-11-14T12:00:00Z`). Las fechas de NASA POWER son días `AAAA-MM-DD` en **hora solar local (LST)** de POWER.
 
 ---
 
@@ -93,6 +95,104 @@ Lista de las parcelas del usuario (las más recientes primero): `PlotRead[]`. Ve
 ### `GET /api/plots/{plot_id}` → 200
 
 Devuelve `PlotRead`, o **404** `plot_not_found` si no existe o no es tuya. Ver [plot-get-200.json](examples/plot-get-200.json) y [error-404-plot-not-found.json](examples/error-404-plot-not-found.json).
+
+### `GET /api/plots/{plot_id}/climate` → 200
+
+Requiere el token del propietario. `OwnedPlot` devuelve **404** `plot_not_found` si la parcela no existe o es ajena, antes de consultar NASA POWER. Las coordenadas proceden de la parcela guardada, no de parámetros del cliente.
+
+| Query | Tipo | Descripción |
+|---|---|---|
+| `from` | fecha `AAAA-MM-DD` | Primer día (LST) del rango, inclusivo; obligatorio |
+| `to` | fecha `AAAA-MM-DD` | Último día (LST) del rango, inclusivo; obligatorio; no puede ser futuro |
+
+`from` posterior a `to` o `to` futuro devuelve **400** `invalid_date_range`; fechas ausentes o mal formadas devuelven **422** `validation_error`. Se consultan T2M (`C`) y PRECTOTCORR (`mm/day`) con `community=AG` y `time-standard=LST`. El valor de relleno que declara POWER en `header.fill_value` (`-999`) se presenta como `null`. Esta ruta **no** guarda nada; para guardar usa `POST /api/plots/{plot_id}/nasa/power`. La respuesta trae también `time_standard: "LST"` y `unidades: {"temperatura_c": "C", "precipitacion_mm_dia": "mm/day"}`.
+
+```json
+{
+  "plot_id": "<UUID de la parcela>",
+  "latitude": -4.9,
+  "longitude": -80.7,
+  "fecha_inicio": "2026-01-01",
+  "fecha_fin": "2026-01-03",
+  "fuente": "NASA POWER",
+  "registros": [
+    {"fecha": "2026-01-01", "temperatura_c": 26.0, "precipitacion_mm_dia": 2.0, "fuente": "NASA POWER"},
+    {"fecha": "2026-01-02", "temperatura_c": 28.0, "precipitacion_mm_dia": 4.0, "fuente": "NASA POWER"},
+    {"fecha": "2026-01-03", "temperatura_c": null, "precipitacion_mm_dia": null, "fuente": "NASA POWER"}
+  ],
+  "indicadores": {
+    "temperatura_promedio_c": 27.0,
+    "temperatura_maxima_diaria_c": 28.0,
+    "temperatura_minima_diaria_c": 26.0,
+    "precipitacion_total_mm": 6.0,
+    "dias_analizados": 3,
+    "dias_temperatura_validos": 2,
+    "dias_precipitacion_validos": 2,
+    "cobertura_temperatura_pct": 66.67,
+    "cobertura_precipitacion_pct": 66.67
+  }
+}
+```
+
+El cálculo reutiliza `normalizar_datos` y `calcular_indicadores`. El motor de rotaciones y `evaluar_temperatura` pueden consumir los indicadores, pero el catálogo actual tiene límites agronómicos sin completar; la API no infiere compatibilidad ni genera puntuaciones sin esos datos.
+
+## NASA POWER guardado (`nasa_observation`)
+
+Son las rutas que ya llama el frontend (`refreshNasaPower` y `getNasaObservations` en `frontend/src/services/api.ts`). Las dos requieren el token del propietario y devuelven **404** `plot_not_found` si la parcela es ajena, sin consultar NASA.
+
+### `POST /api/plots/{plot_id}/nasa/power` → 200
+
+Consulta POWER diario (`T2M`, `PRECTOTCORR`, `community=AG`, `time-standard=LST`) en las coordenadas guardadas de la parcela y lo guarda en `public.nasa_observation`. Se puede repetir: actualiza sin duplicar.
+
+Cuerpo opcional (`{}` o sin cuerpo = **últimos 90 días hasta hoy**):
+
+```json
+{ "start": "2026-08-17", "end": "2026-11-14" }
+```
+
+- Máximo 731 días por petición. `start` > `end`, `end` futuro o rango mayor → **400** `invalid_date_range`.
+- Una fila por parcela, variable y día. `header.fill_value` (-999) se guarda como `null`; 0 mm de lluvia es un día válido.
+- Al reimportar: si POWER devuelve un faltante para un día que ya tenía un valor válido **en el mismo punto**, se conserva el valor. Si cambiaron las coordenadas de la parcela, se reemplaza.
+- Los últimos 3–4 días suelen llegar como faltantes porque POWER publica con retraso: vuelve a importar más tarde para completarlos.
+- Errores: **503** `nasa_power_unavailable`, **502** `nasa_power_invalid_response` (unidades inesperadas, valores imposibles). Si falla, no se guarda nada.
+
+```json
+{
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "latitude": -4.97,
+  "longitude": -80.89,
+  "start": "2026-08-17",
+  "end": "2026-11-14",
+  "source": "NASA POWER",
+  "time_standard": "LST",
+  "variables": ["T2M", "PRECTOTCORR"],
+  "unidades": { "T2M": "C", "PRECTOTCORR": "mm/day" },
+  "dias": 90,
+  "filas_guardadas": 180,
+  "valores_faltantes": 6,
+  "fetched_at": "2026-11-14T21:10:00Z"
+}
+```
+
+### `GET /api/plots/{plot_id}/nasa/observations` → 200
+
+| Query | Tipo | Por defecto |
+|---|---|---|
+| `from` | fecha `AAAA-MM-DD` (LST) | sin límite |
+| `to` | fecha `AAAA-MM-DD` (LST) | sin límite |
+| `variable` | `T2M` o `PRECTOTCORR` | ambas |
+
+Devuelve las observaciones guardadas **del punto actual** de la parcela, ordenadas por `observed_on` y `variable`. Coincide con `NasaObservation` de `frontend/src/types/api.ts`:
+
+```json
+[
+  { "id": "…", "variable": "PRECTOTCORR", "observed_on": "2026-11-01", "value": 17.6, "unit": "mm/day", "source": "NASA POWER" },
+  { "id": "…", "variable": "T2M", "observed_on": "2026-11-01", "value": 26.55, "unit": "C", "source": "NASA POWER" },
+  { "id": "…", "variable": "T2M", "observed_on": "2026-11-14", "value": null, "unit": "C", "source": "NASA POWER" }
+]
+```
+
+> **Para Luis:** las unidades llegan como las da POWER (`C`, `mm/day`), no como en los mocks (`°C`, `mm/día`). Conviértelas solo para mostrarlas. Por ahora solo se guardan `T2M` y `PRECTOTCORR`; `T2M_MIN`, `T2M_MAX`, `RH2M` y `ALLSKY_SFC_SW_DWN` de los mocks todavía no están en la tabla. `from` > `to` → **400** `invalid_date_range`.
 
 ## Dispositivos
 
@@ -195,3 +295,4 @@ Coincide con `SensorReading` de `frontend/src/types/api.ts` y además trae `devi
 | `recorded_at` | `sensor_reading.observed_at` |
 | `device_key` (solo en la respuesta) | `device.secret_hash` = SHA-256 de la clave |
 | usuario del token (`sub`) | `app_user.auth_user_id` |
+| NASA `variable`, `observed_on`, `value`, `unit`, `source` | `nasa_observation.*` (además `time_standard`, `latitude`, `longitude`, `fetched_at`) |

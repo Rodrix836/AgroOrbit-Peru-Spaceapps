@@ -1,0 +1,241 @@
+{
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "estado": "insufficient_data",
+  "modo": "escenario_demostracion",
+  "ubicacion_representativa": true,
+  "coordenadas": {
+    "latitude": -4.97,
+    "longitude": -80.89
+  },
+  "datos_reales_parcela": {
+    "area_ha": null,
+    "water_source": null,
+    "water_availability": null,
+    "soil_texture": null,
+    "soil_ph": null,
+    "soil_salinity_ds_m": null,
+    "declared_irrigated": null
+  },
+  "datos_para_escenario": {
+    "area_ha": 1.0,
+    "water_source": "supuesto: canal",
+    "water_availability": "medium",
+    "soil_texture": "supuesto: franco",
+    "soil_ph": 6.5,
+    "soil_salinity_ds_m": 0.5,
+    "declared_irrigated": true
+  },
+  "procedencia_campos": {
+    "area_ha": "supuesto_demostracion",
+    "water_source": "supuesto_demostracion",
+    "water_availability": "supuesto_demostracion",
+    "soil_texture": "supuesto_demostracion",
+    "soil_ph": "supuesto_demostracion",
+    "soil_salinity_ds_m": "supuesto_demostracion",
+    "declared_irrigated": "supuesto_demostracion"
+  },
+  "supuestos_demostracion_aplicados": [
+    "area_ha",
+    "water_source",
+    "water_availability",
+    "soil_texture",
+    "soil_ph",
+    "soil_salinity_ds_m",
+    "declared_irrigated"
+  ],
+  "contexto_nasa_power": {
+    "fuente": "NASA POWER",
+    "coordenadas": {
+      "latitude": -4.97,
+      "longitude": -80.89
+    },
+    "periodo": {
+      "fecha_inicio": "2026-11-01",
+      "fecha_fin": "2026-11-14",
+      "dias": 14,
+      "dias_validos": 11
+    },
+    "temperatura_media_c": 27.15,
+    "precipitacion_total_mm": 107.57,
+    "codigo_faltante": -999,
+    "datos_diarios_disponibles": false,
+    "uso": "Contexto del 1 al 14 de noviembre de 2026; no es climatología de campaña."
+  },
+  "lecturas_esp32": {
+    "recibidas": 1,
+    "test_ignoradas": 1,
+    "no_test_no_utilizadas": 0,
+    "utilizadas_como_evidencia_agronomica": 0
+  },
+  "rotaciones": [
+    {
+      "rotacion_id": "rotacion_001",
+      "nombre": "Rotación con leguminosa",
+      "campanas": [
+        {
+          "orden": 1,
+          "cultivo": "maiz"
+        },
+        {
+          "orden": 2,
+          "cultivo": "frijol_caupi"
+        },
+        {
+          "orden": 3,
+          "cultivo": "maiz"
+        }
+      ],
+      "estado": "propuesta_por_validar"
+    },
+    {
+      "rotacion_id": "rotacion_002",
+      "nombre": "Rotación diversificada",
+      "campanas": [
+        {
+          "orden": 1,
+          "cultivo": "maiz"
+        },
+        {
+          "orden": 2,
+          "cultivo": "camote"
+        },
+        {
+          "orden": 3,
+          "cultivo": "frijol_caupi"
+        }
+      ],
+      "estado": "propuesta_por_validar"
+    }
+  ],
+  "requisitos_cultivos_pendientes": [
+    {
+      "cultivo_id": "maiz",
+      "nombre": "Maíz",
+      "requisitos": {
+        "temperatura_min_c": null,
+        "temperatura_max_c": null,
+        "agua_min_mm_campana": null,
+        "agua_max_mm_campana": null
+      },
+      "fuentes": [],
+      "requisitos_sin_dato": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ],
+      "requisitos_sin_fuente_por_campo": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ]
+    },
+    {
+      "cultivo_id": "frijol_caupi",
+      "nombre": "Frijol caupí",
+      "requisitos": {
+        "temperatura_min_c": null,
+        "temperatura_max_c": null,
+        "agua_min_mm_campana": null,
+        "agua_max_mm_campana": null
+      },
+      "fuentes": [],
+      "requisitos_sin_dato": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ],
+      "requisitos_sin_fuente_por_campo": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ]
+    },
+    {
+      "cultivo_id": "camote",
+      "nombre": "Camote",
+      "requisitos": {
+        "temperatura_min_c": null,
+        "temperatura_max_c": null,
+        "agua_min_mm_campana": null,
+        "agua_max_mm_campana": null
+      },
+      "fuentes": [],
+      "requisitos_sin_dato": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ],
+      "requisitos_sin_fuente_por_campo": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ]
+    }
+  ],
+  "bloqueos": [
+    {
+      "categoria": "requisito_agronomico",
+      "cultivo_id": "maiz",
+      "requisitos_sin_dato": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ],
+      "requisitos_sin_fuente_por_campo": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ]
+    },
+    {
+      "categoria": "requisito_agronomico",
+      "cultivo_id": "frijol_caupi",
+      "requisitos_sin_dato": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ],
+      "requisitos_sin_fuente_por_campo": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ]
+    },
+    {
+      "categoria": "requisito_agronomico",
+      "cultivo_id": "camote",
+      "requisitos_sin_dato": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ],
+      "requisitos_sin_fuente_por_campo": [
+        "temperatura_min_c",
+        "temperatura_max_c",
+        "agua_min_mm_campana",
+        "agua_max_mm_campana"
+      ]
+    },
+    {
+      "categoria": "evaluacion_con_fuentes",
+      "campo": "evaluacion.pesos"
+    },
+    {
+      "categoria": "evaluacion_con_fuentes",
+      "campo": "evaluacion.rotaciones"
+    }
+  ],
+  "puntuaciones_generadas": false,
+  "comparacion": null
+}

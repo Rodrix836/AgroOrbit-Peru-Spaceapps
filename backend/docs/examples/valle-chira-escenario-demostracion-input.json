@@ -1,0 +1,46 @@
+{
+  "modo": "escenario_demostracion",
+  "nasa_power_fixture": "nasa-power-valle-chira-resumen.json",
+  "parcela": {
+    "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+    "latitude": -4.97,
+    "longitude": -80.89,
+    "area_ha": null,
+    "water_source": null,
+    "water_availability": null,
+    "soil_texture": null,
+    "soil_ph": null,
+    "soil_salinity_ds_m": null,
+    "declared_irrigated": null,
+    "priority": null
+  },
+  "supuestos_demostracion": {
+    "area_ha": 1.0,
+    "water_source": "supuesto: canal",
+    "water_availability": "medium",
+    "soil_texture": "supuesto: franco",
+    "soil_ph": 6.5,
+    "soil_salinity_ds_m": 0.5,
+    "declared_irrigated": true
+  },
+  "lecturas_esp32": [
+    {
+      "sensor_type": "soil_moisture",
+      "calibrated_value": 41.5,
+      "unit": "%",
+      "quality_flag": "test"
+    }
+  ],
+  "rotaciones": [
+    {
+      "rotacion_id": "rotacion_001",
+      "nombre": "Rotación con leguminosa",
+      "cultivos": ["maiz", "frijol_caupi", "maiz"]
+    },
+    {
+      "rotacion_id": "rotacion_002",
+      "nombre": "Rotación diversificada",
+      "cultivos": ["maiz", "camote", "frijol_caupi"]
+    }
+  ]
+}

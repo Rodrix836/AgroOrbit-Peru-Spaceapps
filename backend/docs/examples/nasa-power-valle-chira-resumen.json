@@ -1,0 +1,20 @@
+{
+  "fuente": "NASA POWER",
+  "tipo_dato": "resumen_agregado_proporcionado_por_el_usuario",
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "coordenadas": {
+    "latitude": -4.97,
+    "longitude": -80.89
+  },
+  "periodo": {
+    "fecha_inicio": "2026-11-01",
+    "fecha_fin": "2026-11-14",
+    "dias": 14,
+    "dias_validos": 11
+  },
+  "temperatura_media_c": 27.15,
+  "precipitacion_total_mm": 107.57,
+  "codigo_faltante": -999,
+  "datos_diarios": null,
+  "nota": "Se conserva solo el resumen comunicado; no se reconstruyen valores diarios ni se usa como climatología de campañas futuras."
+}
