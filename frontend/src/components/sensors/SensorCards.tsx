@@ -34,9 +34,15 @@ function Gauge({ value }: { value: number }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
-        className="h-3 w-full bg-track"
+        className="relative h-3 w-full bg-track"
       >
         <div className="h-full bg-ambar" style={{ width: `${pct}%` }} />
+        {/* Marca fina en la posición del valor: con 0 % la barra queda vacía, pero la marca muestra que es 0 y no «sin dato». */}
+        <div
+          aria-hidden
+          className="absolute -top-1 h-5 w-[3px] bg-ink"
+          style={{ left: `${pct}%`, transform: `translateX(-${pct}%)` }}
+        />
       </div>
       <div className="relative mt-1 h-8 font-mono text-[13px] text-muted" aria-hidden>
         {TICKS.map((t) => (
@@ -106,7 +112,6 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
             <div className="mt-4">
               <Gauge value={moisture.calibrated_value} />
             </div>
-            <p className="mt-1 font-mono text-base text-ink">{formatDateTime(moisture.recorded_at)}</p>
             <p className="mt-1 text-muted">Porcentaje según la calibración seco/húmedo del sensor.</p>
           </>
         ) : (
@@ -118,7 +123,6 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
         label="Temperatura del suelo"
         value={temp?.calibrated_value ?? null}
         unit="°C"
-        when={temp ? formatDateTime(temp.recorded_at) : null}
         source="sensor"
         sourceDetail={SOURCE_DETAIL}
         badge={<QualityNotice reading={temp} />}
@@ -126,7 +130,14 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
 
       <div className="border-t border-line pt-4">
         <Eyebrow>Última lectura</Eyebrow>
-        <p className="mt-1 font-mono text-base text-ink">{lastAt ? formatDateTime(lastAt) : 'Sin fecha'}</p>
+        {moisture && temp && moisture.recorded_at !== temp.recorded_at ? (
+          <div className="mt-1 font-mono text-base text-ink">
+            <p>Humedad: {formatDateTime(moisture.recorded_at)}</p>
+            <p>Temperatura: {formatDateTime(temp.recorded_at)}</p>
+          </div>
+        ) : (
+          <p className="mt-1 font-mono text-base text-ink">{lastAt ? formatDateTime(lastAt) : 'Sin fecha'}</p>
+        )}
         <div className="mt-2">
           <SourceBadge kind="sensor" />
         </div>

@@ -9,8 +9,8 @@ interface Props {
   /** null = no hay dato: se muestra "Sin dato", nunca un valor inventado. */
   value: number | null
   unit: string
-  /** Fecha/hora (o período) ya formateada. */
-  when: string | null
+  /** Fecha/hora (o período) ya formateada. Omitir si la fecha se muestra en otro bloque cercano. */
+  when?: string | null
   source: Tone
   sourceDetail?: string
   digits?: number
@@ -36,7 +36,7 @@ export function StatCard({ label, value, unit, when, source, sourceDetail, digit
           <span className="text-xl text-muted">{unit}</span>
         </p>
       )}
-      <p className="mt-2 font-mono text-base text-ink">{when ?? 'Sin fecha'}</p>
+      {when !== undefined && <p className="mt-2 font-mono text-base text-ink">{when ?? 'Sin fecha'}</p>}
       {note && <p className="mt-1 text-muted">{note}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <SourceBadge kind={source} />

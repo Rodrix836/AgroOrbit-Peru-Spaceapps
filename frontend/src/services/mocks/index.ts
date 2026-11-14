@@ -87,11 +87,13 @@ export function mockReadings(): SensorReading[] {
   for (let i = 96; i >= 0; i--) {
     const at = lastAt - i * STEP
     const isLast = i === 0
-    const moisture = 38 + 8 * Math.sin(i / 8)
+    const dry = MOCK_SCENARIO === 'sensor_dry' && isLast
+    const moisture = dry ? 0 : 38 + 8 * Math.sin(i / 8)
     const temp = 27 + 3 * Math.cos(i / 6)
     const flag = (kind: 'moisture' | 'temp'): QualityFlag => {
       if (MOCK_SCENARIO === 'sensor_test') return 'test'
       if (MOCK_SCENARIO === 'sensor_suspect' && isLast && kind === 'moisture') return 'suspect'
+      if (dry && kind === 'moisture') return 'clamped_dry'
       return 'ok'
     }
     const common = { device_id: DEVICE_ID, recorded_at: iso(at), received_at: new Date(at + 4_000).toISOString() }

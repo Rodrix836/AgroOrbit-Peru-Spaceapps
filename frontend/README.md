@@ -42,6 +42,7 @@ Pon `VITE_USE_MOCKS=true` y cambia `VITE_MOCK_SCENARIO` en `.env`. **Reinicia `n
 | `nasa_down` | Aviso **NASA no disponible** (503 `nasa_power_unavailable`) y, debajo, los datos guardados antiguos con su fecha | Diagnóstico → Clima |
 | `insufficient_data` | Estado **Datos insuficientes** con lo que falta y el botón «Completar datos» | Rotaciones |
 | `sensor_test` | Etiqueta ámbar **DATO DE PRUEBA** junto a las lecturas y en el gráfico (`quality_flag = test`) | Diagnóstico → Suelo |
+| `sensor_dry` | Humedad en 0 % (`clamped_dry`): la barra queda vacía y una marca fina en el 0 muestra que es un valor, no «sin dato» | Diagnóstico → Suelo |
 | `sensor_suspect` | Aviso **Lectura dudosa** en la humedad (`quality_flag = suspect`) | Diagnóstico → Suelo |
 
 Un valor desconocido se ignora (se usa `normal`) y avisa en la consola del navegador.

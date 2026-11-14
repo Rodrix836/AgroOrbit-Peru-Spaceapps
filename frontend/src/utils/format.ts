@@ -25,6 +25,7 @@ export function formatDay(day: string): string {
   })
 }
 
+/** Día, mes y hora en formato de 24 horas (hora de Perú), p. ej. "14 nov, 16:51". */
 export function formatShortTime(iso: string): string {
   return new Date(iso).toLocaleString('es-PE', {
     timeZone: TZ,
@@ -32,6 +33,17 @@ export function formatShortTime(iso: string): string {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    hourCycle: 'h23',
+  })
+}
+
+/** Solo la hora en formato de 24 horas (hora de Perú), p. ej. "16:51". Para ejes de gráficos. */
+export function formatHour24(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-PE', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
   })
 }
 

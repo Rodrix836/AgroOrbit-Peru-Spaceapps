@@ -9,6 +9,7 @@ export const SCENARIOS = [
   'insufficient_data', // la recomendación responde insufficient_data
   'sensor_test', // lecturas con quality_flag = test (kit de prueba)
   'sensor_suspect', // última humedad con quality_flag = suspect
+  'sensor_dry', // última humedad en 0 % (clamped_dry): la barra queda vacía pero con marca
 ] as const
 
 export type MockScenario = (typeof SCENARIOS)[number]

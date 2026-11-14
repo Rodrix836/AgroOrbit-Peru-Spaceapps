@@ -10,6 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import type { NasaObservation } from '../../types/api'
+import { integerAxis } from '../../utils/chart'
 import { displayUnit, formatDay, formatDayShort } from '../../utils/format'
 import { Eyebrow } from '../ui/Eyebrow'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
@@ -35,7 +36,11 @@ function dailyRows(observations: NasaObservation[]): DayRow[] {
 const unitOf = (obs: NasaObservation[], variable: string, fallback: string) =>
   displayUnit(obs.find((o) => o.variable === variable)?.unit ?? fallback)
 
-const MARGIN = { top: 5, right: 0, left: 0, bottom: 5 }
+const MARGIN = { top: 5, right: 32, left: 8, bottom: 5 }
+const Y_WIDTH = 48
+
+const valuesOf = (rows: DayRow[], key: 'T2M' | 'PRECTOTCORR') =>
+  rows.flatMap((r) => (r[key] === null ? [] : [r[key] as number]))
 
 /** Dos gráficos azules por día: temperatura del aire (línea) y lluvia (barras). Los días sin dato quedan en blanco. */
 export function NasaChart({ observations }: { observations: NasaObservation[] }) {
@@ -47,6 +52,8 @@ export function NasaChart({ observations }: { observations: NasaObservation[] })
   const hasTemp = data.some((d) => d.T2M !== null)
   const hasRain = data.some((d) => d.PRECTOTCORR !== null)
   if (!hasTemp && !hasRain) return null
+  const tAxis = hasTemp ? integerAxis(valuesOf(data, 'T2M')) : null
+  const rAxis = hasRain ? integerAxis(valuesOf(data, 'PRECTOTCORR'), true) : null
 
   return (
     <div className="space-y-6 border-t border-line pt-4">
@@ -58,7 +65,7 @@ export function NasaChart({ observations }: { observations: NasaObservation[] })
               <LineChart data={data} margin={MARGIN}>
                 <CartesianGrid stroke={GRID_STROKE} vertical={false} />
                 <XAxis dataKey="day" tickFormatter={formatDayShort} minTickGap={50} tick={AXIS_TICK} stroke="#3a4b41" />
-                <YAxis tick={AXIS_TICK} width={36} domain={['auto', 'auto']} stroke="#3a4b41" />
+                <YAxis tick={AXIS_TICK} width={Y_WIDTH} domain={tAxis?.domain} ticks={tAxis?.ticks} allowDecimals={false} stroke="#3a4b41" />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
                   labelFormatter={(v) => formatDay(String(v))}
@@ -87,7 +94,7 @@ export function NasaChart({ observations }: { observations: NasaObservation[] })
               <BarChart data={data} margin={MARGIN}>
                 <CartesianGrid stroke={GRID_STROKE} vertical={false} />
                 <XAxis dataKey="day" tickFormatter={formatDayShort} minTickGap={50} tick={AXIS_TICK} stroke="#3a4b41" />
-                <YAxis tick={AXIS_TICK} width={36} stroke="#3a4b41" />
+                <YAxis tick={AXIS_TICK} width={Y_WIDTH} domain={rAxis?.domain} ticks={rAxis?.ticks} allowDecimals={false} stroke="#3a4b41" />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
                   cursor={{ fill: '#1c2921' }}

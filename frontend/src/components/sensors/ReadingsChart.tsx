@@ -9,7 +9,8 @@ import {
   YAxis,
 } from 'recharts'
 import type { SensorReading } from '../../types/api'
-import { formatShortTime } from '../../utils/format'
+import { integerAxis } from '../../utils/chart'
+import { formatHour24, formatShortTime } from '../../utils/format'
 import { Eyebrow } from '../ui/Eyebrow'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
 import { TestBadge } from './QualityNotice'
@@ -32,6 +33,8 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
   }
   const data = [...byTime.values()].sort((a, b) => a.t.localeCompare(b.t))
   if (data.length < 2) return null
+  const tempValues = data.flatMap((d) => (d.temperatura === undefined ? [] : [d.temperatura]))
+  const tempAxis = tempValues.length ? integerAxis(tempValues) : null
   const hasTest = valid.some(
     (r) => r.quality_flag === 'test' && newest - new Date(r.recorded_at).getTime() <= DAY,
   )
@@ -44,11 +47,29 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
       </div>
       <div className="mt-3 h-64 w-full">
         <ResponsiveContainer>
-          <LineChart data={data} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
+          <LineChart data={data} margin={{ top: 5, right: 12, left: 8, bottom: 5 }}>
             <CartesianGrid stroke={GRID_STROKE} vertical={false} />
-            <XAxis dataKey="t" tickFormatter={formatShortTime} minTickGap={90} tick={AXIS_TICK} stroke="#3a4b41" />
-            <YAxis yAxisId="h" tick={AXIS_TICK} width={44} unit="%" stroke="#3a4b41" />
-            <YAxis yAxisId="t" orientation="right" tick={AXIS_TICK} width={44} unit="°" stroke="#3a4b41" />
+            <XAxis dataKey="t" tickFormatter={formatHour24} minTickGap={60} tick={AXIS_TICK} stroke="#3a4b41" />
+            <YAxis
+              yAxisId="h"
+              domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]}
+              tick={AXIS_TICK}
+              width={52}
+              unit="%"
+              stroke="#3a4b41"
+            />
+            <YAxis
+              yAxisId="t"
+              orientation="right"
+              domain={tempAxis?.domain}
+              ticks={tempAxis?.ticks}
+              allowDecimals={false}
+              tick={AXIS_TICK}
+              width={44}
+              unit="°"
+              stroke="#3a4b41"
+            />
             <Tooltip labelFormatter={(v) => formatShortTime(String(v))} contentStyle={TOOLTIP_STYLE} />
             <Legend wrapperStyle={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13 }} />
             <Line
