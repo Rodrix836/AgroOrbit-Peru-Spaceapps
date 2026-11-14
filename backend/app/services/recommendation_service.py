@@ -78,12 +78,12 @@ def _sensor_context(session: Session, plot: Plot) -> SensorContext:
         .group_by(SensorReading.quality_flag)
     ).all())
     if not flags:
-        return SensorContext(quality_flag=None, used_as_evidence=False, reason="La parcela no tiene lecturas del kit.")
+        return SensorContext(quality_flag=None, used_as_evidence=False, reason="Esta parcela todavía no tiene lecturas del sensor.")
     if set(flags) == {"test"}:
         return SensorContext(quality_flag="test", used_as_evidence=False,
-                             reason="Lecturas de kits de prueba (quality_flag=test): no se usan como evidencia.")
+                             reason="Las lecturas del sensor son de prueba, tomadas fuera del campo, y no se usan para el cálculo.")
     return SensorContext(quality_flag="ok", used_as_evidence=False,
-                         reason="El motor de rotaciones aún no usa las lecturas del sensor.")
+                         reason="Las lecturas del sensor todavía no se usan para el cálculo.")
 
 
 def _missing(session: Session, plot: Plot, power: PowerContext | None, valid_days: int,
@@ -91,28 +91,28 @@ def _missing(session: Session, plot: Plot, power: PowerContext | None, valid_day
     missing = []
     if start_on is None:
         missing.append(MissingItem(field="plot.next_sowing_date",
-                                   reason="Sin start_on en la petición ni ciclo planned con sowing_date en la parcela."))
+                                   reason="Falta la fecha en que piensas sembrar la siguiente campaña."))
     has_previous = session.scalar(select(func.count()).select_from(CropCycle).where(
         CropCycle.plot_id == plot.id, CropCycle.status == "finished"))
     if not has_previous:
         missing.append(MissingItem(field="plot.previous_crop",
-                                   reason="La regla de rotación necesita el cultivo anterior; la parcela aún no tiene un ciclo finished."))
+                                   reason="Falta indicar qué cultivo tuviste antes en esta parcela."))
     if plot.water_availability is None:
         missing.append(MissingItem(field="plot.water_availability",
-                                   reason="Necesario para estimar si el agua cubre la campaña."))
+                                   reason="Falta indicar cuánta agua tienes para regar: poca, media o mucha."))
     if plot.soil_texture is None:
-        missing.append(MissingItem(field="plot.soil_texture", reason="Necesario para la regla de suelo."))
+        missing.append(MissingItem(field="plot.soil_texture", reason="Falta indicar qué tipo de suelo tiene la parcela, por ejemplo arenoso, franco o arcilloso."))
     for crop_id, crop in obtener_cultivos().items():
         if any(crop.get(f) is None for f in CROP_REQUIREMENT_FIELDS) or not crop.get("fuentes"):
             missing.append(MissingItem(field=f"crops.{crop_id}.requirements",
-                                       reason="Rangos de temperatura y agua sin fuente verificable en el catálogo."))
+                                       reason=f"Todavía no tenemos, de una fuente confiable, qué temperaturas y cuánta agua necesita el cultivo «{crop['nombre']}»."))
     if power is None:
         missing.append(MissingItem(field="climate.history",
-                                   reason="No hay datos de NASA POWER guardados: importa con POST /api/plots/{plot_id}/nasa/power."))
+                                   reason="Todavía no hay datos del clima de la NASA guardados para esta parcela."))
     elif valid_days < MIN_HISTORY_DAYS:
         missing.append(MissingItem(field="climate.history",
-                                   reason=f"{valid_days} días de POWER no bastan para evaluar campañas futuras; "
-                                          f"se necesitan al menos {MIN_HISTORY_DAYS}."))
+                                   reason=f"Hay {valid_days} días de datos del clima y se necesita al menos un año ({MIN_HISTORY_DAYS} días) "
+                                          "para comparar campañas."))
     return missing
 
 
@@ -121,7 +121,7 @@ def recommend(session: Session, plot: Plot, request: RecommendationRequest) -> R
     start_on = _resolve_start_on(session, plot, request)
     power, valid_days = _power_context(session, plot, start_on)
     context = RecommendationContext(
-        notice="Evaluación de datos disponibles. Sin datos esenciales no se generan alternativas.",
+        notice="Revisamos los datos de tu parcela. Mientras falten datos importantes, no mostramos alternativas.",
         start_on=start_on,
         power=power,
         sensor=_sensor_context(session, plot),
@@ -129,7 +129,7 @@ def recommend(session: Session, plot: Plot, request: RecommendationRequest) -> R
     missing = _missing(session, plot, power, valid_days, start_on)
 
     if not missing and ROTATION_ENGINE is None:
-        missing.append(MissingItem(field="engine", reason="El motor de rotaciones aún no está integrado en la API."))
+        missing.append(MissingItem(field="engine", reason="El sistema de recomendaciones todavía no está listo."))
     if missing:
         return RecommendationResponse(
             status="insufficient_data", mode="evaluacion", engine_version=API_LAYER_VERSION,
