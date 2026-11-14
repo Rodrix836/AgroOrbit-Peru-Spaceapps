@@ -21,15 +21,19 @@
       "mode": "evaluacion",
       "engine_version": "<versión del motor>",
       "plot_id": "<plot_id>",
+      "calculated_at": "2026-11-14T22:50:00Z",
       "context": {
         "notice": "Evaluación con datos declarados de la parcela y requisitos de cultivo con fuente.",
+        "start_on": "2026-12-01",
         "power": {
           "source": "NASA POWER",
           "time_standard": "LST",
           "start": "<inicio del histórico usado>",
           "end": "<fin del histórico usado>",
           "use": "historico",
-          "indicators": { "<indicador>": "<valor>" }
+          "indicators": {
+            "<indicador>": "<valor>"
+          }
         },
         "sensor": {
           "quality_flag": "ok",
@@ -46,24 +50,58 @@
           "rank": 1,
           "score": 0,
           "campaigns": [
-            { "crop": "<crop id>", "starts_on": "2026-12-01", "ends_on": "<AAAA-MM-DD>" },
-            { "crop": "<crop id>", "starts_on": "<AAAA-MM-DD>", "ends_on": "<AAAA-MM-DD>" }
+            {
+              "crop": "<crop id>",
+              "starts_on": "2026-12-01",
+              "ends_on": "<AAAA-MM-DD>"
+            },
+            {
+              "crop": "<crop id>",
+              "starts_on": "<AAAA-MM-DD>",
+              "ends_on": "<AAAA-MM-DD>"
+            }
           ],
-          "reasons": ["<razón respaldada por una fuente>"],
-          "limitations": ["<limitación>"],
-          "sources": [{ "title": "<título de la fuente>", "url": "<https://...>" }]
+          "reasons": [
+            "<razón respaldada por una fuente>"
+          ],
+          "limitations": [
+            "<limitación>"
+          ],
+          "sources": [
+            {
+              "title": "<título de la fuente>",
+              "url": "<https://...>"
+            }
+          ]
         },
         {
           "id": "rot-b",
           "rank": 2,
           "score": 0,
           "campaigns": [
-            { "crop": "<crop id>", "starts_on": "2026-12-01", "ends_on": "<AAAA-MM-DD>" },
-            { "crop": "<crop id>", "starts_on": "<AAAA-MM-DD>", "ends_on": "<AAAA-MM-DD>" }
+            {
+              "crop": "<crop id>",
+              "starts_on": "2026-12-01",
+              "ends_on": "<AAAA-MM-DD>"
+            },
+            {
+              "crop": "<crop id>",
+              "starts_on": "<AAAA-MM-DD>",
+              "ends_on": "<AAAA-MM-DD>"
+            }
           ],
-          "reasons": ["<razón respaldada por una fuente>"],
-          "limitations": ["<limitación>"],
-          "sources": [{ "title": "<título de la fuente>", "url": "<https://...>" }]
+          "reasons": [
+            "<razón respaldada por una fuente>"
+          ],
+          "limitations": [
+            "<limitación>"
+          ],
+          "sources": [
+            {
+              "title": "<título de la fuente>",
+              "url": "<https://...>"
+            }
+          ]
         }
       ]
     }
