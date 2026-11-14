@@ -1,0 +1,19 @@
+# Entorno virtual de Python
+.venv/
+venv/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+
+# Variables de entorno y credenciales
+.env
+.env.local
+.env.*.local
+
+# Dependencias de frontend
+node_modules/
+dist/
+
+# Archivos del editor
+.vscode/
