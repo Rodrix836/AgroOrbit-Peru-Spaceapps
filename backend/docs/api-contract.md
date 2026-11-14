@@ -136,6 +136,20 @@ Cabecera: `X-Device-Key: <device_key>`. El dispositivo, y con él la parcela, se
 
 Respuesta: `{ "device_id", "inserted", "readings": SensorReading[] }`. Ver [readings-post-201.json](examples/readings-post-201.json), [error-401-invalid-device-key.json](examples/error-401-invalid-device-key.json), [error-403-device-inactive.json](examples/error-403-device-inactive.json), [error-409-duplicate-reading.json](examples/error-409-duplicate-reading.json) y [error-422-validation.json](examples/error-422-validation.json).
 
+### `POST /api/sensors/readings` → 201 (ESP32 sin reloj)
+
+Registra el kit en la parcela con `external_id` igual al identificador del firmware. Envía la clave devuelta al registrar el kit como `X-Device-Key` en el POST. La clave debe corresponder al `device_id` del cuerpo.
+
+```json
+{"device_id":"kit-lote4b-01","soil_moisture_pct":0.0,"soil_moisture_raw":2926,"soil_temp_c":30.12}
+```
+
+Cada muestra guarda dos lecturas con la misma hora UTC de recepción. En la respuesta, `recorded_at` representa esa hora para este formato. Se conserva `0.0` como porcentaje válido de la calibración seco/húmedo. La cadencia del firmware es de 10 segundos.
+
+La ruta devuelve el mismo formato de respuesta que `/api/devices/readings`, con `inserted: 2`. Si falta la clave devuelve `401`. Si la clave pertenece a otro kit devuelve `403` con `device_id_mismatch`.
+
+Sin ID de muestra ni fecha del dispositivo, cada recepción válida se guarda como una muestra nueva. Dos valores idénticos pueden corresponder a muestras legítimas consecutivas. El firmware necesitará un identificador estable por muestra si se agrega deduplicación de reintentos.
+
 ### `GET /api/plots/{plot_id}/sensors/readings` → 200 (frontend)
 
 | Query | Tipo | Por defecto |
