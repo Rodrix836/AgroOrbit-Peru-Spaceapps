@@ -270,8 +270,8 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
   "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
   "context": { "notice": "…", "power": { "start": "2026-11-01", "end": "2026-11-14", "use": "contexto_del_periodo", "…": "…" }, "sensor": { "quality_flag": "test", "used_as_evidence": false, "reason": "…" }, "assumptions": [] },
   "missing": [
-    { "field": "plot.previous_crop", "reason": "La regla de rotación necesita el cultivo anterior; la parcela aún no tiene un ciclo finished." },
-    { "field": "crops.maiz.requirements", "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo." }
+    { "field": "plot.previous_crop", "reason": "Falta indicar qué cultivo tuviste antes en esta parcela." },
+    { "field": "crops.maiz.requirements", "reason": "Todavía no tenemos, de una fuente confiable, qué temperaturas y cuánta agua necesita el cultivo «Maíz»." }
   ],
   "selected_id": null,
   "alternatives": []

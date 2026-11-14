@@ -23,7 +23,7 @@
       "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
       "created_at": "2026-11-14T22:50:00Z",
       "context": {
-        "notice": "Parcela demostrativa: ubicación representativa (Valle del Chira, Sullana), no una chacra real.",
+        "notice": "Revisamos los datos de tu parcela. Mientras falten datos importantes, no mostramos alternativas.",
         "start_on": "2026-12-01",
         "power": {
           "source": "NASA POWER",
@@ -42,38 +42,38 @@
         "sensor": {
           "quality_flag": "test",
           "used_as_evidence": false,
-          "reason": "Lecturas del ESP32 tomadas fuera del campo."
+          "reason": "Las lecturas del sensor son de prueba, tomadas fuera del campo, y no se usan para el cálculo."
         },
         "assumptions": []
       },
       "missing": [
         {
           "field": "plot.previous_crop",
-          "reason": "La regla de rotación necesita el cultivo anterior; la parcela aún no tiene un ciclo finished."
+          "reason": "Falta indicar qué cultivo tuviste antes en esta parcela."
         },
         {
           "field": "plot.water_availability",
-          "reason": "Necesario para estimar si el agua cubre la campaña."
+          "reason": "Falta indicar cuánta agua tienes para regar: poca, media o mucha."
         },
         {
           "field": "plot.soil_texture",
-          "reason": "Necesario para la regla de suelo."
+          "reason": "Falta indicar qué tipo de suelo tiene la parcela, por ejemplo arenoso, franco o arcilloso."
         },
         {
           "field": "crops.maiz.requirements",
-          "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo."
+          "reason": "Todavía no tenemos, de una fuente confiable, qué temperaturas y cuánta agua necesita el cultivo «Maíz»."
         },
         {
           "field": "crops.frijol_caupi.requirements",
-          "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo."
+          "reason": "Todavía no tenemos, de una fuente confiable, qué temperaturas y cuánta agua necesita el cultivo «Frijol caupí»."
         },
         {
           "field": "crops.camote.requirements",
-          "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo."
+          "reason": "Todavía no tenemos, de una fuente confiable, qué temperaturas y cuánta agua necesita el cultivo «Camote»."
         },
         {
           "field": "climate.history",
-          "reason": "14 días de POWER no bastan para evaluar campañas futuras; falta un histórico."
+          "reason": "Hay 11 días de datos del clima y se necesita al menos un año (365 días) para comparar campañas."
         }
       ],
       "selected_id": null,

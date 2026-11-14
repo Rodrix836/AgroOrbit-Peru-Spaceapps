@@ -67,7 +67,7 @@ def test_empty_plot_gives_insufficient_data(client, owner_headers, test_plot):
     assert all(m["reason"] for m in data["missing"])
     assert data["context"]["power"] is None
     assert data["context"]["sensor"] == {"quality_flag": None, "used_as_evidence": False,
-                                         "reason": "La parcela no tiene lecturas del kit."}
+                                         "reason": "Esta parcela todavía no tiene lecturas del sensor."}
     assert data["context"]["assumptions"] == []
 
 
@@ -90,7 +90,7 @@ def test_context_uses_stored_power_and_test_sensor(client, db, owner_headers, te
     assert data["context"]["sensor"]["quality_flag"] == "test"
     assert data["context"]["sensor"]["used_as_evidence"] is False
     history = next(m for m in data["missing"] if m["field"] == "climate.history")
-    assert "14 días" in history["reason"]
+    assert history["reason"].startswith("Hay 14 días de datos del clima")
 
 
 def test_power_after_start_on_is_not_used(client, db, owner_headers, test_plot):
@@ -113,7 +113,7 @@ def test_without_engine_never_invents_alternatives(client, db, owner_headers, te
     response = client.post(URL, json=body(test_plot), headers=owner_headers)
     data = response.json()
     assert data["status"] == "insufficient_data" and data["alternatives"] == []
-    assert data["missing"] == [{"field": "engine", "reason": "El motor de rotaciones aún no está integrado en la API."}]
+    assert data["missing"] == [{"field": "engine", "reason": "El sistema de recomendaciones todavía no está listo."}]
 
 
 def test_engine_hook_returns_ok(client, db, owner_headers, test_plot, monkeypatch):
@@ -191,3 +191,13 @@ def test_engine_receives_resolved_start_on(client, db, owner_headers, test_plot,
     no_date.pop("start_on")
     assert client.post(URL, json=no_date, headers=owner_headers).json()["status"] == "ok"
     assert seen == [date(2026, 12, 15)]
+
+
+def test_reasons_are_plain_language(client, owner_headers, test_plot):
+    data = client.post(URL, json=body(test_plot), headers=owner_headers).json()
+    reasons = {m["field"]: m["reason"] for m in data["missing"]}
+    assert reasons["plot.previous_crop"] == "Falta indicar qué cultivo tuviste antes en esta parcela."
+    assert reasons["crops.maiz.requirements"].endswith("necesita el cultivo «Maíz».")
+    jargon = ("POST ", "/api/", "quality_flag", "finished", "planned", "start_on", "POWER", "motor")
+    for text in [*reasons.values(), data["context"]["notice"], data["context"]["sensor"]["reason"]]:
+        assert not any(word in text for word in jargon), text
