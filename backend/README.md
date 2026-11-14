@@ -1,6 +1,6 @@
 # AgroOrbit Perú: backend (FastAPI)
 
-API de usuarios, parcelas, dispositivos ESP32 y lecturas de suelo. El contrato está en [`docs/api-contract.md`](docs/api-contract.md).
+API de usuarios, parcelas, clima de NASA POWER, dispositivos ESP32 y lecturas de suelo. El contrato está en [`docs/api-contract.md`](docs/api-contract.md).
 
 ## Requisitos
 
@@ -68,7 +68,13 @@ curl -X POST $API/api/devices/readings -H "X-Device-Key: $DEVICE_KEY" -H "Conten
   -d '{"readings":[{"sensor_type":"soil_moisture","raw_value":2100,"calibrated_value":41.5,"unit":"%","recorded_at":"2026-11-14T12:00:00Z"}]}'
 
 curl "$API/api/plots/$PLOT_ID/sensors/readings?sensor_type=soil_moisture&limit=50" -H "Authorization: Bearer $TOKEN"
+
+curl "$API/api/plots/$PLOT_ID/climate?from=2026-01-01&to=2026-01-31" -H "Authorization: Bearer $TOKEN"
 ```
+
+La ruta climática usa la latitud y longitud guardadas en la parcela, consulta los valores diarios T2M y PRECTOTCORR de NASA POWER y devuelve registros normalizados e indicadores. El rango es inclusivo y se pide con fechas `AAAA-MM-DD` en UTC. La consulta puede tardar hasta 60 segundos si NASA POWER no responde; no guarda los datos en la base.
+
+Los indicadores pueden alimentar una evaluación posterior de cultivos y rotaciones. El catálogo actual aún no tiene rangos agronómicos respaldados por fuentes, por lo que esta ruta no calcula compatibilidad ni puntuaciones de rotación.
 
 ## Estructura
 
@@ -79,8 +85,10 @@ app/
   core/exceptions.py    errores JSON {"error": {code, message, details}}
   api/router.py         rutas bajo /api
   api/deps.py           usuario actual, sesión de BD, parcela propia (404 si es ajena)
-  api/routes/           users, plots (incluye devices e historial), devices (ingesta)
+  api/routes/           users, plots (incluye clima, devices e historial), devices (ingesta)
   services/auth.py      validación del JWT de Supabase (HS256 o JWKS)
+  services/climate_service.py  consulta NASA y cálculo de indicadores para parcelas
+  services/nasa/        cliente y normalización de NASA POWER
   services/sensor_service.py  registro de dispositivos, ingesta e historial
   schemas/              modelos Pydantic de entrada y salida
   database/             motor, sesión y modelos ORM (app_user, plot, device, sensor_reading)

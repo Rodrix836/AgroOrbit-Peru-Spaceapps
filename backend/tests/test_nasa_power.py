@@ -46,6 +46,16 @@ def test_datos_faltantes():
     assert registros[2]["precipitacion_mm_dia"] is None
 
 
+def test_normalizacion_con_fechas_presentes_en_solo_un_parametro():
+    datos = crear_respuesta_ejemplo()
+    del datos["properties"]["parameter"]["T2M"]["20260102"]
+    registros = normalizar_datos(datos)
+
+    assert registros[1]["fecha"] == "2026-01-02"
+    assert registros[1]["temperatura_c"] is None
+    assert registros[1]["precipitacion_mm_dia"] == 4.0
+
+
 def test_indicadores():
     datos = crear_respuesta_ejemplo()
     registros = normalizar_datos(datos)

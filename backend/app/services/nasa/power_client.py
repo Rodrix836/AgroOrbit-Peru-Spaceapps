@@ -1,5 +1,9 @@
 
+import logging
+
 import requests
+
+logger = logging.getLogger("agroorbit.nasa")
 
 NASA_POWER_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
 
@@ -34,8 +38,8 @@ def obtener_datos_nasa(latitud, longitud, fecha_inicio, fecha_fin):
 
         return datos
 
-    except requests.exceptions.RequestException as error:
-        print("Error al consultar NASA POWER:", error)
+    except requests.exceptions.RequestException:
+        logger.warning("No se pudo consultar NASA POWER", exc_info=True)
         return None
 
 

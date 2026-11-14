@@ -36,9 +36,11 @@ Los ejemplos completos (petición y respuesta reales) están en [`examples/`](ex
 | 409 | `duplicate_reading` | Ya existe una lectura con el mismo dispositivo, `sensor_type` y `recorded_at`, o el lote la repite. `details` lista las repetidas |
 | 422 | `validation_error` | Cuerpo, query o path inválidos. `details` es una lista de `{field, message, type}` y no incluye el valor enviado |
 | 500 | `internal_error` | Error inesperado (sin traza ni datos internos) |
+| 502 | `nasa_power_invalid_response` | NASA POWER respondió con datos incompletos, unidades inesperadas o valores inválidos |
 | 503 | `database_not_configured`, `auth_not_configured`, `auth_unavailable` | Falta configuración en `.env` o Supabase Auth no responde |
+| 503 | `nasa_power_unavailable` | Error de red, timeout o respuesta HTTP fallida de NASA POWER |
 
-Todas las fechas van en **ISO 8601 UTC** (`2026-11-14T12:00:00Z`).
+Las marcas de tiempo van en **ISO 8601 UTC** (`2026-11-14T12:00:00Z`). El rango climático usa fechas calendario `AAAA-MM-DD` en UTC.
 
 ---
 
@@ -93,6 +95,46 @@ Lista de las parcelas del usuario (las más recientes primero): `PlotRead[]`. Ve
 ### `GET /api/plots/{plot_id}` → 200
 
 Devuelve `PlotRead`, o **404** `plot_not_found` si no existe o no es tuya. Ver [plot-get-200.json](examples/plot-get-200.json) y [error-404-plot-not-found.json](examples/error-404-plot-not-found.json).
+
+### `GET /api/plots/{plot_id}/climate` → 200
+
+Requiere el token del propietario. `OwnedPlot` devuelve **404** `plot_not_found` si la parcela no existe o es ajena, antes de consultar NASA POWER. Las coordenadas proceden de la parcela guardada, no de parámetros del cliente.
+
+| Query | Tipo | Descripción |
+|---|---|---|
+| `from` | fecha `AAAA-MM-DD` | Primer día UTC del rango, inclusivo; obligatorio |
+| `to` | fecha `AAAA-MM-DD` | Último día UTC del rango, inclusivo; obligatorio; no puede ser futuro |
+
+`from` posterior a `to` o `to` futuro devuelve **400** `invalid_date_range`; fechas ausentes o mal formadas devuelven **422** `validation_error`. Se consultan T2M (°C) y PRECTOTCORR (mm/día) con `community=AG`. Los valores faltantes de NASA (`-999`) se presentan como `null`. La respuesta no se persiste y puede incluir días sin mediciones válidas.
+
+```json
+{
+  "plot_id": "<UUID de la parcela>",
+  "latitude": -4.9,
+  "longitude": -80.7,
+  "fecha_inicio": "2026-01-01",
+  "fecha_fin": "2026-01-03",
+  "fuente": "NASA POWER",
+  "registros": [
+    {"fecha": "2026-01-01", "temperatura_c": 26.0, "precipitacion_mm_dia": 2.0, "fuente": "NASA POWER"},
+    {"fecha": "2026-01-02", "temperatura_c": 28.0, "precipitacion_mm_dia": 4.0, "fuente": "NASA POWER"},
+    {"fecha": "2026-01-03", "temperatura_c": null, "precipitacion_mm_dia": null, "fuente": "NASA POWER"}
+  ],
+  "indicadores": {
+    "temperatura_promedio_c": 27.0,
+    "temperatura_maxima_diaria_c": 28.0,
+    "temperatura_minima_diaria_c": 26.0,
+    "precipitacion_total_mm": 6.0,
+    "dias_analizados": 3,
+    "dias_temperatura_validos": 2,
+    "dias_precipitacion_validos": 2,
+    "cobertura_temperatura_pct": 66.67,
+    "cobertura_precipitacion_pct": 66.67
+  }
+}
+```
+
+El cálculo reutiliza `normalizar_datos` y `calcular_indicadores`. El motor de rotaciones y `evaluar_temperatura` pueden consumir los indicadores, pero el catálogo actual tiene límites agronómicos sin completar; la API no infiere compatibilidad ni genera puntuaciones sin esos datos.
 
 ## Dispositivos
 

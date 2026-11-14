@@ -1,6 +1,6 @@
 """Parcelas del usuario, registro de dispositivos e historial de lecturas."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query
@@ -10,10 +10,11 @@ from app.api.deps import CurrentUser, DbSession, OwnedPlot
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.database.models import AppUser, Device, Plot, SensorReading
 from app.schemas.common import as_utc
+from app.schemas.climate import PlotClimateRead
 from app.schemas.device import DeviceCreate, DeviceRead, DeviceRegistered
 from app.schemas.plot import PlotCreate, PlotRead
 from app.schemas.sensor import SensorReadingRead, SensorType
-from app.services import sensor_service
+from app.services import climate_service, sensor_service
 
 router = APIRouter(prefix="/plots", tags=["Parcelas"])
 
@@ -43,6 +44,15 @@ def list_my_plots(user: CurrentUser, session: DbSession) -> list[Plot]:
 @router.get("/{plot_id}", response_model=PlotRead)
 def get_plot(plot: OwnedPlot) -> Plot:
     return plot
+
+
+@router.get("/{plot_id}/climate", response_model=PlotClimateRead, tags=["Clima"])
+def get_plot_climate(
+    plot: OwnedPlot,
+    date_from: Annotated[date, Query(alias="from", description="Primer día UTC, inclusive (AAAA-MM-DD)")],
+    date_to: Annotated[date, Query(alias="to", description="Último día UTC, inclusive (AAAA-MM-DD)")],
+) -> PlotClimateRead:
+    return climate_service.obtener_clima_parcela(plot, date_from, date_to)
 
 
 @router.post("/{plot_id}/devices", response_model=DeviceRegistered, status_code=201, tags=["Dispositivos"])

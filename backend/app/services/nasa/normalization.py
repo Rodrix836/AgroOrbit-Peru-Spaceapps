@@ -1,5 +1,6 @@
 
 from datetime import datetime
+from math import isfinite
 
 
 def normalizar_datos(datos):
@@ -30,15 +31,19 @@ def normalizar_datos(datos):
 
     registros = []
 
-    for fecha in sorted(temperaturas.keys()):
-        temperatura = temperaturas[fecha]
+    for fecha in sorted(temperaturas.keys() | precipitaciones.keys()):
+        temperatura = temperaturas.get(fecha)
         lluvia = precipitaciones.get(fecha)
 
         # NASA POWER suele utilizar -999 para datos faltantes.
-        if temperatura is None or temperatura <= -900:
+        for valor in (temperatura, lluvia):
+            if valor is not None and (isinstance(valor, bool)
+                                     or not isinstance(valor, (int, float))
+                                     or not isfinite(valor)):
+                raise ValueError("Valor climático inválido en la respuesta de NASA POWER.")
+        if temperatura is not None and temperatura <= -900:
             temperatura = None
-
-        if lluvia is None or lluvia <= -900:
+        if lluvia is not None and lluvia <= -900:
             lluvia = None
 
         fecha_formateada = datetime.strptime(
