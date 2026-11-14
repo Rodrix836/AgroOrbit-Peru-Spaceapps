@@ -40,6 +40,19 @@ uvicorn app.main:app --reload --port 8000
 - Estado: `GET http://localhost:8000/health`
 - Documentación interactiva: `http://localhost:8000/docs`
 
+## Despliegue en Render
+
+El archivo [`render.yaml`](../render.yaml), en la raíz del repo, define el servicio `agroorbit-api` (plan gratuito, se redespliega con cada push a `main`).
+
+1. En render.com: **New → Blueprint** → elige este repositorio → Render lee `render.yaml`.
+2. Rellena los valores que pide (no van en el repo):
+   - `DATABASE_URL`: la cadena del **Session pooler** de Supabase (puerto 5432).
+   - `SUPABASE_URL`: `https://<ref>.supabase.co`. Con claves ES256 no hace falta `SUPABASE_JWT_SECRET`.
+   - `CORS_ORIGINS`: `http://localhost:5173` y la URL publicada del frontend, separadas por comas.
+3. **Apply.** Cuando termine, abre `https://<servicio>.onrender.com/health`.
+
+Plan gratuito: el servicio se duerme tras unos 15 minutos sin peticiones, y la primera petición después tarda entre 30 y 60 segundos. El ESP32 debe usar la URL `https://` (en Arduino, `WiFiClientSecure`).
+
 ## Pruebas
 
 ```bash
