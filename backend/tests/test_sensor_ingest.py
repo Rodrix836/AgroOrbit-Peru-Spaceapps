@@ -192,3 +192,38 @@ def test_flat_esp32_payload(client, test_plot, owner_headers):
     assert (moisture["raw_value"], moisture["calibrated_value"]) == (2926, 0.0)
     assert temperature["raw_value"] == 30.12
     assert moisture["recorded_at"] == moisture["received_at"] == temperature["recorded_at"]
+
+
+# --- Kits de prueba: TEST_DEVICE_EXTERNAL_IDS -> quality_flag="test" ---------------------
+
+def use_test_devices(external_ids: str):
+    from conftest import TEST_JWT_SECRET
+    from app.core.config import Settings, get_settings
+    from app.main import app
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        _env_file=None, supabase_jwt_secret=TEST_JWT_SECRET, supabase_url=None,
+        test_device_external_ids=external_ids,
+    )
+
+
+def test_readings_of_test_device_are_flagged(client, owner_headers, test_plot):
+    use_test_devices("otro-kit, kit-lote4b-01")
+    kit = client.post(f"/api/plots/{test_plot['id']}/devices", json={"external_id": "kit-lote4b-01"},
+                      headers=owner_headers).json()
+    key = {"X-Device-Key": kit["device_key"]}
+
+    flat = client.post("/api/sensors/readings", headers=key, json={
+        "device_id": "kit-lote4b-01", "soil_moisture_pct": 41.5, "soil_moisture_raw": 2100, "soil_temp_c": 27.3})
+    batch = client.post(INGEST_URL, headers=key, json={"readings": [reading(quality_flag="clamped_dry")]})
+    assert flat.status_code == batch.status_code == 201
+    assert {r["quality_flag"] for r in flat.json()["readings"] + batch.json()["readings"]} == {"test"}
+
+    history = client.get(history_url(test_plot), headers=owner_headers).json()
+    assert len(history) == 3 and {r["quality_flag"] for r in history} == {"test"}
+
+
+def test_field_devices_are_not_flagged(client, test_device):
+    use_test_devices("kit-lote4b-01")
+    response = send(client, test_device["device_key"], reading(quality_flag="clamped_dry"))
+    assert response.status_code == 201
+    assert response.json()["readings"][0]["quality_flag"] == "clamped_dry"

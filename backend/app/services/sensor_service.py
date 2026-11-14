@@ -17,6 +17,7 @@ from app.schemas.device import DeviceCreate
 from app.schemas.sensor import ReadingIn
 
 DEVICE_KEY_PREFIX = "aok_"
+TEST_QUALITY_FLAG = "test"
 
 
 def hash_device_key(device_key: str) -> str:
@@ -78,8 +79,12 @@ def _duplicate_details(rows: list[tuple[str, datetime]]) -> list[dict[str, str]]
 
 def ingest_readings(
     session: Session, device: Device, readings: list[ReadingIn], *, received_at: datetime | None = None,
+    mark_as_test: bool = False,
 ) -> list[SensorReading]:
-    """Inserta el lote completo o nada. Rechaza duplicados (mismo tipo y fecha) con 409."""
+    """Inserta el lote completo o nada. Rechaza duplicados (mismo tipo y fecha) con 409.
+
+    Con mark_as_test=True todas las lecturas se guardan con quality_flag="test".
+    """
     keys = [(r.sensor_type, r.recorded_at) for r in readings]
 
     repeated = sorted({k for k in keys if keys.count(k) > 1}, key=lambda k: (k[1], k[0]))
@@ -111,7 +116,7 @@ def ingest_readings(
             raw_value=r.raw_value,
             calibrated_value=r.calibrated_value,
             unit=r.unit,
-            quality_flag=r.quality_flag,
+            quality_flag=TEST_QUALITY_FLAG if mark_as_test else r.quality_flag,
             received_at=received_at,
         )
         for r in readings
