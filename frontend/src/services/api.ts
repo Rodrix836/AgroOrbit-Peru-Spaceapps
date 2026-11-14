@@ -7,6 +7,7 @@ import type {
   NasaObservation,
   Plot,
   PlotInput,
+  PlotUpdate,
   RecommendationRequest,
   RecommendationResponse,
   SensorReading,
@@ -17,6 +18,7 @@ import {
   MOCK_SCENARIO,
   mockCreatePlot,
   mockCrops,
+  mockUpdatePlot,
   mockNasa,
   mockPlots,
   mockReadings,
@@ -116,8 +118,15 @@ export const api = {
       ? wait(mockCreatePlot(input))
       : request<Plot>('/api/plots', { method: 'POST', body: JSON.stringify(input) }),
 
-  /** PENDIENTE BACKEND: GET /api/crops no existe todavía. Siempre usa mocks (DATOS DE EJEMPLO). */
-  listCrops: (): Promise<Crop[]> => wait(mockCrops),
+  /** Guarda solo los campos enviados y devuelve la parcela completa. null borra un campo opcional. */
+  updatePlot: (plotId: string, patch: PlotUpdate): Promise<Plot> =>
+    USE_MOCKS
+      ? wait(mockUpdatePlot(plotId, patch))
+      : request<Plot>(`/api/plots/${plotId}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  /** Catálogo público (no necesita token). */
+  listCrops: (): Promise<Crop[]> =>
+    USE_MOCKS ? wait(mockCrops) : request<Crop[]>('/api/crops'),
 
   /** Orden ascendente por recorded_at. */
   getReadings: (plotId: string): Promise<SensorReading[]> =>

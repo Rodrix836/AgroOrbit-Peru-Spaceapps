@@ -19,7 +19,7 @@ export function PlotSummary() {
       </p>
       <p className="text-ink">Cultivo: {crop}</p>
       <p className="text-ink">
-        Agua: {prefs.waterAvailability ? WATER_LABELS[prefs.waterAvailability] : 'Sin indicar'}
+        Agua: {plot.water_availability ? WATER_LABELS[plot.water_availability] : 'Sin indicar'}
       </p>
     </div>
   )

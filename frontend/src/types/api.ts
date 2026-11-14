@@ -3,9 +3,11 @@
 // Fuente de verdad: backend/docs/api-contract.md y backend/docs/examples/*.json (solo lectura).
 // CONFIRMADO con el contrato: Plot, PlotInput, SensorReading, NasaObservation, formato de error.
 //
-// PENDIENTE BACKEND (no existe en la API todavía): GET /api/crops y POST /api/recommendations.
-// Los tipos Crop, RecommendationRequest y RecommendationResponse son SUPUESTOS y sus respuestas
-// salen de mocks (DATOS DE EJEMPLO) hasta que Rodrigo los confirme.
+// CONFIRMADO también: GET /api/crops y PATCH /api/plots/{id}.
+//
+// PENDIENTE BACKEND (no existe en la API todavía): POST /api/recommendations. Sus tipos
+// (RecommendationRequest/Response, incl. `mode`, `context` y `missing`) son SUPUESTOS y la
+// respuesta sale de mocks (DATOS DE EJEMPLO) hasta que Rodrigo los confirme.
 
 // ---------- Formato de error (todas las rutas) ----------
 
@@ -73,24 +75,25 @@ export interface UserProfile {
   created_at: string
 }
 
-/** PENDIENTE BACKEND: GET /api/crops no existe todavía (forma supuesta). */
+/** Cuerpo de PATCH /api/plots/{id}: solo los campos enviados cambian; null borra un campo opcional. */
+export type PlotUpdate = Partial<PlotInput>
+
+/** Cultivo de GET /api/crops (catálogo público: solo id y nombre). */
 export interface Crop {
   id: string
   name: string
 }
 
 /**
- * Datos del formulario de parcela que la API aún no guarda (no hay PATCH de parcelas
- * ni crop-cycles). Se conservan solo en este navegador.
+ * Datos del formulario de parcela que la API todavía no guarda (cultivo anterior, cultivo actual
+ * y fecha de la próxima campaña: falta la tabla crop_cycle). Se conservan solo en este navegador.
+ * El agua y la prioridad ya se guardan en la parcela (PATCH /api/plots/{id}).
  */
 export interface PlotPreferences {
   previousCropId: string
   currentCropId: string
-  /** '' = sin indicar (no se inventa un valor). */
-  waterAvailability: WaterAvailability | ''
   /** Inicio de la siguiente campaña, AAAA-MM-DD. */
   startOn: string
-  priority: Priority
 }
 
 // ---------- Sensor ESP32 ----------
@@ -154,6 +157,32 @@ export interface NasaImportResult {
 
 // ---------- Recomendaciones (PENDIENTE BACKEND: POST /api/recommendations) ----------
 
+/** "evaluacion" = cálculo para la parcela; "escenario_demostracion" = datos de demostración. */
+export type RecommendationMode = 'evaluacion' | 'escenario_demostracion'
+
+/** Dato que falta para recomendar (status = insufficient_data). */
+export interface MissingItem {
+  /** Nombre del campo que falta. */
+  field: string
+  /** Por qué hace falta o por qué no se pudo usar. */
+  reason: string
+}
+
+/**
+ * PENDIENTE BACKEND: formato de `context` no cerrado; todos los campos internos son opcionales.
+ * Con qué datos se calculó la recomendación.
+ */
+export interface RecommendationContext {
+  /** Período de NASA POWER usado (AAAA-MM-DD, LST). */
+  start?: string
+  end?: string
+  /** Indicadores del período (nombres por confirmar). */
+  indicadores?: Record<string, number | string | null>
+  /** true = la parcela es una ubicación representativa, no una chacra real. */
+  representative_plot?: boolean
+  representative_plot_notice?: string
+}
+
 export interface RecommendationRequest {
   plot_id: string
   horizon_days: number
@@ -187,10 +216,15 @@ export interface Alternative {
 
 export interface RecommendationResponse {
   status: 'ok' | 'insufficient_data'
+  /** PENDIENTE BACKEND. Con "escenario_demostracion" la pantalla avisa que no es para una parcela real. */
+  mode?: RecommendationMode
   engine_version: string
-  /** Datos críticos que faltan cuando status = insufficient_data. */
-  missing?: string[]
+  /** PENDIENTE BACKEND: período NASA POWER usado y aviso de parcela representativa. */
+  context?: RecommendationContext
+  /** Datos que faltan cuando status = insufficient_data. */
+  missing?: MissingItem[]
   selected_id?: string
-  alternatives: Alternative[]
+  /** Con insufficient_data no llegan alternativas (ni puntajes). */
+  alternatives?: Alternative[]
   created_at?: string
 }

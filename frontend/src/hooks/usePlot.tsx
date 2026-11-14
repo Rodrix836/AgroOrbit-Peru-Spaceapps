@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { api } from '../services/api'
-import type { Crop, Plot, PlotInput, PlotPreferences, Priority } from '../types/api'
+import type { Crop, Plot, PlotInput, PlotPreferences, PlotUpdate } from '../types/api'
 import { useAsync } from './useAsync'
 import { useAuth } from './useAuth'
 
@@ -10,16 +10,7 @@ const prefsKey = (id: string) => `agroorbit.prefs.${id}`
 export const DEFAULT_PREFS: PlotPreferences = {
   previousCropId: '',
   currentCropId: '',
-  waterAvailability: '', // sin indicar: no se inventa un valor
   startOn: '',
-  priority: 'save_water',
-}
-
-/** Valores iniciales: lo que la API ya guardó en la parcela (si es una prioridad que ofrece la interfaz). */
-function prefsFromPlot(plot: Plot): PlotPreferences {
-  const priority: Priority =
-    plot.priority === 'save_water' || plot.priority === 'improve_soil' ? plot.priority : DEFAULT_PREFS.priority
-  return { ...DEFAULT_PREFS, waterAvailability: plot.water_availability ?? '', priority }
 }
 
 /** Nombre para el perfil: la parte del correo antes de la @. */
@@ -47,16 +38,19 @@ interface PlotState {
   plots: Plot[]
   plot: Plot | null
   crops: Crop[]
+  /** Error al cargar el catálogo de cultivos (los selectores quedan solo con «No sé»). */
+  cropsError: string | null
   loading: boolean
   error: string | null
   reload: () => void
   selectPlot: (id: string) => void
   createPlot: (input: PlotInput) => Promise<Plot>
+  /** Guarda en la API los campos enviados (PATCH) y actualiza la parcela con la respuesta. */
+  updatePlot: (patch: PlotUpdate) => Promise<Plot>
   prefs: PlotPreferences
   /**
-   * Preferencias de la parcela (cultivos, disponibilidad de agua, inicio, prioridad).
-   * La API no tiene PATCH de parcelas ni crop-cycles todavía (PENDIENTE BACKEND):
-   * mientras tanto se guardan solo en este navegador.
+   * Cultivo anterior, cultivo actual y fecha de la próxima campaña.
+   * La API aún no tiene dónde guardarlos (falta la tabla crop_cycle): solo en este navegador.
    */
   savePrefs: (prefs: PlotPreferences) => void
 }
@@ -75,19 +69,26 @@ export function PlotProvider({ children }: { children: ReactNode }) {
   const [selectedId, setSelectedId] = useState<string | null>(() => readLS(SEL_KEY))
   const [prefsVersion, setPrefsVersion] = useState(0)
 
-  const plots = plotsQ.data ?? []
+  // Parcelas ya guardadas con PATCH: la respuesta de la API reemplaza a la de la lista.
+  const [updated, setUpdated] = useState<Record<string, Plot>>({})
+
+  const plots = (plotsQ.data ?? []).map((p) => updated[p.id] ?? p)
   const plot = plots.find((p) => p.id === selectedId) ?? plots[0] ?? null
 
   const prefs: PlotPreferences = (() => {
     void prefsVersion
     if (!plot) return DEFAULT_PREFS
-    const initial = prefsFromPlot(plot)
     const raw = readLS(prefsKey(plot.id))
-    if (!raw) return initial
+    if (!raw) return DEFAULT_PREFS
     try {
-      return { ...initial, ...(JSON.parse(raw) as Partial<PlotPreferences>) }
+      const stored = JSON.parse(raw) as Partial<PlotPreferences>
+      return {
+        previousCropId: stored.previousCropId ?? '',
+        currentCropId: stored.currentCropId ?? '',
+        startOn: stored.startOn ?? '',
+      }
     } catch {
-      return initial
+      return DEFAULT_PREFS
     }
   })()
 
@@ -107,6 +108,17 @@ export function PlotProvider({ children }: { children: ReactNode }) {
     [selectPlot],
   )
 
+  const plotId = plot?.id
+  const updatePlot = useCallback(
+    async (patch: PlotUpdate) => {
+      if (!plotId) throw new Error('No hay parcela seleccionada.')
+      const saved = await api.updatePlot(plotId, patch)
+      setUpdated((u) => ({ ...u, [saved.id]: saved }))
+      return saved
+    },
+    [plotId],
+  )
+
   const savePrefs = useCallback(
     (next: PlotPreferences) => {
       if (!plot) return
@@ -120,11 +132,13 @@ export function PlotProvider({ children }: { children: ReactNode }) {
     plots,
     plot,
     crops: cropsQ.data ?? [],
+    cropsError: cropsQ.error,
     loading: plotsQ.loading,
     error: plotsQ.error,
     reload: plotsQ.reload,
     selectPlot,
     createPlot,
+    updatePlot,
     prefs,
     savePrefs,
   }

@@ -10,8 +10,14 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { SourceBadge } from '../components/ui/SourceBadge'
 import { inputClass } from '../components/ui/styles'
 import { errorMessage } from '../hooks/useAsync'
+import { USE_MOCKS } from '../services/api'
 import { usePlot } from '../hooks/usePlot'
 import type { PlotPreferences, Priority, WaterAvailability } from '../types/api'
+
+/** La prioridad de la parcela si es una de las dos que ofrece la interfaz; si no, '' (sin elegir). */
+function uiPriority(p: string | null | undefined): Priority | '' {
+  return p === 'save_water' || p === 'improve_soil' ? p : ''
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -102,25 +108,51 @@ const PRIORITIES: { value: Priority; label: string; hint: string }[] = [
 
 /** Bloques B (cultivos y fechas) y C (agua y prioridad): un solo formulario. */
 function PrefsForm() {
-  const { plot, crops, prefs, savePrefs } = usePlot()
-  const [form, setForm] = useState<PlotPreferences>(prefs)
+  const { plot, crops, cropsError, prefs, savePrefs, updatePlot } = usePlot()
+  const [local, setLocal] = useState<PlotPreferences>(prefs)
+  // Agua y prioridad se guardan en la API; '' = sin indicar (prioridad: la parcela tiene otra que la interfaz no ofrece).
+  const [water, setWater] = useState<WaterAvailability | ''>(plot?.water_availability ?? '')
+  const [priority, setPriority] = useState<Priority | ''>(uiPriority(plot?.priority))
+  const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
-  useEffect(() => setForm(prefs), [plot?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const set = <K extends keyof PlotPreferences>(k: K, v: PlotPreferences[K]) => {
+  useEffect(() => {
+    setLocal(prefs)
+    setWater(plot?.water_availability ?? '')
+    setPriority(uiPriority(plot?.priority))
     setSaved(false)
-    setForm((f) => ({ ...f, [k]: v }))
+    setSaveError(null)
+  }, [plot?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setLocalField = <K extends keyof PlotPreferences>(k: K, v: PlotPreferences[K]) => {
+    setSaved(false)
+    setLocal((f) => ({ ...f, [k]: v }))
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    savePrefs(form)
-    setSaved(true)
+    setBusy(true)
+    setSaved(false)
+    setSaveError(null)
+    savePrefs(local) // cultivos y fecha: solo en este navegador
+    try {
+      // null borra el campo; la prioridad solo se envía si se eligió una.
+      await updatePlot({ water_availability: water || null, ...(priority ? { priority } : {}) })
+      setSaved(true)
+    } catch (err) {
+      setSaveError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
   }
 
   const cropSelect = (value: string, onChange: (v: string) => void) => (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+    <select
+      value={crops.some((c) => c.id === value) ? value : ''}
+      onChange={(e) => onChange(e.target.value)}
+      className={inputClass}
+    >
       <option value="">No sé / no aplica</option>
       {crops.map((c) => (
         <option key={c.id} value={c.id}>
@@ -131,32 +163,42 @@ function PrefsForm() {
   )
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={(e) => void submit(e)}>
       <FormBlock letter="B" name="Cultivos y fechas">
         <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Cultivo anterior">{cropSelect(form.previousCropId, (v) => set('previousCropId', v))}</Field>
-          <Field label="Cultivo actual">{cropSelect(form.currentCropId, (v) => set('currentCropId', v))}</Field>
+          <Field label="Cultivo anterior">
+            {cropSelect(local.previousCropId, (v) => setLocalField('previousCropId', v))}
+          </Field>
+          <Field label="Cultivo actual">
+            {cropSelect(local.currentCropId, (v) => setLocalField('currentCropId', v))}
+          </Field>
         </div>
-        {/* PENDIENTE BACKEND: GET /api/crops no existe; la lista sale de mocks. */}
-        <div className="flex flex-wrap items-center gap-3">
-          <SourceBadge kind="prototype" label="Datos de ejemplo" />
-          <span className="text-muted">La lista de cultivos todavía es de muestra.</span>
-        </div>
+        {USE_MOCKS && (
+          <div className="flex flex-wrap items-center gap-3">
+            <SourceBadge kind="prototype" label="Datos de ejemplo" />
+            <span className="text-muted">La lista de cultivos es de muestra (modo ejemplo).</span>
+          </div>
+        )}
+        {cropsError && <ErrorBox message={`No se pudo cargar la lista de cultivos. ${cropsError}`} />}
         <Field label="Inicio previsto de la siguiente campaña">
           <input
             type="date"
-            value={form.startOn}
-            onChange={(e) => set('startOn', e.target.value)}
+            value={local.startOn}
+            onChange={(e) => setLocalField('startOn', e.target.value)}
             className={`${inputClass} font-mono md:max-w-xs`}
           />
         </Field>
+        <p className="text-muted">Por ahora se guarda solo en este navegador.</p>
       </FormBlock>
 
       <FormBlock letter="C" name="Agua y prioridad">
         <Field label="Disponibilidad de agua">
           <select
-            value={form.waterAvailability}
-            onChange={(e) => set('waterAvailability', e.target.value as WaterAvailability | '')}
+            value={water}
+            onChange={(e) => {
+              setSaved(false)
+              setWater(e.target.value as WaterAvailability | '')
+            }}
             className={`${inputClass} md:max-w-md`}
           >
             <option value="">Sin indicar</option>
@@ -171,7 +213,7 @@ function PrefsForm() {
           <legend className="font-medium text-ink">¿Qué es más importante para ti?</legend>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             {PRIORITIES.map((p) => {
-              const on = form.priority === p.value
+              const on = priority === p.value
               return (
                 <label
                   key={p.value}
@@ -184,7 +226,10 @@ function PrefsForm() {
                     name="priority"
                     className="sr-only"
                     checked={on}
-                    onChange={() => set('priority', p.value)}
+                    onChange={() => {
+                      setSaved(false)
+                      setPriority(p.value)
+                    }}
                   />
                   <span className={`block font-display text-2xl font-extrabold tracking-[-0.02em] ${on ? 'text-lima' : 'text-ink'}`}>
                     {p.label}
@@ -195,12 +240,15 @@ function PrefsForm() {
             })}
           </div>
         </fieldset>
+        {saveError && <ErrorBox message={`No se pudo guardar el agua y la prioridad. ${saveError}`} />}
         <div className="flex flex-wrap items-center gap-4">
-          <Button size="lg">Guardar →</Button>
+          <Button size="lg" disabled={busy}>
+            {busy ? 'Guardando…' : 'Guardar →'}
+          </Button>
           {saved && (
             <>
               <span role="status" className="font-mono text-base text-lima">
-                Guardado en este navegador.
+                Guardado: el agua y la prioridad quedaron en tu cuenta; los cultivos y la fecha, en este navegador.
               </span>
               <ButtonLink to="/rotaciones" variant="outline">
                 Ver rotaciones →

@@ -6,6 +6,8 @@
 // sea false) porque GET /api/crops y POST /api/recommendations aún no existen.
 import type {
   Crop,
+  PlotUpdate,
+  RecommendationContext,
   NasaObservation,
   Plot,
   PlotInput,
@@ -69,6 +71,15 @@ export function mockCreatePlot(input: PlotInput): Plot {
     declared_irrigated: input.declared_irrigated ?? null,
     created_at: iso(Date.now()),
   }
+}
+
+/** Respuesta de PATCH /api/plots/{id}: aplica solo los campos enviados y devuelve la parcela completa. */
+export function mockUpdatePlot(plotId: string, patch: PlotUpdate): Plot {
+  const i = mockPlots.findIndex((p) => p.id === plotId)
+  if (i < 0) throw new Error('Parcela de ejemplo no encontrada.')
+  const next = { ...mockPlots[i], ...patch } as Plot
+  mockPlots[i] = next
+  return next
 }
 
 // ---------- Sensor ESP32 (SensorReading[], orden ascendente) ----------
@@ -152,23 +163,51 @@ export function mockNasa(): NasaObservation[] {
   return out
 }
 
-// ---------- PENDIENTE BACKEND: cultivos y recomendaciones ----------
+// ---------- Cultivos (GET /api/crops) ----------
 
 export const mockCrops = crops as Crop[]
 
+// ---------- PENDIENTE BACKEND: POST /api/recommendations ----------
+
+/** Contexto de ejemplo: período NASA POWER de 90 días y aviso de parcela representativa. */
+function mockContext(): RecommendationContext {
+  const end = todayLima().getTime()
+  const day = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+  return {
+    start: day(end - 89 * DAY),
+    end: day(end),
+    indicadores: {
+      temperatura_promedio_c: 25,
+      precipitacion_total_mm: 37.8,
+      dias_analizados: 90,
+    },
+    representative_plot: true,
+    representative_plot_notice:
+      '[Ejemplo] La parcela demostrativa es una ubicación representativa, no una chacra real.',
+  }
+}
+
 export function mockRecommendation(req: RecommendationRequest): RecommendationResponse {
+  const created_at = new Date().toISOString()
   if (MOCK_SCENARIO === 'insufficient_data') {
+    // Sin alternativas ni puntajes, y `missing` como lista de { field, reason }.
     return {
       status: 'insufficient_data',
+      mode: 'evaluacion',
       engine_version: 'ejemplo-0.0',
+      context: mockContext(),
       missing: [
-        '[Ejemplo] Cultivo actual de la parcela',
-        '[Ejemplo] Fecha de inicio de la siguiente campaña',
+        { field: 'current_crop', reason: '[Ejemplo] No se indicó el cultivo actual de la parcela.' },
+        { field: 'start_on', reason: '[Ejemplo] Falta la fecha de inicio de la siguiente campaña.' },
       ],
-      alternatives: [],
-      created_at: new Date().toISOString(),
+      created_at,
     }
   }
   const base = req.priority === 'improve_soil' ? recommendationSoil : recommendationSave
-  return { ...(base as RecommendationResponse), created_at: new Date().toISOString() }
+  return {
+    ...(base as RecommendationResponse),
+    mode: MOCK_SCENARIO === 'demo_mode' ? 'escenario_demostracion' : 'evaluacion',
+    context: mockContext(),
+    created_at,
+  }
 }

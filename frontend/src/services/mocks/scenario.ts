@@ -6,7 +6,8 @@ export const SCENARIOS = [
   'sensor_stale', // la última lectura del sensor tiene horas
   'sensor_empty', // el sensor aún no envió nada
   'nasa_down', // NASA POWER responde 503; quedan datos guardados antiguos
-  'insufficient_data', // la recomendación responde insufficient_data
+  'insufficient_data', // la recomendación responde insufficient_data (missing con motivos, sin alternativas)
+  'demo_mode', // la recomendación llega con mode = escenario_demostracion
   'sensor_test', // lecturas con quality_flag = test (kit de prueba)
   'sensor_suspect', // última humedad con quality_flag = suspect
   'sensor_dry', // última humedad en 0 % (clamped_dry): la barra queda vacía pero con marca
