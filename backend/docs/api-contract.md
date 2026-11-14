@@ -131,7 +131,7 @@ Cabecera: `X-Device-Key: <device_key>`. El dispositivo, y con él la parcela, se
 | `soil_temperature` (DS18B20) | `°C` | -55 a 125 | -55 a 125 |
 
 - `recorded_at` **debe incluir zona horaria** (`Z` u offset). Se guarda en UTC y no puede adelantarse más de 5 minutos a la hora del servidor.
-- `quality_flag` es opcional: `ok` (por defecto), `clamped_dry`, `clamped_wet` o `suspect`.
+- `quality_flag` es opcional: `ok` (por defecto), `clamped_dry`, `clamped_wet` o `suspect`. Si el kit es de prueba (ver más abajo), la API lo sustituye por `test`.
 - Duplicado: mismo dispositivo, `sensor_type` y `recorded_at` → **409** `duplicate_reading`.
 
 Respuesta: `{ "device_id", "inserted", "readings": SensorReading[] }`. Ver [readings-post-201.json](examples/readings-post-201.json), [error-401-invalid-device-key.json](examples/error-401-invalid-device-key.json), [error-403-device-inactive.json](examples/error-403-device-inactive.json), [error-409-duplicate-reading.json](examples/error-409-duplicate-reading.json) y [error-422-validation.json](examples/error-422-validation.json).
@@ -149,6 +149,14 @@ Cada muestra guarda dos lecturas con la misma hora UTC de recepción. En la resp
 La ruta devuelve el mismo formato de respuesta que `/api/devices/readings`, con `inserted: 2`. Si falta la clave devuelve `401`. Si la clave pertenece a otro kit devuelve `403` con `device_id_mismatch`.
 
 Sin ID de muestra ni fecha del dispositivo, cada recepción válida se guarda como una muestra nueva. Dos valores idénticos pueden corresponder a muestras legítimas consecutivas. El firmware necesitará un identificador estable por muestra si se agrega deduplicación de reintentos.
+
+### Kits de prueba: `quality_flag = "test"`
+
+Los kits cuyo `external_id` figura en `TEST_DEVICE_EXTERNAL_IDS` (`backend/.env`, separados por comas) guardan **todas** sus lecturas con `quality_flag: "test"`, en las dos rutas de ingesta. Para la demo: `TEST_DEVICE_EXTERNAL_IDS=kit-lote4b-01`, porque sus lecturas se toman fuera del campo.
+
+La parcela demostrativa *Parcela demostrativa – Valle del Chira (Sullana, Piura)* (-4.97, -80.89) es una ubicación representativa, no una chacra real.
+
+> **Para Luis:** muestra las lecturas con `quality_flag === "test"` como «dato de prueba» y no las mezcles con datos de campo en indicadores o recomendaciones.
 
 ### `GET /api/plots/{plot_id}/sensors/readings` → 200 (frontend)
 

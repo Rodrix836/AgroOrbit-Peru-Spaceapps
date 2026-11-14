@@ -27,6 +27,7 @@ cp .env.example .env   # y completa los valores
 | `SUPABASE_JWT_SECRET` | Solo para proyectos con secreto HS256 (Settings → API → JWT Secret) |
 | `SUPABASE_JWT_AUDIENCE` | Por defecto `authenticated` |
 | `CORS_ORIGINS` | Orígenes separados por comas. Por defecto `http://localhost:5173` |
+| `TEST_DEVICE_EXTERNAL_IDS` | `external_id` de kits de prueba, separados por comas. Sus lecturas se guardan con `quality_flag=test`. Demo: `kit-lote4b-01` |
 
 **Nunca subas `.env`**: está en `.gitignore`.
 
@@ -46,6 +47,16 @@ pytest
 ```
 
 Las pruebas usan SQLite en memoria y JWT firmados localmente. **No tocan Supabase.**
+
+## Alta de la parcela demostrativa y del kit
+
+Con la API levantada y `backend/.env` configurado, ejecuta en tu propia terminal:
+
+```bash
+python scripts/alta_parcela_piloto.py
+```
+
+Pide el correo y la contraseña de la cuenta demo (la contraseña no se muestra) y propone los datos confirmados: *Parcela demostrativa – Valle del Chira (Sullana, Piura)*, -4.97, -80.89. Registra el perfil, la parcela y el kit `kit-lote4b-01`. Puedes repetirlo sin duplicar nada. La clave del kit se guarda en `~/agroorbit-secretos/kit-lote4b-01.key`, fuera del repositorio; nunca se imprime.
 
 ## Flujo con la parcela de prueba
 

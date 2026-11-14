@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str | None = Field(default=None, repr=False)
     supabase_jwt_audience: str = "authenticated"
 
+    # external_id de kits de prueba (separados por comas): sus lecturas se guardan con
+    # quality_flag="test" para distinguirlas de datos de campo. Ej.: kit-lote4b-01
+    test_device_external_ids: str = ""
+
     model_config = SettingsConfigDict(
         env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore",
     )
@@ -31,6 +35,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def test_device_ids(self) -> frozenset[str]:
+        return frozenset(i.strip() for i in self.test_device_external_ids.split(",") if i.strip())
 
 
 @lru_cache(maxsize=1)

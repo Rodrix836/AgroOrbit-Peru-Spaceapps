@@ -3,9 +3,10 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Depends, Header
 
 from app.api.deps import DbSession
+from app.core.config import Settings, get_settings
 from app.core.exceptions import ForbiddenError
 from app.database.models import Device, SensorReading
 from app.schemas.sensor import Esp32Sample, ReadingIn, ReadingsAccepted, ReadingsBatch, SensorReadingRead
@@ -14,16 +15,25 @@ from app.services import sensor_service
 router = APIRouter(prefix="/devices", tags=["Lecturas"])
 esp32_router = APIRouter(prefix="/sensors", tags=["Lecturas"])
 
+AppSettings = Annotated[Settings, Depends(get_settings)]
+
+
+def _is_test_device(device: Device, settings: Settings) -> bool:
+    return device.external_id in settings.test_device_ids
+
 
 @router.post("/readings", response_model=ReadingsAccepted, status_code=201)
 def receive_readings(
     body: ReadingsBatch,
     session: DbSession,
+    settings: AppSettings,
     x_device_key: Annotated[str | None, Header(alias="X-Device-Key")] = None,
 ) -> ReadingsAccepted:
     """Guarda el lote completo o nada; 409 si alguna lectura ya existía."""
     device = sensor_service.authenticate_device(session, x_device_key)
-    rows = sensor_service.ingest_readings(session, device, body.readings)
+    rows = sensor_service.ingest_readings(
+        session, device, body.readings, mark_as_test=_is_test_device(device, settings),
+    )
     return _accepted(device, rows)
 
 
@@ -31,6 +41,7 @@ def receive_readings(
 def receive_esp32_sample(
     body: Esp32Sample,
     session: DbSession,
+    settings: AppSettings,
     x_device_key: Annotated[str | None, Header(alias="X-Device-Key")] = None,
 ) -> ReadingsAccepted:
     """Convierte una muestra del firmware en dos lecturas con la hora de recepción."""
@@ -51,7 +62,10 @@ def receive_esp32_sample(
             calibrated_value=body.soil_temp_c, unit="°C", recorded_at=received_at,
         ),
     ]
-    rows = sensor_service.ingest_readings(session, device, readings, received_at=received_at)
+    rows = sensor_service.ingest_readings(
+        session, device, readings, received_at=received_at,
+        mark_as_test=_is_test_device(device, settings),
+    )
     return _accepted(device, rows)
 
 
