@@ -96,6 +96,36 @@ Lista de las parcelas del usuario (las más recientes primero): `PlotRead[]`. Ve
 
 Devuelve `PlotRead`, o **404** `plot_not_found` si no existe o no es tuya. Ver [plot-get-200.json](examples/plot-get-200.json) y [error-404-plot-not-found.json](examples/error-404-plot-not-found.json).
 
+### `PATCH /api/plots/{plot_id}` → 200
+
+Actualiza **solo los campos enviados** y devuelve el `PlotRead` completo. Acepta los mismos campos y rangos que `POST /api/plots`. Por ejemplo, para guardar lo que hoy el frontend deja en el navegador:
+
+```json
+{ "water_availability": "low", "priority": "save_water" }
+```
+
+- `null` borra un campo opcional (`{"water_availability": null}`). `name`, `latitude` y `longitude` no admiten `null`.
+- `{}` no cambia nada. Campos desconocidos, `id` o `user_id` → **422** `validation_error`.
+- Parcela ajena o inexistente → **404** `plot_not_found`.
+- Si cambian `latitude`/`longitude`, el historial NASA del punto anterior deja de mostrarse: vuelve a importar con `POST /api/plots/{plot_id}/nasa/power`.
+- El cultivo anterior, el actual y la fecha de la próxima campaña **aún no tienen columna en la base**. Necesitan una migración (propuesta: tabla `crop_cycle`).
+
+## Cultivos
+
+### `GET /api/crops` → 200
+
+Catálogo de `app/data/crops.py` para los selectores. No requiere token. Coincide con `Crop` de `frontend/src/types/api.ts`:
+
+```json
+[
+  { "id": "maiz", "name": "Maíz" },
+  { "id": "frijol_caupi", "name": "Frijol caupí" },
+  { "id": "camote", "name": "Camote" }
+]
+```
+
+Los requisitos agronómicos no se exponen aquí. Mientras no tengan fuente, el motor no puede recomendar.
+
 ### `GET /api/plots/{plot_id}/climate` → 200
 
 Requiere el token del propietario. `OwnedPlot` devuelve **404** `plot_not_found` si la parcela no existe o es ajena, antes de consultar NASA POWER. Las coordenadas proceden de la parcela guardada, no de parámetros del cliente.
