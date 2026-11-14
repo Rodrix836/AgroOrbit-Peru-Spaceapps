@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import Settings, get_settings
-from app.database.models import Base
+from app.database.models import Base, Crop
 from app.database.session import get_db_session
 from app.main import app
 
@@ -43,6 +43,13 @@ def engine():
         dbapi_connection.execute("PRAGMA foreign_keys=ON")
 
     Base.metadata.create_all(engine)
+    # Mismo catálogo que siembra supabase/migrations/20261114222638_create_crop_cycles.sql.
+    with engine.begin() as connection:
+        connection.execute(Crop.__table__.insert(), [
+            {"code": "maiz", "name": "Maíz"},
+            {"code": "frijol_caupi", "name": "Frijol caupí"},
+            {"code": "camote", "name": "Camote"},
+        ])
     yield engine
     engine.dispose()
 

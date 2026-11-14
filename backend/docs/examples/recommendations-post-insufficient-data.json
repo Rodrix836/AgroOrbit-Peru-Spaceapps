@@ -45,7 +45,7 @@
         "assumptions": []
       },
       "missing": [
-        { "field": "plot.previous_crop", "reason": "La regla de rotación necesita el cultivo anterior; aún no se guarda en la base." },
+        { "field": "plot.previous_crop", "reason": "La regla de rotación necesita el cultivo anterior; la parcela aún no tiene un ciclo finished." },
         { "field": "plot.water_availability", "reason": "Necesario para estimar si el agua cubre la campaña." },
         { "field": "plot.soil_texture", "reason": "Necesario para la regla de suelo." },
         { "field": "crops.maiz.requirements", "reason": "Rangos de temperatura y agua sin fuente verificable en el catálogo." },
