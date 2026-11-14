@@ -26,6 +26,7 @@ DEFAULT_CODES = {
     409: "conflict",
     422: "validation_error",
     500: "internal_error",
+    502: "bad_gateway",
     503: "service_unavailable",
 }
 
@@ -38,6 +39,7 @@ DEFAULT_MESSAGES = {
     409: "Conflicto con el estado actual del recurso.",
     422: "La solicitud no es válida.",
     500: "Error interno del servidor.",
+    502: "Respuesta inválida del servicio externo.",
     503: "Servicio no disponible.",
 }
 

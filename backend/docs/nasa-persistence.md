@@ -1,6 +1,6 @@
 # Persistencia de NASA POWER
 
-La migración `20261114204035_create_nasa_observation.sql` prepara la tabla que usará FastAPI. La ruta de consulta de clima de Milene se integra por separado.
+La migración `20261114204035_create_nasa_observation.sql` prepara la tabla que usará FastAPI. La importación está en `app/services/nasa/persistence.py` y se expone en `POST /api/plots/{plot_id}/nasa/power` (guardar) y `GET /api/plots/{plot_id}/nasa/observations` (leer); ver `api-contract.md`.
 
 Para la parcela demostrativa del Valle del Chira, usa `-4.97`, `-80.89`, comunidad `AG`, `time-standard=LST` y los parámetros `T2M` y `PRECTOTCORR`. Persiste una fila por parcela, variable y fecha `AAAA-MM-DD`. Conserva el punto consultado en `latitude` y `longitude`, y la procedencia `NASA POWER` en `source`.
 
