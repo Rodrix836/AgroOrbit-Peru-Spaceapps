@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/plots/c4645fb7-03cc-425a-872b-7c7e88d06c90",
+    "headers": {
+      "Authorization": "Bearer <token de otro usuario>"
+    }
+  },
+  "response": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "plot_not_found",
+        "message": "Parcela no encontrada.",
+        "details": null
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+# Variables de entorno y credenciales
+.env
+.env.local
+.env.*.local
+
+# Entornos virtuales
+venv/
+.venv/
+.venv-nasa/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Datos satelitales crudos (no se versionan)
+*.nc
+*.nc4
+*.hdf
+*.h5
+
+# Bases locales de prueba
+*.sqlite3
+*.db
+
+# Frontend
+node_modules/
+dist/
+
+# Editor
+.vscode/

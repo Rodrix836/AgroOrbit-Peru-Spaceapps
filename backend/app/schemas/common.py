@@ -1,0 +1,14 @@
+"""Tipos compartidos por los esquemas."""
+
+from datetime import datetime, timezone
+from typing import Annotated
+
+from pydantic import AfterValidator
+
+
+def as_utc(value: datetime) -> datetime:
+    """Fechas sin zona (p. ej. leídas de SQLite) se interpretan como UTC; el resto se convierte."""
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
+UtcDatetime = Annotated[datetime, AfterValidator(as_utc)]
