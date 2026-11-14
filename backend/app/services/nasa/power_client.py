@@ -23,7 +23,9 @@ def obtener_datos_nasa(latitud, longitud, fecha_inicio, fecha_fin):
         "latitude": latitud,
         "start": fecha_inicio,
         "end": fecha_fin,
-        "format": "JSON"
+        "format": "JSON",
+        # Días en hora solar local (LST), como espera public.nasa_observation.
+        "time-standard": "LST"
     }
 
     try:
@@ -48,8 +50,8 @@ if __name__ == "__main__":
     print("Consultando datos climáticos de NASA POWER...")
 
     datos = obtener_datos_nasa(
-        latitud=-5.1945,
-        longitud=-80.6328,
+        latitud=-4.97,  # Parcela demostrativa – Valle del Chira (Sullana, Piura)
+        longitud=-80.89,
         fecha_inicio="20260101",
         fecha_fin="20260131"
     )

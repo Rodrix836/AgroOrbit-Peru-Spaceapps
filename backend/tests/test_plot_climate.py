@@ -50,7 +50,7 @@ def test_climate_uses_plot_coordinates_and_existing_indicators(
     assert get.call_args.kwargs["params"] == {
         "parameters": "T2M,PRECTOTCORR", "community": "AG",
         "longitude": -80.7, "latitude": -4.9,
-        "start": "20260101", "end": "20260103", "format": "JSON",
+        "start": "20260101", "end": "20260103", "format": "JSON", "time-standard": "LST",
     }
     assert get.call_args.kwargs["timeout"] == 60
 

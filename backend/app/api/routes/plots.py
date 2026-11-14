@@ -49,8 +49,8 @@ def get_plot(plot: OwnedPlot) -> Plot:
 @router.get("/{plot_id}/climate", response_model=PlotClimateRead, tags=["Clima"])
 def get_plot_climate(
     plot: OwnedPlot,
-    date_from: Annotated[date, Query(alias="from", description="Primer día UTC, inclusive (AAAA-MM-DD)")],
-    date_to: Annotated[date, Query(alias="to", description="Último día UTC, inclusive (AAAA-MM-DD)")],
+    date_from: Annotated[date, Query(alias="from", description="Primer día (hora solar local de POWER, LST), inclusive (AAAA-MM-DD)")],
+    date_to: Annotated[date, Query(alias="to", description="Último día (LST), inclusive (AAAA-MM-DD)")],
 ) -> PlotClimateRead:
     return climate_service.obtener_clima_parcela(plot, date_from, date_to)
 
