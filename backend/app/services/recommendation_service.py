@@ -4,11 +4,12 @@ from sqlalchemy.orm import Session
 
 from app.data.crops import obtener_cultivos
 from app.database.models import Plot
+from app.engine.recommendation import motor
 from app.engine.rotation import crear_rotacion, validar_rotacion
 from app.schemas.recommendation import RecommendationRequest, RecommendationResponse
 from app.services.crop_cycle_service import list_crop_history
 
-# El catálogo no tiene requisitos ni puntuaciones agronómicas sustentados.
+# El catálogo aún no cubre todos los requisitos ni las evaluaciones agronómicas.
 REQUIRED_CROP_FIELDS = (
     "temperatura_min_c",
     "temperatura_max_c",
@@ -41,6 +42,7 @@ def recommend(
     session: Session,
     plot: Plot,
     request: RecommendationRequest,
+    context: dict | None = None,
 ) -> RecommendationResponse:
     missing = []
     current, previous, _ = list_crop_history(session, plot)
@@ -101,10 +103,32 @@ def recommend(
         ),
     ])
 
+    if missing:
+        return RecommendationResponse(
+            status="insufficient_data",
+            engine_version=motor.version,
+            selected_id=None,
+            alternatives=[],
+            missing=missing,
+        )
+
+    mode, assumptions, alternatives = motor(plot, request, context or {})
+    if mode != "evidence_based" or not alternatives:
+        reason = " ".join(assumptions) or (
+            "El motor requiere evaluaciones con evidencia completa."
+        )
+        return RecommendationResponse(
+            status="insufficient_data",
+            engine_version=motor.version,
+            selected_id=None,
+            alternatives=[],
+            missing=[_missing("recommendation_engine", reason)],
+        )
+
     return RecommendationResponse(
-        status="insufficient_data",
-        engine_version="1.0",
-        selected_id=None,
-        alternatives=[],
-        missing=missing,
+        status="ok",
+        engine_version=motor.version,
+        selected_id=alternatives[0]["id"],
+        alternatives=alternatives,
+        missing=[],
     )
