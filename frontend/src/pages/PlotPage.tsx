@@ -1,15 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { MapFrame } from '../components/plot/MapFrame'
+import { WATER_OPTIONS } from '../components/plot/water'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { ErrorBox } from '../components/ui/ErrorBox'
 import { Eyebrow } from '../components/ui/Eyebrow'
 import { FormBlock } from '../components/ui/FormBlock'
 import { Loading } from '../components/ui/Loading'
 import { PageHeader } from '../components/ui/PageHeader'
+import { SourceBadge } from '../components/ui/SourceBadge'
 import { inputClass } from '../components/ui/styles'
 import { errorMessage } from '../hooks/useAsync'
 import { usePlot } from '../hooks/usePlot'
-import type { Irrigation, PlotPreferences, Priority } from '../types/api'
+import type { PlotPreferences, Priority, WaterAvailability } from '../types/api'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -93,11 +95,6 @@ function NewPlotForm({ onDone }: { onDone?: () => void }) {
   )
 }
 
-const IRRIGATION: { value: Irrigation; label: string }[] = [
-  { value: 'available', label: 'Sí, tengo riego disponible' },
-  { value: 'limited', label: 'Riego limitado' },
-  { value: 'none', label: 'No tengo riego (solo lluvia)' },
-]
 const PRIORITIES: { value: Priority; label: string; hint: string }[] = [
   { value: 'save_water', label: 'Ahorrar agua', hint: 'Da más peso al uso de agua al comparar.' },
   { value: 'improve_soil', label: 'Mejorar el suelo', hint: 'Da más peso a la sucesión de cultivos.' },
@@ -140,6 +137,11 @@ function PrefsForm() {
           <Field label="Cultivo anterior">{cropSelect(form.previousCropId, (v) => set('previousCropId', v))}</Field>
           <Field label="Cultivo actual">{cropSelect(form.currentCropId, (v) => set('currentCropId', v))}</Field>
         </div>
+        {/* PENDIENTE BACKEND: GET /api/crops no existe; la lista sale de mocks. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <SourceBadge kind="prototype" label="Datos de ejemplo" />
+          <span className="text-muted">La lista de cultivos todavía es de muestra.</span>
+        </div>
         <Field label="Inicio previsto de la siguiente campaña">
           <input
             type="date"
@@ -151,13 +153,14 @@ function PrefsForm() {
       </FormBlock>
 
       <FormBlock letter="C" name="Agua y prioridad">
-        <Field label="Disponibilidad de riego">
+        <Field label="Disponibilidad de agua">
           <select
-            value={form.irrigation}
-            onChange={(e) => set('irrigation', e.target.value as Irrigation)}
+            value={form.waterAvailability}
+            onChange={(e) => set('waterAvailability', e.target.value as WaterAvailability | '')}
             className={`${inputClass} md:max-w-md`}
           >
-            {IRRIGATION.map((o) => (
+            <option value="">Sin indicar</option>
+            {WATER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>

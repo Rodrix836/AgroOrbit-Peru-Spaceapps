@@ -1,12 +1,6 @@
 import { usePlot } from '../../hooks/usePlot'
-import type { Irrigation } from '../../types/api'
 import { Eyebrow } from '../ui/Eyebrow'
-
-const IRRIGATION: Record<Irrigation, string> = {
-  available: 'Riego disponible',
-  limited: 'Riego limitado',
-  none: 'Sin riego (solo lluvia)',
-}
+import { WATER_LABELS } from './water'
 
 /** Bloque mono con nombre, coordenadas, cultivo y riego de la parcela. */
 export function PlotSummary() {
@@ -24,7 +18,9 @@ export function PlotSummary() {
         {plot.latitude}°, {plot.longitude}°
       </p>
       <p className="text-ink">Cultivo: {crop}</p>
-      <p className="text-ink">{IRRIGATION[prefs.irrigation]}</p>
+      <p className="text-ink">
+        Agua: {prefs.waterAvailability ? WATER_LABELS[prefs.waterAvailability] : 'sin indicar'}
+      </p>
     </div>
   )
 }

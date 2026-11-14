@@ -12,6 +12,7 @@ import type { SensorReading } from '../../types/api'
 import { formatShortTime } from '../../utils/format'
 import { Eyebrow } from '../ui/Eyebrow'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
+import { TestBadge } from './QualityNotice'
 
 const DAY = 24 * 3600_000
 
@@ -31,10 +32,16 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
   }
   const data = [...byTime.values()].sort((a, b) => a.t.localeCompare(b.t))
   if (data.length < 2) return null
+  const hasTest = valid.some(
+    (r) => r.quality_flag === 'test' && newest - new Date(r.recorded_at).getTime() <= DAY,
+  )
 
   return (
     <div className="border-t border-line pt-4">
-      <Eyebrow tone="ambar">Últimas 24 h · sensor ESP32</Eyebrow>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Eyebrow tone="ambar">Últimas 24 h · sensor ESP32</Eyebrow>
+        {hasTest && <TestBadge />}
+      </div>
       <div className="mt-3 h-64 w-full">
         <ResponsiveContainer>
           <LineChart data={data} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
@@ -66,7 +73,10 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-2 text-muted">Fuente: sensor ESP32 en tu parcela. Horas en hora de Perú.</p>
+      <p className="mt-2 text-muted">
+        Fuente: sensor ESP32 en tu parcela. Horas en hora de Perú.
+        {hasTest && ' Incluye lecturas de un kit de prueba: no son datos de campo.'}
+      </p>
     </div>
   )
 }

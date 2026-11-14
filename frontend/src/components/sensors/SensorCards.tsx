@@ -1,21 +1,26 @@
 import { useState } from 'react'
 import type { SensorReading, SensorType } from '../../types/api'
-import { formatDateTime, formatNumber, HOURS_STALE, isStale } from '../../utils/format'
+import { formatDateTime, formatNumber, isStale, SENSOR_STALE_MINUTES } from '../../utils/format'
 import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { Eyebrow } from '../ui/Eyebrow'
 import { SourceBadge } from '../ui/SourceBadge'
 import { StatCard } from '../ui/StatCard'
+import { QualityNotice } from './QualityNotice'
 
 const SOURCE_DETAIL = 'Sensor ESP32 en tu parcela'
 const TICKS = [0, 25, 50, 75, 100]
 
+/** Última lectura de un tipo de sensor (la API las entrega en orden ascendente por recorded_at). */
 function latest(readings: SensorReading[], type: SensorType): SensorReading | null {
-  const list = readings
-    .filter((r) => r.sensor_type === type && r.calibrated_value !== null)
-    .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
-  return list[0] ?? null
+  let last: SensorReading | null = null
+  for (const r of readings) {
+    if (r.sensor_type === type && r.calibrated_value !== null) {
+      if (!last || r.recorded_at >= last.recorded_at) last = r
+    }
+  }
+  return last
 }
 
 /** Barra de 0 a 100 con marcas 0/25/50/75/100. */
@@ -62,30 +67,34 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
     return (
       <EmptyState
         tone="insufficient"
-        title="El sensor aún no ha enviado lecturas"
+        title="Aún no hay lecturas del sensor"
         message="Cuando el ESP32 envíe su primera lectura aparecerá aquí. No mostramos valores de relleno."
       />
     )
   }
 
-  const stale = [moisture, temp].some((r) => r && isStale(r.recorded_at))
   const lastAt = [moisture, temp]
     .filter((r): r is SensorReading => r !== null)
     .map((r) => r.recorded_at)
     .sort()
     .pop()
+  const stale = lastAt ? isStale(lastAt) : false
 
   return (
     <div className="space-y-6">
       {stale && (
         <Alert tone="warn" title="Sensor sin actualización">
-          La última lectura tiene más de {HOURS_STALE} horas. Revisa que el equipo tenga energía y
-          conexión.
+          La última lectura es del {lastAt ? formatDateTime(lastAt) : 'una fecha desconocida'} (hora de
+          Perú): hace más de {SENSOR_STALE_MINUTES} minutos que el sensor no envía datos. Revisa que el
+          equipo tenga energía y conexión.
         </Alert>
       )}
 
       <div>
-        <Eyebrow>Humedad del suelo</Eyebrow>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Eyebrow>Humedad del suelo</Eyebrow>
+          <QualityNotice reading={moisture} />
+        </div>
         {moisture?.calibrated_value != null ? (
           <>
             <p className="mt-2 flex items-baseline gap-3 font-mono text-ambar">
@@ -97,6 +106,7 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
             <div className="mt-4">
               <Gauge value={moisture.calibrated_value} />
             </div>
+            <p className="mt-1 font-mono text-base text-ink">{formatDateTime(moisture.recorded_at)}</p>
             <p className="mt-1 text-muted">Porcentaje según la calibración seco/húmedo del sensor.</p>
           </>
         ) : (
@@ -111,6 +121,7 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
         when={temp ? formatDateTime(temp.recorded_at) : null}
         source="sensor"
         sourceDetail={SOURCE_DETAIL}
+        badge={<QualityNotice reading={temp} />}
       />
 
       <div className="border-t border-line pt-4">
@@ -132,6 +143,11 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
               {moisture?.raw_value ?? 'Sin dato'} {moisture?.raw_value != null && 'unidades del sensor'}
               {moisture ? ` · ${formatDateTime(moisture.recorded_at)}` : ''}
             </p>
+            {moisture && (
+              <p className="mt-1 font-mono text-base text-muted">
+                Recibida por la API: {formatDateTime(moisture.received_at)} · calidad: {moisture.quality_flag ?? 'sin dato'}
+              </p>
+            )}
             <p className="mt-1 text-muted">Fuente: {SOURCE_DETAIL}. Útil solo para calibrar el equipo.</p>
           </div>
         )}

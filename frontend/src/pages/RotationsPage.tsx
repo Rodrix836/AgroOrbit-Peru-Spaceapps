@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { AlternativeCard } from '../components/rotations/AlternativeCard'
 import { SourcesList } from '../components/rotations/SourcesList'
+import { SourceBadge } from '../components/ui/SourceBadge'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBox } from '../components/ui/ErrorBox'
@@ -10,7 +11,7 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { PanelGrid } from '../components/ui/PanelGrid'
 import { usePlot } from '../hooks/usePlot'
 import { useRecommendation } from '../hooks/useRecommendation'
-import type { Priority, SourceRef } from '../types/api'
+import type { PlotPreferences, Priority, RecommendationRequest, SourceRef } from '../types/api'
 
 const HORIZON_DAYS = 365 // hasta 12 meses, dos campañas
 const LETTERS = ['A', 'B', 'C', 'D']
@@ -19,6 +20,16 @@ const PRIORITIES: { value: Priority; label: string }[] = [
   { value: 'save_water', label: 'Ahorrar agua' },
   { value: 'improve_soil', label: 'Mejorar el suelo' },
 ]
+
+function buildRequest(plotId: string, prefs: PlotPreferences): RecommendationRequest {
+  return {
+    plot_id: plotId,
+    horizon_days: HORIZON_DAYS,
+    priority: prefs.priority,
+    ...(prefs.waterAvailability ? { water_availability: prefs.waterAvailability } : {}),
+    ...(prefs.startOn ? { start_on: prefs.startOn } : {}),
+  }
+}
 
 /** 03 / Rotaciones */
 export function RotationsPage() {
@@ -29,15 +40,9 @@ export function RotationsPage() {
   const plotId = plot?.id
   useEffect(() => {
     if (!plotId) return
-    void run({
-      plot_id: plotId,
-      horizon_days: HORIZON_DAYS,
-      priority: prefs.priority,
-      irrigation: prefs.irrigation,
-      ...(prefs.startOn ? { start_on: prefs.startOn } : {}),
-    })
+    void run(buildRequest(plotId, prefs))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plotId, prefs.priority, prefs.irrigation, prefs.startOn])
+  }, [plotId, prefs.priority, prefs.waterAvailability, prefs.startOn])
 
   if (plotLoading) return <Loading label="Cargando tu parcela…" />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
@@ -69,9 +74,17 @@ export function RotationsPage() {
   return (
     <div>
       <PageHeader index="03" label="Rotaciones" title="Dos campañas, dos caminos" />
-      <p className="-mt-4 mb-8 max-w-prose text-muted">
+      <p className="-mt-4 mb-4 max-w-prose text-muted">
         Dos campañas seguidas dentro de los próximos 12 meses. Elige qué te importa más y compara.
       </p>
+
+      {/* PENDIENTE BACKEND: POST /api/recommendations aún no existe; esta pantalla usa respuestas de ejemplo. */}
+      <div className="mb-8 flex flex-wrap items-center gap-3">
+        <SourceBadge kind="prototype" label="Datos de ejemplo" />
+        <span className="text-muted">
+          El motor de recomendaciones todavía no está conectado a la API: estas alternativas son de muestra.
+        </span>
+      </div>
 
       {/* Fila de prioridad entre dos líneas */}
       <div className="mb-8 flex flex-wrap items-center gap-3 border-y border-line py-4" role="group" aria-label="Prioridad">
@@ -92,15 +105,7 @@ export function RotationsPage() {
       {rec.error && (
         <ErrorBox
           message={rec.error}
-          onRetry={() =>
-            void run({
-              plot_id: plot.id,
-              horizon_days: HORIZON_DAYS,
-              priority: prefs.priority,
-              irrigation: prefs.irrigation,
-              ...(prefs.startOn ? { start_on: prefs.startOn } : {}),
-            })
-          }
+          onRetry={() => void run(buildRequest(plot.id, prefs))}
         />
       )}
 

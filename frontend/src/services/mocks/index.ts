@@ -1,73 +1,172 @@
 // Respuestas de EJEMPLO para avanzar sin API. No son mediciones reales.
+// Tienen la forma exacta de backend/docs/examples/*.json (fuente de verdad: api-contract.md).
 // La interfaz muestra un aviso visible cuando VITE_USE_MOCKS=true.
+//
+// PENDIENTE BACKEND: `mockCrops` y `mockRecommendation` se usan SIEMPRE (aunque VITE_USE_MOCKS
+// sea false) porque GET /api/crops y POST /api/recommendations aún no existen.
 import type {
   Crop,
   NasaObservation,
   Plot,
-  RecommendationResponse,
+  PlotInput,
+  QualityFlag,
   RecommendationRequest,
+  RecommendationResponse,
   SensorReading,
 } from '../../types/api'
 import crops from './crops.json'
-import recommendationSave from './recommendation-save-water.json'
 import recommendationSoil from './recommendation-improve-soil.json'
+import recommendationSave from './recommendation-save-water.json'
+import { MOCK_SCENARIO } from './scenario'
 
-export const mockCrops = crops as Crop[]
+export { MOCK_SCENARIO, SCENARIOS, type MockScenario } from './scenario'
+
+const MINUTE = 60_000
+const HOUR = 3600_000
+const DAY = 24 * HOUR
+
+/** ISO 8601 UTC sin milisegundos, como en los ejemplos del contrato. */
+const iso = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z')
+
+// ---------- Parcela (PlotRead) ----------
+
+export const MOCK_PLOT_ID = 'f544f739-bc06-45c6-9cf9-052c44499ab6'
 
 export const mockPlots: Plot[] = [
-  { id: 'ejemplo-1', name: 'Parcela de ejemplo (Piura)', latitude: -5.2, longitude: -80.63 },
+  {
+    id: MOCK_PLOT_ID,
+    user_id: '6d729673-640c-4527-b7fe-42d32fd949d9',
+    name: 'Parcela demostrativa – Valle del Chira (Sullana, Piura)',
+    latitude: -4.97,
+    longitude: -80.89,
+    area_ha: null,
+    water_source: null,
+    water_availability: 'medium',
+    soil_texture: null,
+    soil_ph: null,
+    soil_salinity_ds_m: null,
+    priority: 'save_water',
+    declared_irrigated: null,
+    created_at: '2026-11-14T17:33:30Z',
+  },
 ]
 
-const HOUR = 3600_000
+/** Respuesta de POST /api/plots: PlotInput más id, user_id y created_at. */
+export function mockCreatePlot(input: PlotInput): Plot {
+  return {
+    id: crypto.randomUUID(),
+    user_id: mockPlots[0].user_id,
+    name: input.name,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    area_ha: input.area_ha ?? null,
+    water_source: input.water_source ?? null,
+    water_availability: input.water_availability ?? null,
+    soil_texture: input.soil_texture ?? null,
+    soil_ph: input.soil_ph ?? null,
+    soil_salinity_ds_m: input.soil_salinity_ds_m ?? null,
+    priority: input.priority ?? null,
+    declared_irrigated: input.declared_irrigated ?? null,
+    created_at: iso(Date.now()),
+  }
+}
 
-/** Lecturas de ejemplo de las últimas 48 h, una cada 2 h, relativas a ahora. */
+// ---------- Sensor ESP32 (SensorReading[], orden ascendente) ----------
+
+const DEVICE_ID = 'dca83203-c87b-41d5-bfb3-1c5cc7ee5c0b'
+
+/** Lecturas de las últimas 24 h, una cada 15 min, según el escenario. */
 export function mockReadings(): SensorReading[] {
-  const now = Date.now()
+  if (MOCK_SCENARIO === 'sensor_empty') return []
+
+  // Última lectura: hace 2 min (al día) o hace 3 h (sin actualización).
+  const lastAt = Date.now() - (MOCK_SCENARIO === 'sensor_stale' ? 3 * HOUR : 2 * MINUTE)
+  const STEP = 15 * MINUTE
   const out: SensorReading[] = []
-  for (let i = 24; i >= 0; i--) {
-    const t = new Date(now - i * 2 * HOUR).toISOString()
-    const moisture = 38 + 8 * Math.sin(i / 4)
+
+  for (let i = 96; i >= 0; i--) {
+    const at = lastAt - i * STEP
+    const isLast = i === 0
+    const moisture = 38 + 8 * Math.sin(i / 8)
+    const temp = 27 + 3 * Math.cos(i / 6)
+    const flag = (kind: 'moisture' | 'temp'): QualityFlag => {
+      if (MOCK_SCENARIO === 'sensor_test') return 'test'
+      if (MOCK_SCENARIO === 'sensor_suspect' && isLast && kind === 'moisture') return 'suspect'
+      return 'ok'
+    }
+    const common = { device_id: DEVICE_ID, recorded_at: iso(at), received_at: new Date(at + 4_000).toISOString() }
     out.push({
       id: `m-${i}`,
       sensor_type: 'soil_moisture',
       raw_value: Math.round(2400 - moisture * 12),
       calibrated_value: Math.round(moisture * 10) / 10,
       unit: '%',
-      recorded_at: t,
+      quality_flag: flag('moisture'),
+      ...common,
     })
     out.push({
       id: `t-${i}`,
       sensor_type: 'soil_temperature',
-      raw_value: null,
-      calibrated_value: Math.round((27 + 3 * Math.cos(i / 3)) * 10) / 10,
+      raw_value: Math.round(temp * 100) / 100,
+      calibrated_value: Math.round(temp * 100) / 100,
       unit: '°C',
-      recorded_at: t,
+      quality_flag: flag('temp'),
+      ...common,
     })
   }
   return out
 }
 
-/** Observaciones de ejemplo: 90 días terminando hace 2 días (POWER tiene retraso). */
+// ---------- NASA POWER (NasaObservation[]) ----------
+
+/** Día de hoy AAAA-MM-DD en hora de Perú (UTC-5), que se parece a la LST de POWER. */
+const todayLima = () => new Date(Date.now() - 5 * HOUR)
+
+/**
+ * Observaciones guardadas: 90 días, T2M ("C") y PRECTOTCORR ("mm/day"), ordenadas por día y variable.
+ * Los últimos 4 días vienen null (POWER publica con retraso) y hay un hueco suelto a mitad de serie.
+ * En `nasa_down` lo guardado es de una importación antigua (hace 12 días).
+ */
 export function mockNasa(): NasaObservation[] {
   const out: NasaObservation[] = []
-  const end = Date.now() - 2 * 24 * HOUR
-  const r1 = (n: number) => Math.round(n * 10) / 10
+  const lag = MOCK_SCENARIO === 'nasa_down' ? 12 : 0
+  const end = todayLima().getTime() - lag * DAY
+  const r2 = (n: number) => Math.round(n * 100) / 100
   for (let i = 89; i >= 0; i--) {
-    const day = new Date(end - i * 24 * HOUR).toISOString().slice(0, 10)
-    const t = 25 + 2.5 * Math.sin(i / 5)
+    const day = new Date(end - i * DAY).toISOString().slice(0, 10)
+    const missing = i <= 3 || i === 47
     const add = (variable: string, value: number, unit: string) =>
-      out.push({ id: `${variable}-${i}`, variable, observed_on: day, value, unit, source: 'NASA POWER' })
-    add('T2M', r1(t), '°C')
-    add('T2M_MIN', r1(t - 4), '°C')
-    add('T2M_MAX', r1(t + 5), '°C')
-    add('PRECTOTCORR', i % 9 === 0 ? 4.2 : 0, 'mm/día')
-    add('RH2M', Math.round(70 + 8 * Math.cos(i / 6)), '%')
-    add('ALLSKY_SFC_SW_DWN', r1(5.5 + 0.8 * Math.sin(i / 7)), 'kWh/m²/día')
+      out.push({
+        id: `${variable}-${day}`,
+        variable,
+        observed_on: day,
+        value: missing ? null : value,
+        unit,
+        source: 'NASA POWER',
+      })
+    add('PRECTOTCORR', i % 9 === 0 ? 4.2 : 0, 'mm/day')
+    add('T2M', r2(25 + 2.5 * Math.sin(i / 5)), 'C')
   }
   return out
 }
 
+// ---------- PENDIENTE BACKEND: cultivos y recomendaciones ----------
+
+export const mockCrops = crops as Crop[]
+
 export function mockRecommendation(req: RecommendationRequest): RecommendationResponse {
+  if (MOCK_SCENARIO === 'insufficient_data') {
+    return {
+      status: 'insufficient_data',
+      engine_version: 'ejemplo-0.0',
+      missing: [
+        '[Ejemplo] Cultivo actual de la parcela',
+        '[Ejemplo] Fecha de inicio de la siguiente campaña',
+      ],
+      alternatives: [],
+      created_at: new Date().toISOString(),
+    }
+  }
   const base = req.priority === 'improve_soil' ? recommendationSoil : recommendationSave
   return { ...(base as RecommendationResponse), created_at: new Date().toISOString() }
 }

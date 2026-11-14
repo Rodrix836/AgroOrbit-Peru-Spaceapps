@@ -1,68 +1,158 @@
 // Tipos del contrato con la API FastAPI.
 //
-// SUPUESTO: los nombres de campos de plots/crops/readings/NASA se infirieron del plan
-// (raw_value, calibrated_value, soil_moisture, soil_temperature, plot_id, horizon_days,
-// priority). Confirmar con Rodrigo contra backend/docs/recommendations-contract.md
-// y ajustar aquí; el resto del frontend solo importa estos tipos.
+// Fuente de verdad: backend/docs/api-contract.md y backend/docs/examples/*.json (solo lectura).
+// CONFIRMADO con el contrato: Plot, PlotInput, SensorReading, NasaObservation, formato de error.
 //
-// PENDIENTE (no implementado en backend según el plan): POST /api/recommendations,
-// `start_on` y `alternatives`.
+// PENDIENTE BACKEND (no existe en la API todavía): GET /api/crops y POST /api/recommendations.
+// Los tipos Crop, RecommendationRequest y RecommendationResponse son SUPUESTOS y sus respuestas
+// salen de mocks (DATOS DE EJEMPLO) hasta que Rodrigo los confirme.
 
+// ---------- Formato de error (todas las rutas) ----------
+
+export interface ApiErrorBody {
+  error: {
+    code: string
+    message: string
+    details: unknown
+  }
+}
+
+// ---------- Parcelas ----------
+
+export type WaterAvailability = 'low' | 'medium' | 'high'
+
+/** Los 5 valores que acepta la API. La interfaz solo ofrece dos (ver `Priority`). */
+export type ApiPriority =
+  | 'save_water'
+  | 'improve_soil'
+  | 'reduce_climate_risk'
+  | 'diversify'
+  | 'maintain_productivity'
+
+/** Prioridades que ofrece la interfaz. */
+export type Priority = Extract<ApiPriority, 'save_water' | 'improve_soil'>
+
+/** PlotRead del contrato. */
 export interface Plot {
   id: string
+  user_id: string
   name: string
   latitude: number
   longitude: number
+  area_ha: number | null
+  water_source: string | null
+  water_availability: WaterAvailability | null
+  soil_texture: string | null
+  soil_ph: number | null
+  soil_salinity_ds_m: number | null
+  priority: ApiPriority | null
+  declared_irrigated: boolean | null
+  created_at: string
 }
 
+/** Cuerpo de POST /api/plots: solo name, latitude y longitude son obligatorios. */
 export interface PlotInput {
   name: string
   latitude: number
   longitude: number
+  area_ha?: number | null
+  water_source?: string | null
+  water_availability?: WaterAvailability | null
+  soil_texture?: string | null
+  soil_ph?: number | null
+  soil_salinity_ds_m?: number | null
+  priority?: ApiPriority | null
+  declared_irrigated?: boolean | null
 }
 
+/** Perfil de POST/GET /api/users/me. */
+export interface UserProfile {
+  id: string
+  auth_user_id: string | null
+  display_name: string
+  created_at: string
+}
+
+/** PENDIENTE BACKEND: GET /api/crops no existe todavía (forma supuesta). */
 export interface Crop {
   id: string
   name: string
 }
 
-export type Irrigation = 'none' | 'limited' | 'available'
-export type Priority = 'save_water' | 'improve_soil'
-
-/** Datos del formulario de parcela que aún no tienen endpoint confirmado. */
+/**
+ * Datos del formulario de parcela que la API aún no guarda (no hay PATCH de parcelas
+ * ni crop-cycles). Se conservan solo en este navegador.
+ */
 export interface PlotPreferences {
   previousCropId: string
   currentCropId: string
-  irrigation: Irrigation
+  /** '' = sin indicar (no se inventa un valor). */
+  waterAvailability: WaterAvailability | ''
   /** Inicio de la siguiente campaña, AAAA-MM-DD. */
   startOn: string
   priority: Priority
 }
 
+// ---------- Sensor ESP32 ----------
+
 export type SensorType = 'soil_moisture' | 'soil_temperature'
 
+/** `test` lo pone la API a las lecturas de kits de prueba. */
+export type QualityFlag = 'ok' | 'clamped_dry' | 'clamped_wet' | 'suspect' | 'test'
+
+/** Lectura de GET /api/plots/{id}/sensors/readings (orden ascendente por recorded_at). */
 export interface SensorReading {
   id: string
+  device_id: string
   sensor_type: SensorType
   /** Lectura cruda del ADC; solo para detalle técnico de calibración. */
-  raw_value: number | null
+  raw_value: number
   /** soil_moisture: % calibrado seco/húmedo. soil_temperature: °C. */
   calibrated_value: number | null
   unit: string
-  /** ISO 8601 en UTC. */
+  quality_flag: QualityFlag | null
+  /** ISO 8601 en UTC: cuándo midió el sensor. */
   recorded_at: string
+  /** ISO 8601 en UTC: cuándo la recibió la API. */
+  received_at: string
 }
+
+// ---------- NASA POWER ----------
+
+/** Variables que guarda la API hoy. */
+export type NasaVariable = 'T2M' | 'PRECTOTCORR'
 
 export interface NasaObservation {
   id: string
-  /** Código POWER: T2M, T2M_MIN, T2M_MAX, PRECTOTCORR, RH2M, WS10M, ALLSKY_SFC_SW_DWN */
-  variable: string
-  /** Fecha AAAA-MM-DD (tiempo solar local de POWER). */
+  /** T2M (temperatura del aire a 2 m) o PRECTOTCORR (precipitación). */
+  variable: NasaVariable | string
+  /** Fecha AAAA-MM-DD en hora solar local (LST) de POWER. */
   observed_on: string
+  /** null = POWER no tiene el dato (no es 0). */
   value: number | null
+  /** Tal como la da POWER: "C" o "mm/day". Convertir solo para mostrar. */
   unit: string
   source: string
 }
+
+/** Respuesta de POST /api/plots/{id}/nasa/power. */
+export interface NasaImportResult {
+  plot_id: string
+  latitude: number
+  longitude: number
+  start: string
+  end: string
+  source: string
+  time_standard: 'LST'
+  variables: string[]
+  unidades: Record<string, string>
+  dias: number
+  filas_guardadas: number
+  valores_faltantes: number
+  fetched_at: string
+}
+
+// ---------- Recomendaciones (PENDIENTE BACKEND: POST /api/recommendations) ----------
 
 export interface RecommendationRequest {
   plot_id: string
@@ -70,7 +160,7 @@ export interface RecommendationRequest {
   priority: Priority
   /** PENDIENTE de confirmar en el contrato. */
   start_on?: string
-  irrigation?: Irrigation
+  water_availability?: WaterAvailability
 }
 
 export interface Campaign {

@@ -13,7 +13,7 @@ import { PanelGrid } from '../components/ui/PanelGrid'
 import { SectionCard } from '../components/ui/SectionCard'
 import { useNasa } from '../hooks/useNasa'
 import { usePlot } from '../hooks/usePlot'
-import { useReadings } from '../hooks/useReadings'
+import { SENSOR_REFRESH_MS, useReadings } from '../hooks/useReadings'
 
 /** 02 / Diagnóstico: sensor ESP32 (ámbar) y contexto NASA POWER (azul), siempre separados. */
 export function DashboardPage() {
@@ -52,6 +52,7 @@ export function DashboardPage() {
             <>
               <SensorCards readings={readings.data} />
               <ReadingsChart readings={readings.data} />
+              <p className="text-muted">Se actualiza solo cada {SENSOR_REFRESH_MS / 1000} segundos.</p>
             </>
           )}
         </SectionCard>
@@ -62,17 +63,24 @@ export function DashboardPage() {
           description="Contexto regional de modelos de NASA para tu zona. No es una medición sobre tu parcela."
           tone="nasa"
           actions={
-            <Button variant="cielo" onClick={() => void nasa.refresh()} disabled={nasa.refreshing}>
+            <Button variant="cielo" onClick={() => void nasa.refresh()} disabled={nasa.refreshing || nasa.loading}>
               {nasa.refreshing ? 'Consultando NASA…' : 'Actualizar clima'}
             </Button>
           }
         >
-          {nasa.refreshError && (
-            <Alert tone="warn" title="NASA no disponible" role="alert">
-              {nasa.refreshError} Se muestran los últimos datos guardados, con su fecha.
+          {nasa.problem && (
+            <Alert
+              tone="warn"
+              title={nasa.problem.nasaDown ? 'NASA no disponible' : 'No se pudo actualizar el clima'}
+              role="alert"
+            >
+              {nasa.problem.message}{' '}
+              {nasa.data && nasa.data.length > 0
+                ? 'Se muestran los últimos datos guardados, con su fecha.'
+                : 'Todavía no hay datos guardados para mostrar.'}
             </Alert>
           )}
-          {nasa.loading && <Loading label="Cargando clima NASA…" />}
+          {nasa.loading && <Loading label="Consultando NASA POWER…" />}
           {nasa.error && <ErrorBox message={nasa.error} onRetry={nasa.reload} />}
           {nasa.data && (
             <>

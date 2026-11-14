@@ -42,7 +42,28 @@ export function formatNumber(value: number, digits = 1): string {
   })
 }
 
-export const HOURS_STALE = 6
-export function isStale(iso: string, hours = HOURS_STALE): boolean {
-  return Date.now() - new Date(iso).getTime() > hours * 3600_000
+/** Pasado este tiempo sin lecturas nuevas, el sensor se considera "sin actualización". */
+export const SENSOR_STALE_MINUTES = 15
+export function isStale(iso: string, minutes = SENSOR_STALE_MINUTES): boolean {
+  return Date.now() - new Date(iso).getTime() > minutes * 60_000
+}
+
+/** Unidades de la API (tal como las da POWER) a texto para mostrar. */
+const UNIT_LABELS: Record<string, string> = {
+  C: '°C',
+  'mm/day': 'mm/día',
+}
+export function displayUnit(unit: string): string {
+  return UNIT_LABELS[unit] ?? unit
+}
+
+/** Día AAAA-MM-DD corto para ejes de gráficos (sin año). */
+export function formatDayShort(day: string): string {
+  const [y, m, d] = day.split('-').map(Number)
+  if (!y || !m || !d) return '—'
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('es-PE', {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: 'short',
+  })
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { formatNumber } from '../../utils/format'
 import { Eyebrow } from './Eyebrow'
 import { SourceBadge } from './SourceBadge'
@@ -14,14 +15,19 @@ interface Props {
   sourceDetail?: string
   digits?: number
   note?: string
+  /** Etiquetas extra junto al título (p. ej. DATO DE PRUEBA). */
+  badge?: ReactNode
 }
 
 /** Cifra mono con la unidad pequeña al lado, más fecha/hora y fuente. */
-export function StatCard({ label, value, unit, when, source, sourceDetail, digits = 1, note }: Props) {
+export function StatCard({ label, value, unit, when, source, sourceDetail, digits = 1, note, badge }: Props) {
   const tone = TONES[source]
   return (
     <div className="border-t border-line pt-4">
-      <Eyebrow>{label}</Eyebrow>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Eyebrow>{label}</Eyebrow>
+        {badge}
+      </div>
       {value === null ? (
         <p className="mt-2 font-mono text-3xl font-medium text-muted">Sin dato</p>
       ) : (
