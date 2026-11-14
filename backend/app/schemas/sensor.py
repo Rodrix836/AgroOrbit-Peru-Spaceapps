@@ -70,6 +70,17 @@ class ReadingsBatch(BaseModel):
 
     readings: list[ReadingIn] = Field(min_length=1, max_length=50)
 
+class Esp32Sample(BaseModel):
+    """Formato plano del firmware con hora asignada por el servidor."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    device_id: str = Field(min_length=1, max_length=120)
+    soil_moisture_pct: float = Field(strict=True, ge=0, le=100, allow_inf_nan=False)
+    soil_moisture_raw: int = Field(strict=True, ge=0, le=4095)
+    soil_temp_c: float = Field(strict=True, ge=-55, le=125, allow_inf_nan=False)
+
+
 class SensorReadingRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

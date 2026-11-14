@@ -34,3 +34,7 @@ dist/
 
 # Configuración del editor
 .vscode/
+
+# Estado local de Supabase CLI
+supabase/.temp/
+supabase/.branches/
