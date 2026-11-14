@@ -182,10 +182,13 @@ export const api = {
       ? wait(mockReadings())
       : request<SensorReading[]>(`/api/plots/${plotId}/sensors/readings`),
 
-  getNasaObservations: (plotId: string): Promise<NasaObservation[]> =>
+  /** Observaciones guardadas del período (from y to, AAAA-MM-DD, hora solar local de POWER). */
+  getNasaObservations: (plotId: string, range: { from: string; to: string }): Promise<NasaObservation[]> =>
     USE_MOCKS
-      ? wait(mockNasa())
-      : request<NasaObservation[]>(`/api/plots/${plotId}/nasa/observations`),
+      ? wait(mockNasa(range))
+      : request<NasaObservation[]>(
+          `/api/plots/${plotId}/nasa/observations?from=${range.from}&to=${range.to}`,
+        ),
 
   /** Pide a la API consultar POWER (últimos 90 días) y guardarlo. Luego se leen las observaciones. */
   refreshNasaPower: (plotId: string): Promise<NasaImportResult | null> => {

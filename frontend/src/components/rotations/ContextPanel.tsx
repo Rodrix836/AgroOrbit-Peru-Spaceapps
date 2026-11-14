@@ -1,5 +1,6 @@
 import type { RecommendationContext } from '../../types/api'
 import { formatDateTime, formatDay, formatNumber } from '../../utils/format'
+import { daysBetween } from '../../utils/period'
 import { TestBadge } from '../sensors/QualityNotice'
 import { Alert } from '../ui/Alert'
 import { Eyebrow } from '../ui/Eyebrow'
@@ -52,6 +53,13 @@ export function ContextPanel({
   const { power, sensor } = context
   const ind = power?.indicators ?? {}
   const days = num(ind.dias_analizados)
+  const rainTotal = num(ind.precipitacion_total_mm)
+  const rainValid = num(ind.dias_precipitacion_validos)
+  // Promedio anual = lluvia total ÷ años del período. Solo tiene sentido con un período de un año o más.
+  const periodDays = power ? daysBetween(power.start, power.end) : 0
+  const years = periodDays / 365.25
+  const annualRain = rainTotal !== null && periodDays >= 365 ? rainTotal / years : null
+  const partial = rainValid !== null && days !== null && rainValid < days
 
   return (
     <section className="mb-8 border border-line bg-panel p-6 md:p-8" aria-label="Con qué datos se calculó">
@@ -76,13 +84,17 @@ export function ContextPanel({
               <Eyebrow tone="cielo">Clima de la zona</Eyebrow>
               <SourceBadge kind="nasa" label={power.source} />
             </div>
-            <p className="font-mono text-base text-ink">
-              Período: {formatDay(power.start)} a {formatDay(power.end)}
-            </p>
+            {power.use === 'historico' ? (
+              <p className="font-mono text-base text-ink">
+                Histórico de {formatDay(power.start)} a {formatDay(power.end)}
+              </p>
+            ) : (
+              <p className="font-mono text-base text-ink">
+                Período: {formatDay(power.start)} a {formatDay(power.end)}
+              </p>
+            )}
             <p className="mt-1 text-muted">
-              {power.use === 'contexto_del_periodo'
-                ? 'Contexto reciente, no un histórico.'
-                : 'Histórico del período indicado.'}{' '}
+              {power.use === 'contexto_del_periodo' && 'Contexto reciente, no un histórico. '}
               Días en hora solar local ({power.time_standard}) de NASA POWER; no es una medición sobre tu parcela.
             </p>
             <dl className="mt-3">
@@ -93,11 +105,21 @@ export function ContextPanel({
                 detail={coverage(num(ind.dias_temperatura_validos), days)}
               />
               <Row
-                label="Lluvia total"
-                value={num(ind.precipitacion_total_mm)}
+                label="Lluvia total del período"
+                value={rainTotal}
                 unit="mm"
-                detail={coverage(num(ind.dias_precipitacion_validos), days)}
+                detail={coverage(rainValid, days)}
               />
+              {annualRain !== null && (
+                <Row
+                  label="Lluvia promedio anual"
+                  value={annualRain}
+                  unit="mm/año"
+                  detail={`Cálculo del frontend, no un dato de NASA: lluvia total ÷ ${formatNumber(years, 1)} años del período.${
+                    partial ? ' Los días sin dato no se cuentan: el promedio puede quedar por debajo del real.' : ''
+                  }`}
+                />
+              )}
             </dl>
           </div>
         )}

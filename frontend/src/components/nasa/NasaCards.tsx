@@ -1,3 +1,4 @@
+import type { NasaView } from '../../hooks/useNasa'
 import type { NasaObservation } from '../../types/api'
 import { displayUnit, formatDay, formatNumber } from '../../utils/format'
 import { EmptyState } from '../ui/EmptyState'
@@ -49,15 +50,8 @@ function Row({
   )
 }
 
-/** Cuántos días tiene la variable y cuántos de ellos traen valor. */
-function coverage(obs: NasaObservation[], variable: string): string {
-  const all = obs.filter((o) => o.variable === variable)
-  const valid = all.filter((o) => o.value !== null)
-  return `${valid.length} de ${all.length} días con dato`
-}
-
 /** Solo T2M y PRECTOTCORR, que son las variables que entrega la API hoy. */
-export function NasaCards({ observations }: { observations: NasaObservation[] }) {
+export function NasaCards({ observations, view }: { observations: NasaObservation[]; view: NasaView }) {
   const temp = nasaSeries(observations, 'T2M')
   const rain = nasaSeries(observations, 'PRECTOTCORR')
 
@@ -65,18 +59,18 @@ export function NasaCards({ observations }: { observations: NasaObservation[] })
     return (
       <EmptyState
         tone="insufficient"
-        title="Aún no hay clima NASA POWER guardado para esta parcela"
+        title={`No hay clima NASA POWER guardado para ${view.period.label.toLowerCase()}`}
         message="Usa «Actualizar clima» para consultarlo. Si NASA no responde, no mostramos valores de relleno."
       />
     )
   }
 
-  const days = [...new Set(observations.map((o) => o.observed_on))].sort()
+  const total = view.period.days
+  const coverage = (valid: number) => `${valid} de ${total} días con dato`
   const lastValid = [...temp, ...rain]
     .map((o) => o.observed_on)
     .sort()
     .pop()
-  const period = `${formatDay(days[0])} a ${formatDay(days[days.length - 1])}`
 
   return (
     <div>
@@ -85,18 +79,20 @@ export function NasaCards({ observations }: { observations: NasaObservation[] })
           label="Temperatura media del aire"
           value={temp.length ? formatNumber(mean(temp), 1) : null}
           unit={displayUnit(temp[0]?.unit ?? 'C')}
-          detail={coverage(observations, 'T2M')}
+          detail={coverage(temp.length)}
         />
         <Row
           label="Lluvia acumulada"
           value={rain.length ? formatNumber(sum(rain), 1) : null}
           unit="mm"
-          detail={`${coverage(observations, 'PRECTOTCORR')} · suma de ${displayUnit(rain[0]?.unit ?? 'mm/day')}`}
+          detail={`${coverage(rain.length)} · suma de ${displayUnit(rain[0]?.unit ?? 'mm/day')}`}
         />
       </dl>
       <div className="border-t border-line pt-4">
         <Eyebrow>Período</Eyebrow>
-        <p className="mt-1 font-mono text-base text-ink">{period}</p>
+        <p className="mt-1 font-mono text-base text-ink">
+          {view.period.label}: {formatDay(view.from)} a {formatDay(view.to)}
+        </p>
         <p className="mt-1 font-mono text-base text-muted">
           Último día con dato: {lastValid ? formatDay(lastValid) : 'Sin fecha'}
         </p>

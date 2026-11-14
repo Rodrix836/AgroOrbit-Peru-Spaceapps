@@ -151,18 +151,21 @@ export function mockReadings(): SensorReading[] {
 const todayLima = () => new Date(Date.now() - 5 * HOUR)
 
 /**
- * Observaciones guardadas: 90 días, T2M ("C") y PRECTOTCORR ("mm/day"), ordenadas por día y variable.
- * Los últimos 4 días vienen null (POWER publica con retraso) y hay un hueco suelto a mitad de serie.
- * En `nasa_down` lo guardado es de una importación antigua (hace 12 días).
+ * Observaciones guardadas: 2 años (730 días), T2M ("C") y PRECTOTCORR ("mm/day"), ordenadas por día y variable.
+ * Como la API, solo devuelve los días entre `from` y `to`. Los últimos 4 días vienen null (POWER publica con
+ * retraso), hay un hueco suelto y septiembre de 2025 sin ningún dato. En `nasa_down` lo guardado es de una importación
+ * antigua (hace 12 días).
  */
-export function mockNasa(): NasaObservation[] {
+export function mockNasa(range?: { from: string; to: string }): NasaObservation[] {
   const out: NasaObservation[] = []
   const lag = MOCK_SCENARIO === 'nasa_down' ? 12 : 0
   const end = todayLima().getTime() - lag * DAY
   const r2 = (n: number) => Math.round(n * 100) / 100
-  for (let i = 89; i >= 0; i--) {
+  const season = (i: number) => Math.sin((2 * Math.PI * i) / 365)
+  for (let i = 729; i >= 0; i--) {
     const day = new Date(end - i * DAY).toISOString().slice(0, 10)
-    const missing = i <= 3 || i === 47
+    if (range && (day < range.from || day > range.to)) continue
+    const missing = i <= 3 || i === 47 || (i >= 395 && i <= 440)
     const add = (variable: string, value: number, unit: string) =>
       out.push({
         id: `${variable}-${day}`,
@@ -172,8 +175,8 @@ export function mockNasa(): NasaObservation[] {
         unit,
         source: 'NASA POWER',
       })
-    add('PRECTOTCORR', i % 9 === 0 ? 4.2 : 0, 'mm/day')
-    add('T2M', r2(25 + 2.5 * Math.sin(i / 5)), 'C')
+    add('PRECTOTCORR', i % 9 === 0 ? r2(3 + 6 * Math.max(0, season(i))) : 0, 'mm/day')
+    add('T2M', r2(25 + 3 * season(i) + 0.8 * Math.sin(i / 5)), 'C')
   }
   return out
 }
@@ -294,15 +297,15 @@ const CONTEXT_OK: RecommendationContext = {
   power: {
     source: 'NASA POWER',
     time_standard: 'LST',
-    start: '2025-11-01',
-    end: '2026-10-31',
+    start: '2024-11-15',
+    end: '2026-11-14',
     use: 'historico',
     indicators: {
-      temperatura_promedio_c: 26.4,
-      precipitacion_total_mm: 180.2,
-      dias_analizados: 365,
-      dias_temperatura_validos: 360,
-      dias_precipitacion_validos: 360,
+      temperatura_promedio_c: 27.2,
+      precipitacion_total_mm: 262.5,
+      dias_analizados: 730,
+      dias_temperatura_validos: 706,
+      dias_precipitacion_validos: 706,
     },
   },
   sensor: {

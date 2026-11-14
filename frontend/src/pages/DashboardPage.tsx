@@ -1,5 +1,6 @@
 import { NasaCards } from '../components/nasa/NasaCards'
 import { NasaChart } from '../components/nasa/NasaChart'
+import { NasaPeriodSelector } from '../components/nasa/NasaPeriodSelector'
 import { PlotSummary } from '../components/plot/PlotSummary'
 import { ReadingsChart } from '../components/sensors/ReadingsChart'
 import { SensorCards } from '../components/sensors/SensorCards'
@@ -81,11 +82,19 @@ export function DashboardPage() {
             </Alert>
           )}
           {nasa.loading && <Loading label="Consultando NASA POWER…" />}
+          {!nasa.loading && (
+            <NasaPeriodSelector
+              value={nasa.period}
+              onChange={(p) => void nasa.setPeriod(p)}
+              disabled={nasa.refreshing}
+            />
+          )}
+          {!nasa.loading && nasa.refreshing && <Loading label="Cargando el período…" />}
           {nasa.error && <ErrorBox message={nasa.error} onRetry={nasa.reload} />}
-          {nasa.data && (
+          {nasa.data && nasa.view && (
             <>
-              <NasaCards observations={nasa.data} />
-              <NasaChart observations={nasa.data} />
+              <NasaCards observations={nasa.data} view={nasa.view} />
+              <NasaChart observations={nasa.data} view={nasa.view} />
             </>
           )}
         </SectionCard>
