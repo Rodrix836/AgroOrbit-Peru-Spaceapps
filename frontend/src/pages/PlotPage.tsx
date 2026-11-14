@@ -119,11 +119,15 @@ function PrefsForm() {
 
   useEffect(() => {
     setLocal(prefs)
-    setWater(plot?.water_availability ?? '')
-    setPriority(uiPriority(plot?.priority))
     setSaved(false)
     setSaveError(null)
   }, [plot?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lo guardado en la parcela (al cargar, al cambiar de parcela y tras guardar) manda sobre el formulario.
+  useEffect(() => {
+    setWater(plot?.water_availability ?? '')
+    setPriority(uiPriority(plot?.priority))
+  }, [plot?.id, plot?.priority, plot?.water_availability])
 
   const setLocalField = <K extends keyof PlotPreferences>(k: K, v: PlotPreferences[K]) => {
     setSaved(false)
@@ -232,6 +236,11 @@ function PrefsForm() {
                     }}
                   />
                   <span className={`block font-display text-2xl font-extrabold tracking-[-0.02em] ${on ? 'text-lima' : 'text-ink'}`}>
+                    {on && (
+                      <span aria-hidden className="mr-2 font-mono text-lg">
+                        ✓
+                      </span>
+                    )}
                     {p.label}
                   </span>
                   <span className="mt-1 block text-muted">{p.hint}</span>
@@ -239,6 +248,12 @@ function PrefsForm() {
               )
             })}
           </div>
+          {priority === '' && (
+            <p className="mt-2 text-muted">
+              Sin prioridad elegida.
+              {plot?.priority ? ` La parcela tiene guardada otra prioridad («${plot.priority}») que esta pantalla no ofrece.` : ''}
+            </p>
+          )}
         </fieldset>
         {saveError && <ErrorBox message={`No se pudo guardar el agua y la prioridad. ${saveError}`} />}
         <div className="flex flex-wrap items-center gap-4">

@@ -11,7 +11,7 @@ const clamp = (n: number) => Math.max(0, Math.min(100, n))
 /**
  * Calendario de 12 meses (01 a 12) que empieza en el mes de la primera siembra.
  * Primera campaña: barra lima sólida. Siguientes: barra con solo borde lima.
- * En pantallas angostas se desplaza en horizontal.
+ * Los 12 meses caben siempre en el ancho de la tarjeta (sin desplazamiento horizontal).
  */
 export function CampaignCalendar({ campaigns }: { campaigns: Campaign[] }) {
   if (campaigns.length === 0) return null
@@ -35,13 +35,18 @@ export function CampaignCalendar({ campaigns }: { campaigns: Campaign[] }) {
 
   return (
     <div>
-      <div className="overflow-x-auto" tabIndex={0} aria-label="Calendario de 12 meses, desplazable">
-        <div className="min-w-[640px]">
+      <div role="group" aria-label="Calendario de 12 meses">
+        <div>
           <div className="grid grid-cols-12 border-b border-line">
             {months.map((m, i) => (
-              <div key={i} className="border-l border-line px-1 pb-1 font-mono text-[13px] text-muted first:border-l-0">
-                <span className="text-ink">{m.n}</span>
-                {m.first && <span className="ml-1">’{String(m.year).slice(2)}</span>}
+              <div
+                key={i}
+                className="min-w-0 border-l border-line px-0.5 pb-1 text-center font-mono text-[13px] leading-4 text-muted first:border-l-0 md:px-1 md:text-left"
+              >
+                <span className="block text-ink">{m.n}</span>
+                <span className="block h-4 whitespace-nowrap tracking-[-0.1em] md:tracking-normal">
+                  {m.first ? `’${String(m.year).slice(2)}` : ''}
+                </span>
               </div>
             ))}
           </div>
@@ -64,7 +69,7 @@ export function CampaignCalendar({ campaigns }: { campaigns: Campaign[] }) {
                   }`}
                   style={{ left: `${left}%`, width: `${Math.max(right - left, 2)}%` }}
                 >
-                  {c.crop}
+                  <span className="min-w-0 truncate">{c.crop}</span>
                 </div>
               </div>
             )

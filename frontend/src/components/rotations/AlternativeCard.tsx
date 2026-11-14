@@ -1,4 +1,5 @@
 import type { Alternative } from '../../types/api'
+import { formatDay } from '../../utils/format'
 import { Eyebrow } from '../ui/Eyebrow'
 import { labelClass } from '../ui/styles'
 import { CampaignCalendar } from './CampaignCalendar'
@@ -10,20 +11,24 @@ interface Props {
   selected: boolean
   /** Letra de la alternativa: A, B… */
   letter: string
+  /** true = la fecha de inicio no está guardada: el calendario usa una fecha supuesta y se avisa. */
+  assumedStart?: boolean
 }
 
-export function AlternativeCard({ alternative: a, selected, letter }: Props) {
+export function AlternativeCard({ alternative: a, selected, letter, assumedStart = false }: Props) {
   const sequence = a.campaigns.map((c) => c.crop).join(' → ')
   const score = Math.max(0, Math.min(100, a.score))
+  const firstStart = a.campaigns.map((c) => c.starts_on).sort()[0]
 
   return (
     <article className={`min-w-0 bg-panel p-6 md:p-8 ${selected ? 'border-t-2 border-lima' : 'border-t-2 border-transparent'}`}>
       <Eyebrow tone={selected ? 'lima' : 'muted'}>Alternativa {letter}</Eyebrow>
-      {selected && (
-        <p className={`mt-2 inline-block bg-lima px-2 py-1 font-medium text-bg ${labelClass}`}>
-          Mejor puntaje con esta prioridad
-        </p>
-      )}
+      {/* El espacio de la etiqueta se reserva también en las demás tarjetas, para que todo quede a la misma altura. */}
+      <p
+        className={`mt-2 inline-block px-2 py-1 font-medium ${labelClass} ${selected ? 'bg-lima text-bg' : 'invisible'}`}
+      >
+        Mejor puntaje con esta prioridad
+      </p>
 
       <h3
         className={`mt-3 font-display text-[clamp(28px,4vw,40px)] font-extrabold leading-none tracking-[-0.03em] ${
@@ -48,6 +53,11 @@ export function AlternativeCard({ alternative: a, selected, letter }: Props) {
       </p>
 
       <Eyebrow className="mb-3 mt-8">Calendario · dos campañas</Eyebrow>
+      {assumedStart && firstStart && (
+        <p className="mb-3 font-mono text-base font-medium text-ambar">
+          Fecha de inicio supuesta: {formatDay(firstStart)}
+        </p>
+      )}
       <CampaignCalendar campaigns={a.campaigns} />
 
       <Eyebrow tone="lima" className="mb-3 mt-8">

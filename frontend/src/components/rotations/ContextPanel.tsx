@@ -39,16 +39,18 @@ function coverage(valid: number | null, total: number | null): string | undefine
  * Bloque «Con qué datos se calculó»: aviso, NASA POWER y sensor, siempre separados.
  * PENDIENTE BACKEND: formato propuesto en el PR #7 (pendiente de confirmar por Milene).
  */
-export function ContextPanel({ context }: { context: RecommendationContext }) {
+export function ContextPanel({ context, example = false }: { context: RecommendationContext; example?: boolean }) {
   const { power, sensor } = context
   const ind = power?.indicators ?? {}
   const days = num(ind.dias_analizados)
 
   return (
     <section className="mb-8 border border-line bg-panel p-6 md:p-8" aria-label="Con qué datos se calculó">
-      <Eyebrow tone="lima" className="mb-4">
-        Con qué datos se calculó
-      </Eyebrow>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Eyebrow tone="lima">Con qué datos se calculó</Eyebrow>
+        {/* PENDIENTE BACKEND: mientras la respuesta salga de mocks, las cifras no son reales. */}
+        {example && <SourceBadge kind="prototype" label="Datos de ejemplo" />}
+      </div>
       {context.notice && (
         <div className="mb-6">
           <Alert tone="warn" title="Aviso">

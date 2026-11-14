@@ -56,7 +56,7 @@ export const mockPlots: Plot[] = [
 
 /** Respuesta de POST /api/plots: PlotInput más id, user_id y created_at. */
 export function mockCreatePlot(input: PlotInput): Plot {
-  return {
+  const plot: Plot = {
     id: crypto.randomUUID(),
     user_id: mockPlots[0].user_id,
     name: input.name,
@@ -72,6 +72,8 @@ export function mockCreatePlot(input: PlotInput): Plot {
     declared_irrigated: input.declared_irrigated ?? null,
     created_at: iso(Date.now()),
   }
+  mockPlots.push(plot) // para que aparezca en la lista, como con la API real
+  return plot
 }
 
 /** Respuesta de PATCH /api/plots/{id}: aplica solo los campos enviados y devuelve la parcela completa. */
@@ -187,7 +189,7 @@ const POWER_EXAMPLE = {
   },
 }
 
-/** Evaluación de ejemplo: histórico de NASA POWER y sensor usado como evidencia (valores de muestra). */
+/** Evaluación de ejemplo: histórico de NASA POWER (valores de muestra). Nuestro kit es de prueba: no es evidencia. */
 const CONTEXT_OK: RecommendationContext = {
   notice: '[Ejemplo] Evaluación de muestra con datos declarados de la parcela; no proviene del motor de reglas.',
   power: {
@@ -205,9 +207,9 @@ const CONTEXT_OK: RecommendationContext = {
     },
   },
   sensor: {
-    quality_flag: 'ok',
-    used_as_evidence: true,
-    reason: '[Ejemplo] Se usaron las lecturas de humedad del kit como evidencia.',
+    quality_flag: 'test',
+    used_as_evidence: false,
+    reason: 'Lecturas del ESP32 tomadas fuera del campo.',
   },
   assumptions: [],
 }

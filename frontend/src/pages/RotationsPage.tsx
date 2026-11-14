@@ -160,12 +160,27 @@ export function RotationsPage() {
       {rec.error && <ErrorBox message={rec.error} onRetry={() => void run(buildRequest(plot, priority, prefs))} />}
 
       {/* Siempre visible, encima del resultado */}
-      {!rec.loading && data?.context && <ContextPanel context={data.context} />}
+      {!rec.loading && data?.context && <ContextPanel context={data.context} example />}
 
       {!rec.loading && insufficient && <InsufficientPanel missing={data?.missing ?? []} crops={crops} />}
 
       {!rec.loading && data?.status === 'ok' && alternatives.length === 0 && (
         <EmptyState title="No hay alternativas para mostrar" />
+      )}
+
+      {/* Sin fecha de inicio guardada, el calendario usa una fecha supuesta: se avisa antes de las alternativas. */}
+      {!rec.loading && data?.status === 'ok' && missingStart && (
+        <div className="mb-8">
+          <Alert tone="warn" title="Falta un dato">
+            <p>
+              Falta la fecha de inicio de la siguiente campaña, así que los calendarios usan una fecha supuesta
+              (está marcada en cada alternativa). Se verán más precisos cuando la agregues.
+            </p>
+            <ButtonLink to="/parcela" variant="amber" size="lg" className="mt-4">
+              Completar datos →
+            </ButtonLink>
+          </Alert>
+        </div>
       )}
 
       {!rec.loading && alternatives.length > 0 && (
@@ -176,15 +191,16 @@ export function RotationsPage() {
               alternative={a}
               letter={LETTERS[i] ?? String(i + 1)}
               selected={a.id === data?.selected_id}
+              assumedStart={missingStart}
             />
           ))}
         </PanelGrid>
       )}
 
-      {/* Abajo: fuentes y método, y aviso de fecha de inicio faltante */}
+      {/* Abajo: fuentes y método */}
       {!rec.loading && data?.status === 'ok' && (
         <div className="mt-6">
-          <PanelGrid className={missingStart ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}>
+          <PanelGrid className="lg:grid-cols-1">
             <section className="bg-panel p-6 md:p-8">
               <Eyebrow tone="cielo" className="mb-4">
                 Fuentes y método
@@ -196,20 +212,6 @@ export function RotationsPage() {
                 ponderación; el ganador no siempre cambia.
               </p>
             </section>
-            {missingStart && (
-              <section className="border-l-4 border-ambar bg-ambar-bg p-6 md:p-8">
-                <Eyebrow tone="ambar" className="mb-3">
-                  Falta un dato
-                </Eyebrow>
-                <p className="text-ink">
-                  Falta la fecha de inicio de la siguiente campaña: el calendario será más preciso cuando la
-                  agregues.
-                </p>
-                <ButtonLink to="/parcela" variant="amber" size="lg" className="mt-5">
-                  Completar datos →
-                </ButtonLink>
-              </section>
-            )}
           </PanelGrid>
         </div>
       )}

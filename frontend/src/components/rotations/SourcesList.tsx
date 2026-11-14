@@ -8,15 +8,18 @@ export function SourcesList({ sources }: { sources: SourceRef[] }) {
     <ul className="space-y-1">
       {sources.map((s, i) => (
         <li key={i} className="flex gap-3">
-          <span aria-hidden className="font-mono text-cielo">
-            ↗
-          </span>
           {s.url ? (
-            <a href={s.url} target="_blank" rel="noreferrer" className="text-cielo underline">
-              {s.title}
-            </a>
+            <>
+              <span aria-hidden className="font-mono text-cielo">
+                ↗
+              </span>
+              <a href={s.url} target="_blank" rel="noreferrer" className="text-cielo underline">
+                {s.title}
+              </a>
+            </>
           ) : (
-            <span className="text-ink">{s.title}</span>
+            // Sin enlace verificado: texto plano, sin flecha ni subrayado (no parece una cita real).
+            <span className="pl-6 text-muted">{s.title}</span>
           )}
         </li>
       ))}
