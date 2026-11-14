@@ -1,0 +1,40 @@
+
+# ==========================================
+# AgroOrbit Perú - Git Ignore
+# ==========================================
+
+# Entornos virtuales de Python
+.venv/
+venv/
+.venv-nasa/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Variables de entorno y credenciales
+.env
+.env.local
+.env.*.local
+
+# Datos satelitales crudos
+*.nc
+*.nc4
+*.hdf
+*.h5
+
+# Bases de datos locales de prueba
+*.sqlite3
+*.db
+
+# Dependencias y compilaciones de frontend
+node_modules/
+dist/
+
+# Configuración del editor
+.vscode/
+
+# Estado local de Supabase CLI
+supabase/.temp/
+supabase/.branches/

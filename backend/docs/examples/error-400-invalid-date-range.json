@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/plots/c4645fb7-03cc-425a-872b-7c7e88d06c90/sensors/readings?from=2026-11-15T00:00:00Z&to=2026-11-14T00:00:00Z",
+    "headers": {
+      "Authorization": "Bearer <access_token de Supabase>"
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "invalid_date_range",
+        "message": "'from' debe ser anterior o igual a 'to'.",
+        "details": null
+      }
+    }
+  }
+}

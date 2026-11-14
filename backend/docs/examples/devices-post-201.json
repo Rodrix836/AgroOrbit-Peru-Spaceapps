@@ -1,0 +1,26 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/plots/c4645fb7-03cc-425a-872b-7c7e88d06c90/devices",
+    "headers": {
+      "Authorization": "Bearer <access_token de Supabase>"
+    },
+    "body": {
+      "external_id": "esp32-sullana-01",
+      "model": "ESP32 + HW-390 + DS18B20"
+    }
+  },
+  "response": {
+    "status": 201,
+    "body": {
+      "id": "dca83203-c87b-41d5-bfb3-1c5cc7ee5c0b",
+      "plot_id": "c4645fb7-03cc-425a-872b-7c7e88d06c90",
+      "external_id": "esp32-sullana-01",
+      "model": "ESP32 + HW-390 + DS18B20",
+      "status": "active",
+      "installed_at": null,
+      "created_at": "2026-11-14T17:33:30Z",
+      "device_key": "aok_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    }
+  }
+}

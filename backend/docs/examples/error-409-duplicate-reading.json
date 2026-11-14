@@ -1,0 +1,47 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/devices/readings",
+    "headers": {
+      "X-Device-Key": "<device_key>",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "readings": [
+        {
+          "sensor_type": "soil_moisture",
+          "raw_value": 2100,
+          "calibrated_value": 41.5,
+          "unit": "%",
+          "recorded_at": "2026-11-14T12:00:00Z"
+        },
+        {
+          "sensor_type": "soil_temperature",
+          "raw_value": 27.31,
+          "calibrated_value": 27.31,
+          "unit": "°C",
+          "recorded_at": "2026-11-14T12:00:00Z"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 409,
+    "body": {
+      "error": {
+        "code": "duplicate_reading",
+        "message": "La lectura ya fue registrada para este dispositivo.",
+        "details": [
+          {
+            "sensor_type": "soil_moisture",
+            "recorded_at": "2026-11-14T12:00:00Z"
+          },
+          {
+            "sensor_type": "soil_temperature",
+            "recorded_at": "2026-11-14T12:00:00Z"
+          }
+        ]
+      }
+    }
+  }
+}

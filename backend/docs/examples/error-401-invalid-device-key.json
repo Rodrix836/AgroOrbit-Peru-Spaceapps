@@ -1,0 +1,37 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/devices/readings",
+    "headers": {
+      "X-Device-Key": "aok_clave-incorrecta"
+    },
+    "body": {
+      "readings": [
+        {
+          "sensor_type": "soil_moisture",
+          "raw_value": 2100,
+          "calibrated_value": 41.5,
+          "unit": "%",
+          "recorded_at": "2026-11-14T12:00:00Z"
+        },
+        {
+          "sensor_type": "soil_temperature",
+          "raw_value": 27.31,
+          "calibrated_value": 27.31,
+          "unit": "°C",
+          "recorded_at": "2026-11-14T12:00:00Z"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 401,
+    "body": {
+      "error": {
+        "code": "invalid_device_key",
+        "message": "Clave de dispositivo inválida.",
+        "details": null
+      }
+    }
+  }
+}
