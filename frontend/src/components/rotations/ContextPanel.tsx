@@ -19,7 +19,7 @@ function Row({ label, value, unit, detail }: { label: string; value: number | nu
             <span className="text-muted">Sin dato</span>
           ) : (
             <>
-              {formatNumber(value, 2)}
+              {formatNumber(value, 1)}
               <span className="ml-1.5 text-base text-muted">{unit}</span>
             </>
           )}
