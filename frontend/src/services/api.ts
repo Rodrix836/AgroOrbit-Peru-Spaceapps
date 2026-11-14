@@ -28,6 +28,14 @@ import {
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
+/**
+ * De dónde sale la recomendación: VITE_RECOMMENDATIONS_SOURCE=mock (por defecto) | api.
+ * Se llama a la API solo con "api" y VITE_USE_MOCKS=false; en cualquier otro caso salen mocks.
+ */
+export const RECOMMENDATIONS_SOURCE = import.meta.env.VITE_RECOMMENDATIONS_SOURCE === 'api' ? 'api' : 'mock'
+/** true = la recomendación que se muestra es de ejemplo (la pantalla lo rotula como DATOS DE EJEMPLO). */
+export const RECOMMENDATIONS_ARE_MOCK = USE_MOCKS || RECOMMENDATIONS_SOURCE !== 'api'
+
 /** Códigos de error de la API que significan "NASA POWER no está disponible". */
 export const NASA_ERROR_CODES = ['nasa_power_unavailable', 'nasa_power_invalid_response']
 
@@ -156,9 +164,15 @@ export const api = {
   },
 
   /**
-   * PENDIENTE BACKEND: POST /api/recommendations no existe todavía.
-   * Siempre usa mocks (DATOS DE EJEMPLO), aunque VITE_USE_MOCKS sea false.
+   * PENDIENTE BACKEND: POST /api/recommendations todavía no tiene ruta (propuesta del PR #7).
+   * Por defecto usa mocks (DATOS DE EJEMPLO). Cuando exista la ruta: VITE_RECOMMENDATIONS_SOURCE=api
+   * y VITE_USE_MOCKS=false, sin tocar código.
    */
   createRecommendation: (req: RecommendationRequest): Promise<RecommendationResponse> =>
-    wait(mockRecommendation(req)),
+    RECOMMENDATIONS_ARE_MOCK
+      ? wait(mockRecommendation(req))
+      : request<RecommendationResponse>('/api/recommendations', {
+          method: 'POST',
+          body: JSON.stringify(req),
+        }),
 }

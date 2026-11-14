@@ -18,9 +18,10 @@ import type {
 } from '../../types/api'
 import crops from './crops.json'
 import recommendationSoil from './recommendation-improve-soil.json'
+import recommendationFormatMockup from './recommendation-format-mockup.json'
 import recommendationInsufficient from './recommendation-insufficient-data.json'
 import recommendationSave from './recommendation-save-water.json'
-import { MOCK_SCENARIO } from './scenario'
+import { MOCK_SCENARIO, RECOMMENDATION_SCENARIO } from './scenario'
 
 export { MOCK_SCENARIO, SCENARIOS, type MockScenario } from './scenario'
 
@@ -231,11 +232,15 @@ const CONTEXT_DEMO: RecommendationContext = {
 }
 
 export function mockRecommendation(req: RecommendationRequest): RecommendationResponse {
-  if (MOCK_SCENARIO === 'insufficient_data') {
+  if (RECOMMENDATION_SCENARIO === 'insufficient_data') {
     return recommendationInsufficient as RecommendationResponse
   }
+  if (RECOMMENDATION_SCENARIO === 'format_mockup') {
+    // Ejemplo del PR #7 tal cual: trae marcadores <...> y puntajes 0. La pantalla no debe mostrarlo como resultado.
+    return recommendationFormatMockup as RecommendationResponse
+  }
   const base = req.priority === 'improve_soil' ? recommendationSoil : recommendationSave
-  const demo = MOCK_SCENARIO === 'demo_mode'
+  const demo = RECOMMENDATION_SCENARIO === 'demo_mode'
   return {
     status: 'ok',
     mode: demo ? 'escenario_demostracion' : 'evaluacion',

@@ -15,7 +15,9 @@ import { PanelGrid } from '../components/ui/PanelGrid'
 import { SourceBadge } from '../components/ui/SourceBadge'
 import { usePlot } from '../hooks/usePlot'
 import { useRecommendation } from '../hooks/useRecommendation'
+import { RECOMMENDATIONS_ARE_MOCK } from '../services/api'
 import type { Plot, PlotPreferences, Priority, RecommendationRequest, SourceRef } from '../types/api'
+import { hasPlaceholders, isFormatMockup } from '../utils/placeholders'
 
 const HORIZON_DAYS = 365 // hasta 12 meses, dos campañas
 const LETTERS = ['A', 'B', 'C', 'D']
@@ -75,10 +77,12 @@ export function RotationsPage() {
   const data = rec.data
   const insufficient = data?.status === 'insufficient_data'
   const missingStart = !prefs.startOn
-  // Con insufficient_data nunca se muestran alternativas ni puntajes, aunque vengan en la respuesta.
+  // Plan B: si la respuesta es solo la maqueta del formato, no se muestra como alternativas.
+  const mockup = data ? isFormatMockup(data) : false
+  // Con insufficient_data o maqueta nunca se muestran alternativas ni puntajes, aunque vengan en la respuesta.
   // El crop de cada campaña es un id de GET /api/crops: se muestra el nombre.
   const alternatives =
-    data?.status === 'ok'
+    data?.status === 'ok' && !mockup
       ? [...(data.alternatives ?? [])]
           .sort((a, b) => a.rank - b.rank)
           .map((a) => ({
@@ -87,7 +91,8 @@ export function RotationsPage() {
           }))
       : []
   const demo = data?.mode === 'escenario_demostracion'
-  const assumptions = data?.context?.assumptions ?? []
+  const assumptions = (data?.context?.assumptions ?? []).filter((a) => !hasPlaceholders(a))
+  const contextHasPlaceholders = data?.context ? hasPlaceholders(data.context) : false
 
   // Fuentes únicas de todas las alternativas.
   const sources: SourceRef[] = []
@@ -99,20 +104,8 @@ export function RotationsPage() {
 
   return (
     <div>
-      <PageHeader index="03" label="Rotaciones" title="Dos campañas, dos caminos" />
-      <p className="-mt-4 mb-4 max-w-prose text-muted">
-        Dos campañas seguidas dentro de los próximos 12 meses. Elige qué te importa más y compara.
-      </p>
-
-      {/* PENDIENTE BACKEND: POST /api/recommendations aún no existe; esta pantalla usa respuestas de ejemplo. */}
-      <div className="mb-8 flex flex-wrap items-center gap-3">
-        <SourceBadge kind="prototype" label="Datos de ejemplo" />
-        <span className="text-muted">
-          El motor de recomendaciones todavía no está conectado a la API: lo que ves aquí es de muestra.
-        </span>
-      </div>
-
-      {demo && (
+      {/* Escenario de demostración: aviso ámbar arriba de todo, con los supuestos siempre visibles. */}
+      {!rec.loading && demo && (
         <div className="mb-8">
           <Alert tone="warn" title="Escenario de demostración">
             <p className="text-lg font-semibold">
@@ -141,6 +134,21 @@ export function RotationsPage() {
         </div>
       )}
 
+      <PageHeader index="03" label="Rotaciones" title="Dos campañas, dos caminos" />
+      <p className="-mt-4 mb-4 max-w-prose text-muted">
+        Dos campañas seguidas dentro de los próximos 12 meses. Elige qué te importa más y compara.
+      </p>
+
+      {/* PENDIENTE BACKEND: sin ruta POST /api/recommendations (VITE_RECOMMENDATIONS_SOURCE=mock) salen respuestas de ejemplo. */}
+      {RECOMMENDATIONS_ARE_MOCK && (
+        <div className="mb-8 flex flex-wrap items-center gap-3">
+          <SourceBadge kind="prototype" label="Datos de ejemplo" />
+          <span className="text-muted">
+            El motor de recomendaciones todavía no está conectado a la API: lo que ves aquí es de muestra.
+          </span>
+        </div>
+      )}
+
       {/* Fila de prioridad entre dos líneas */}
       <div className="mb-8 flex flex-wrap items-center gap-3 border-y border-line py-4" role="group" aria-label="Prioridad">
         <Eyebrow className="mr-2">Prioridad</Eyebrow>
@@ -160,16 +168,34 @@ export function RotationsPage() {
       {rec.error && <ErrorBox message={rec.error} onRetry={() => void run(buildRequest(plot, priority, prefs))} />}
 
       {/* Siempre visible, encima del resultado */}
-      {!rec.loading && data?.context && <ContextPanel context={data.context} example />}
+      {!rec.loading && data?.context && !(mockup && contextHasPlaceholders) && (
+        <ContextPanel context={data.context} example={RECOMMENDATIONS_ARE_MOCK} />
+      )}
+
+      {/* Plan B: la respuesta es solo la maqueta del formato (marcadores o puntajes en 0). */}
+      {!rec.loading && mockup && (
+        <section className="mb-8 border-l-4 border-ambar bg-ambar-bg p-6 md:p-8">
+          <Eyebrow tone="ambar" className="mb-3">
+            Sin resultado
+          </Eyebrow>
+          <h2 className="font-display text-[clamp(28px,4vw,40px)] font-extrabold leading-none tracking-[-0.03em] text-ink">
+            Maqueta de formato: aún no hay resultado del motor
+          </h2>
+          <p className="mt-3 max-w-prose text-ink">
+            La respuesta solo trae el formato con textos de relleno. No mostramos alternativas, puntajes ni
+            calendario porque no son una recomendación.
+          </p>
+        </section>
+      )}
 
       {!rec.loading && insufficient && <InsufficientPanel missing={data?.missing ?? []} crops={crops} />}
 
-      {!rec.loading && data?.status === 'ok' && alternatives.length === 0 && (
+      {!rec.loading && data?.status === 'ok' && !mockup && alternatives.length === 0 && (
         <EmptyState title="No hay alternativas para mostrar" />
       )}
 
       {/* Sin fecha de inicio guardada, el calendario usa una fecha supuesta: se avisa antes de las alternativas. */}
-      {!rec.loading && data?.status === 'ok' && missingStart && (
+      {!rec.loading && data?.status === 'ok' && !mockup && missingStart && (
         <div className="mb-8">
           <Alert tone="warn" title="Falta un dato">
             <p>
@@ -198,7 +224,7 @@ export function RotationsPage() {
       )}
 
       {/* Abajo: fuentes y método */}
-      {!rec.loading && data?.status === 'ok' && (
+      {!rec.loading && data?.status === 'ok' && !mockup && (
         <div className="mt-6">
           <PanelGrid className="lg:grid-cols-1">
             <section className="bg-panel p-6 md:p-8">
