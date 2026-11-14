@@ -1,14 +1,21 @@
 import { usePlot } from '../../hooks/usePlot'
+import { cropName } from '../rotations/labels'
 import { Eyebrow } from '../ui/Eyebrow'
 import { WATER_LABELS } from './water'
 
 /** Bloque mono con nombre, coordenadas, cultivo y riego de la parcela. */
 export function PlotSummary() {
-  const { plot, crops, prefs } = usePlot()
+  const { plot, crops, cycles, cyclesLoading, cyclesError } = usePlot()
   if (!plot) return null
-  const crop = prefs.currentCropId
-    ? (crops.find((c) => c.id === prefs.currentCropId)?.name ?? 'Sin registrar')
-    : 'Sin registrar'
+  // Cultivo actual: el ciclo `active` que guarda la API.
+  const code = cycles?.current?.crop_code
+  const crop = code
+    ? cropName(code, crops)
+    : cyclesLoading
+      ? 'Cargando…'
+      : cyclesError
+        ? 'No se pudo cargar'
+        : 'Sin registrar'
 
   return (
     <div className="min-w-0 border-l border-edge pl-5 font-mono text-base leading-7">

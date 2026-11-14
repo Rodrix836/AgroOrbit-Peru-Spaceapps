@@ -3,7 +3,7 @@
 // Fuente de verdad: backend/docs/api-contract.md y backend/docs/examples/*.json (solo lectura).
 // CONFIRMADO con el contrato: Plot, PlotInput, SensorReading, NasaObservation, formato de error.
 //
-// CONFIRMADO también: GET /api/crops y PATCH /api/plots/{id}.
+// CONFIRMADO también: GET /api/crops, PATCH /api/plots/{id} y los ciclos de cultivo (crop-cycles).
 //
 // PENDIENTE BACKEND (sin ruta todavía): POST /api/recommendations. Sus tipos siguen la propuesta
 // del PR #7 (pendiente de confirmar por Milene) y la respuesta sale de mocks (DATOS DE EJEMPLO).
@@ -83,17 +83,47 @@ export interface Crop {
   name: string
 }
 
-/**
- * Datos del formulario de parcela que la API todavía no guarda (cultivo anterior, cultivo actual
- * y fecha de la próxima campaña: falta la tabla crop_cycle). Se conservan solo en este navegador.
- * El agua y la prioridad ya se guardan en la parcela (PATCH /api/plots/{id}).
- */
-export interface PlotPreferences {
-  previousCropId: string
-  currentCropId: string
-  /** Inicio de la siguiente campaña, AAAA-MM-DD. */
-  startOn: string
+// ---------- Ciclos de cultivo (cultivo anterior, actual y próxima campaña) ----------
+
+export type CropCycleStatus = 'active' | 'finished' | 'planned'
+export type CropCycleOrigin = 'farmer' | 'recommendation'
+
+/** CropCycleRead del contrato. */
+export interface CropCycle {
+  id: string
+  plot_id: string
+  /** Id de GET /api/crops. null = cultivo pendiente (posible en `planned`). */
+  crop_code: string | null
+  /** AAAA-MM-DD. */
+  sowing_date: string | null
+  harvest_date: string | null
+  status: CropCycleStatus
+  origin: CropCycleOrigin
+  created_at: string
 }
+
+/** GET /api/plots/{id}/crop-cycles. previous = último finished, current = active, planned = planned. */
+export interface CropCyclesResponse {
+  previous: CropCycle | null
+  current: CropCycle | null
+  planned: CropCycle | null
+  /** Historial, del más reciente al más antiguo. */
+  cycles: CropCycle[]
+}
+
+/** Cuerpo de POST /api/plots/{id}/crop-cycles. */
+export interface CropCycleCreate {
+  status: CropCycleStatus
+  /** Obligatorio en active y finished. */
+  crop_code?: string | null
+  /** Obligatorio en planned. */
+  sowing_date?: string | null
+  harvest_date?: string | null
+  origin?: CropCycleOrigin
+}
+
+/** Cuerpo de PATCH .../crop-cycles/{cycle_id}: solo los campos enviados. */
+export type CropCycleUpdate = Partial<CropCycleCreate>
 
 // ---------- Sensor ESP32 ----------
 

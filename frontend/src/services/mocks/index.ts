@@ -4,8 +4,13 @@
 //
 // PENDIENTE BACKEND: `mockCrops` y `mockRecommendation` se usan SIEMPRE (aunque VITE_USE_MOCKS
 // sea false) porque GET /api/crops y POST /api/recommendations aún no existen.
+import { ApiError } from '../apiError'
 import type {
   Crop,
+  CropCycle,
+  CropCycleCreate,
+  CropCycleUpdate,
+  CropCyclesResponse,
   PlotUpdate,
   RecommendationContext,
   NasaObservation,
@@ -74,6 +79,12 @@ export function mockCreatePlot(input: PlotInput): Plot {
     created_at: iso(Date.now()),
   }
   mockPlots.push(plot) // para que aparezca en la lista, como con la API real
+  return plot
+}
+
+export function mockGetPlot(plotId: string): Plot {
+  const plot = mockPlots.find((p) => p.id === plotId)
+  if (!plot) throw new ApiError(404, 'Parcela no encontrada.', 'plot_not_found')
   return plot
 }
 
@@ -170,6 +181,93 @@ export function mockNasa(): NasaObservation[] {
 // ---------- Cultivos (GET /api/crops) ----------
 
 export const mockCrops = crops as Crop[]
+
+// ---------- Ciclos de cultivo (crop-cycles), en memoria ----------
+// Mismas reglas que la API: un solo ciclo active y uno planned por parcela; varios finished.
+
+const mockCycles: Record<string, CropCycle[]> = {}
+
+const validationError = (field: string, message: string) =>
+  new ApiError(422, message, 'validation_error', [{ field: `body.${field}`, message, type: 'value_error' }])
+
+/** Orden de los ciclos terminados: coalesce(cosecha, siembra) descendente, nulos al final, luego created_at e id. */
+function newestFirst(a: CropCycle, b: CropCycle): number {
+  const ka = a.harvest_date ?? a.sowing_date ?? ''
+  const kb = b.harvest_date ?? b.sowing_date ?? ''
+  if (ka !== kb) return ka === '' ? 1 : kb === '' ? -1 : kb.localeCompare(ka)
+  if (a.created_at !== b.created_at) return b.created_at.localeCompare(a.created_at)
+  return b.id.localeCompare(a.id)
+}
+
+export function mockCropCycles(plotId: string): CropCyclesResponse {
+  const all = mockCycles[plotId] ?? []
+  const finished = all.filter((c) => c.status === 'finished').sort(newestFirst)
+  return {
+    previous: finished[0] ?? null,
+    current: all.find((c) => c.status === 'active') ?? null,
+    planned: all.find((c) => c.status === 'planned') ?? null,
+    cycles: [...all].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+  }
+}
+
+function checkCycle(c: Pick<CropCycle, 'status' | 'crop_code' | 'sowing_date' | 'harvest_date'>) {
+  if (c.crop_code !== null && !(crops as Crop[]).some((x) => x.id === c.crop_code)) {
+    throw validationError('crop_code', 'Cultivo desconocido.')
+  }
+  if ((c.status === 'active' || c.status === 'finished') && !c.crop_code) {
+    throw validationError('crop_code', 'Falta el cultivo.')
+  }
+  if (c.status === 'planned' && !c.sowing_date) {
+    throw validationError('sowing_date', 'Falta la fecha de inicio.')
+  }
+  if (c.sowing_date && c.harvest_date && c.harvest_date < c.sowing_date) {
+    throw validationError('harvest_date', 'La cosecha no puede ser antes de la siembra.')
+  }
+}
+
+export function mockCreateCropCycle(plotId: string, body: CropCycleCreate): CropCycle {
+  const all = (mockCycles[plotId] ??= [])
+  const cycle: CropCycle = {
+    id: crypto.randomUUID(),
+    plot_id: plotId,
+    crop_code: body.crop_code ?? null,
+    sowing_date: body.sowing_date ?? null,
+    harvest_date: body.harvest_date ?? null,
+    status: body.status,
+    origin: body.origin ?? 'farmer',
+    created_at: iso(Date.now()),
+  }
+  checkCycle(cycle)
+  const same = body.status === 'finished' ? undefined : all.find((c) => c.status === body.status)
+  if (same) {
+    const code = body.status === 'active' ? 'active_cycle_exists' : 'planned_cycle_exists'
+    throw new ApiError(
+      409,
+      body.status === 'active' ? 'La parcela ya tiene un cultivo actual.' : 'La parcela ya tiene una próxima campaña.',
+      code,
+      { cycle_id: same.id },
+    )
+  }
+  all.push(cycle)
+  return cycle
+}
+
+export function mockUpdateCropCycle(plotId: string, cycleId: string, body: CropCycleUpdate): CropCycle {
+  const all = mockCycles[plotId] ?? []
+  const i = all.findIndex((c) => c.id === cycleId)
+  if (i < 0) throw new ApiError(404, 'Ciclo de cultivo no encontrado.', 'cycle_not_found')
+  const next: CropCycle = { ...all[i], ...body } as CropCycle
+  checkCycle(next)
+  all[i] = next
+  return next
+}
+
+export function mockDeleteCropCycle(plotId: string, cycleId: string): void {
+  const all = mockCycles[plotId] ?? []
+  const i = all.findIndex((c) => c.id === cycleId)
+  if (i < 0) throw new ApiError(404, 'Ciclo de cultivo no encontrado.', 'cycle_not_found')
+  all.splice(i, 1)
+}
 
 // ---------- PENDIENTE BACKEND: POST /api/recommendations ----------
 // Forma de la propuesta del PR #7. `insufficient_data` es el ejemplo real del PR, tal cual.

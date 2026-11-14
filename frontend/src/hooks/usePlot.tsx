@@ -1,17 +1,20 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { api } from '../services/api'
-import type { Crop, Plot, PlotInput, PlotPreferences, PlotUpdate } from '../types/api'
-import { useAsync } from './useAsync'
+import type { Crop, CropCyclesResponse, Plot, PlotInput, PlotUpdate } from '../types/api'
+import { errorMessage, useAsync } from './useAsync'
 import { useAuth } from './useAuth'
 
 const SEL_KEY = 'agroorbit.plotId'
-const prefsKey = (id: string) => `agroorbit.prefs.${id}`
-
-export const DEFAULT_PREFS: PlotPreferences = {
-  previousCropId: '',
-  currentCropId: '',
-  startOn: '',
-}
+/** Prefijo de lo que antes se guardaba en el navegador (cultivos y fecha). Ya no se usa: se borra. */
+const OLD_PREFS_PREFIX = 'agroorbit.prefs.'
 
 /** Nombre para el perfil: la parte del correo antes de la @. */
 function displayNameFromEmail(email: string | undefined): string {
@@ -34,6 +37,20 @@ function writeLS(key: string, value: string) {
   }
 }
 
+/** Borra los cultivos y la fecha que se guardaban en el navegador (usaban ids antiguos; no se migran). */
+function clearOldPrefs() {
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(OLD_PREFS_PREFIX)) keys.push(k)
+    }
+    keys.forEach((k) => localStorage.removeItem(k))
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+
 interface PlotState {
   plots: Plot[]
   plot: Plot | null
@@ -47,12 +64,14 @@ interface PlotState {
   createPlot: (input: PlotInput) => Promise<Plot>
   /** Guarda en la API los campos enviados (PATCH) y actualiza la parcela con la respuesta. */
   updatePlot: (patch: PlotUpdate) => Promise<Plot>
-  prefs: PlotPreferences
-  /**
-   * Cultivo anterior, cultivo actual y fecha de la próxima campaña.
-   * La API aún no tiene dónde guardarlos (falta la tabla crop_cycle): solo en este navegador.
-   */
-  savePrefs: (prefs: PlotPreferences) => void
+  /** Vuelve a leer la parcela desde la API (GET /api/plots/{id}). */
+  refreshPlot: () => Promise<void>
+  /** Ciclos de cultivo de la parcela: anterior, actual y próxima campaña (GET .../crop-cycles). */
+  cycles: CropCyclesResponse | null
+  cyclesLoading: boolean
+  cyclesError: string | null
+  /** Vuelve a leer los ciclos sin vaciar la pantalla. */
+  reloadCycles: () => Promise<void>
 }
 
 const PlotContext = createContext<PlotState | null>(null)
@@ -67,30 +86,15 @@ export function PlotProvider({ children }: { children: ReactNode }) {
   }, [])
   const cropsQ = useAsync(() => api.listCrops(), [])
   const [selectedId, setSelectedId] = useState<string | null>(() => readLS(SEL_KEY))
-  const [prefsVersion, setPrefsVersion] = useState(0)
+
+  useEffect(clearOldPrefs, [])
 
   // Parcelas ya guardadas con PATCH: la respuesta de la API reemplaza a la de la lista.
   const [updated, setUpdated] = useState<Record<string, Plot>>({})
 
   const plots = (plotsQ.data ?? []).map((p) => updated[p.id] ?? p)
   const plot = plots.find((p) => p.id === selectedId) ?? plots[0] ?? null
-
-  const prefs: PlotPreferences = (() => {
-    void prefsVersion
-    if (!plot) return DEFAULT_PREFS
-    const raw = readLS(prefsKey(plot.id))
-    if (!raw) return DEFAULT_PREFS
-    try {
-      const stored = JSON.parse(raw) as Partial<PlotPreferences>
-      return {
-        previousCropId: stored.previousCropId ?? '',
-        currentCropId: stored.currentCropId ?? '',
-        startOn: stored.startOn ?? '',
-      }
-    } catch {
-      return DEFAULT_PREFS
-    }
-  })()
+  const plotId = plot?.id
 
   const selectPlot = useCallback((id: string) => {
     setSelectedId(id)
@@ -108,7 +112,6 @@ export function PlotProvider({ children }: { children: ReactNode }) {
     [selectPlot],
   )
 
-  const plotId = plot?.id
   const updatePlot = useCallback(
     async (patch: PlotUpdate) => {
       if (!plotId) throw new Error('No hay parcela seleccionada.')
@@ -119,14 +122,57 @@ export function PlotProvider({ children }: { children: ReactNode }) {
     [plotId],
   )
 
-  const savePrefs = useCallback(
-    (next: PlotPreferences) => {
-      if (!plot) return
-      writeLS(prefsKey(plot.id), JSON.stringify(next))
-      setPrefsVersion((v) => v + 1)
+  const refreshPlot = useCallback(async () => {
+    if (!plotId) return
+    const fresh = await api.getPlot(plotId)
+    setUpdated((u) => ({ ...u, [fresh.id]: fresh }))
+  }, [plotId])
+
+  // Ciclos de cultivo de la parcela elegida.
+  const [cycles, setCycles] = useState<CropCyclesResponse | null>(null)
+  const [cyclesLoading, setCyclesLoading] = useState(false)
+  const [cyclesError, setCyclesError] = useState<string | null>(null)
+  const cyclesRun = useRef(0)
+
+  const loadCycles = useCallback(
+    async (initial: boolean) => {
+      const run = ++cyclesRun.current
+      if (!plotId) {
+        setCycles(null)
+        setCyclesLoading(false)
+        return
+      }
+      if (initial) {
+        setCycles(null)
+        setCyclesLoading(true)
+        setCyclesError(null)
+      }
+      try {
+        const data = await api.getCropCycles(plotId)
+        if (run === cyclesRun.current) {
+          setCycles(data)
+          setCyclesError(null)
+        }
+      } catch (e) {
+        if (run === cyclesRun.current) setCyclesError(errorMessage(e))
+      } finally {
+        if (run === cyclesRun.current) setCyclesLoading(false)
+      }
     },
-    [plot],
+    [plotId],
   )
+
+  // Descarta respuestas que lleguen tras cambiar de parcela o desmontar.
+  const invalidateCycles = useCallback(() => {
+    cyclesRun.current++
+  }, [])
+
+  useEffect(() => {
+    void loadCycles(true)
+    return invalidateCycles
+  }, [loadCycles, invalidateCycles])
+
+  const reloadCycles = useCallback(() => loadCycles(false), [loadCycles])
 
   const value: PlotState = {
     plots,
@@ -139,8 +185,11 @@ export function PlotProvider({ children }: { children: ReactNode }) {
     selectPlot,
     createPlot,
     updatePlot,
-    prefs,
-    savePrefs,
+    refreshPlot,
+    cycles,
+    cyclesLoading,
+    cyclesError,
+    reloadCycles,
   }
   return <PlotContext.Provider value={value}>{children}</PlotContext.Provider>
 }

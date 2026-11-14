@@ -16,7 +16,7 @@ import { SourceBadge } from '../components/ui/SourceBadge'
 import { usePlot } from '../hooks/usePlot'
 import { useRecommendation } from '../hooks/useRecommendation'
 import { RECOMMENDATIONS_ARE_MOCK } from '../services/api'
-import type { Plot, PlotPreferences, Priority, RecommendationRequest, SourceRef } from '../types/api'
+import type { Plot, Priority, RecommendationRequest, SourceRef } from '../types/api'
 import { hasPlaceholders, isFormatMockup } from '../utils/placeholders'
 
 const HORIZON_DAYS = 365 // hasta 12 meses, dos campañas
@@ -32,18 +32,18 @@ function plotPriority(plot: Plot | null): Priority {
   return plot?.priority === 'improve_soil' ? 'improve_soil' : 'save_water'
 }
 
-function buildRequest(plot: Plot, priority: Priority, prefs: PlotPreferences): RecommendationRequest {
+function buildRequest(plot: Plot, priority: Priority, startOn: string): RecommendationRequest {
   return {
     plot_id: plot.id,
     horizon_days: HORIZON_DAYS,
     priority,
-    ...(prefs.startOn ? { start_on: prefs.startOn } : {}),
+    ...(startOn ? { start_on: startOn } : {}),
   }
 }
 
 /** 03 / Rotaciones */
 export function RotationsPage() {
-  const { plot, crops, loading: plotLoading, error: plotError, reload, prefs } = usePlot()
+  const { plot, crops, loading: plotLoading, error: plotError, reload, cycles, cyclesLoading } = usePlot()
   const rec = useRecommendation()
   const { run } = rec
 
@@ -51,14 +51,17 @@ export function RotationsPage() {
   const [override, setOverride] = useState<Priority | null>(null)
   const priority = override ?? plotPriority(plot)
 
+  // Inicio de la primera campaña: la fecha de la próxima campaña (planned) que guarda la API.
+  const startOn = cycles?.planned?.sowing_date ?? ''
+
   const plotId = plot?.id
   useEffect(() => setOverride(null), [plotId])
 
   useEffect(() => {
-    if (!plot) return
-    void run(buildRequest(plot, priority, prefs))
+    if (!plot || cyclesLoading) return // se espera a conocer la fecha para no calcular dos veces
+    void run(buildRequest(plot, priority, startOn))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plotId, priority, prefs.startOn])
+  }, [plotId, priority, startOn, cyclesLoading])
 
   if (plotLoading) return <Loading label="Cargando tu parcela…" />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
@@ -76,7 +79,7 @@ export function RotationsPage() {
 
   const data = rec.data
   const insufficient = data?.status === 'insufficient_data'
-  const missingStart = !prefs.startOn
+  const missingStart = !startOn
   // Plan B: si la respuesta es solo la maqueta del formato, no se muestra como alternativas.
   const mockup = data ? isFormatMockup(data) : false
   // Con insufficient_data o maqueta nunca se muestran alternativas ni puntajes, aunque vengan en la respuesta.
@@ -165,7 +168,7 @@ export function RotationsPage() {
       </div>
 
       {rec.loading && <Loading label="Calculando alternativas…" />}
-      {rec.error && <ErrorBox message={rec.error} onRetry={() => void run(buildRequest(plot, priority, prefs))} />}
+      {rec.error && <ErrorBox message={rec.error} onRetry={() => void run(buildRequest(plot, priority, startOn))} />}
 
       {/* Siempre visible, encima del resultado */}
       {!rec.loading && data?.context && !(mockup && contextHasPlaceholders) && (

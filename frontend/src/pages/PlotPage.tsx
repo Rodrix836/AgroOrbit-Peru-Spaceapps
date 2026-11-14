@@ -12,7 +12,15 @@ import { inputClass } from '../components/ui/styles'
 import { errorMessage } from '../hooks/useAsync'
 import { USE_MOCKS } from '../services/api'
 import { usePlot } from '../hooks/usePlot'
-import type { PlotPreferences, Priority, WaterAvailability } from '../types/api'
+import {
+  cycleFormFrom,
+  summarizeSave,
+  syncCropCycles,
+  WATER_PART_LABEL,
+  type CycleForm,
+  type PartResult,
+} from '../services/cropCycles'
+import type { Priority, WaterAvailability } from '../types/api'
 
 /** La prioridad de la parcela si es una de las dos que ofrece la interfaz; si no, '' (sin elegir). */
 function uiPriority(p: string | null | undefined): Priority | '' {
@@ -108,53 +116,68 @@ const PRIORITIES: { value: Priority; label: string; hint: string }[] = [
 
 /** Bloques B (cultivos y fechas) y C (agua y prioridad): un solo formulario. */
 function PrefsForm() {
-  const { plot, crops, cropsError, prefs, savePrefs, updatePlot } = usePlot()
-  const [local, setLocal] = useState<PlotPreferences>(prefs)
-  // Agua y prioridad se guardan en la API; '' = sin indicar (prioridad: la parcela tiene otra que la interfaz no ofrece).
+  const { plot, crops, cropsError, cycles, cyclesLoading, cyclesError, updatePlot, refreshPlot, reloadCycles } =
+    usePlot()
+  // Cultivo anterior, cultivo actual y fecha de inicio: lo que dice la API (ciclos de cultivo).
+  const [form, setForm] = useState<CycleForm>(() => cycleFormFrom(cycles))
+  // Agua y prioridad: van en la parcela. '' = sin indicar (prioridad: la parcela tiene otra que la interfaz no ofrece).
   const [water, setWater] = useState<WaterAvailability | ''>(plot?.water_availability ?? '')
   const [priority, setPriority] = useState<Priority | ''>(uiPriority(plot?.priority))
   const [busy, setBusy] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
 
+  // Lo que dice la API manda sobre el formulario: al cargar, al cambiar de parcela y tras guardar.
   useEffect(() => {
-    setLocal(prefs)
-    setSaved(false)
-    setSaveError(null)
-  }, [plot?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Lo guardado en la parcela (al cargar, al cambiar de parcela y tras guardar) manda sobre el formulario.
+    setForm(cycleFormFrom(cycles))
+  }, [cycles])
   useEffect(() => {
     setWater(plot?.water_availability ?? '')
     setPriority(uiPriority(plot?.priority))
   }, [plot?.id, plot?.priority, plot?.water_availability])
+  useEffect(() => setResult(null), [plot?.id])
 
-  const setLocalField = <K extends keyof PlotPreferences>(k: K, v: PlotPreferences[K]) => {
-    setSaved(false)
-    setLocal((f) => ({ ...f, [k]: v }))
+  const cyclesReady = cycles !== null
+  const setField = <K extends keyof CycleForm>(k: K, v: CycleForm[K]) => {
+    setResult(null)
+    setForm((f) => ({ ...f, [k]: v }))
   }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (!plot) return
     setBusy(true)
-    setSaved(false)
-    setSaveError(null)
-    savePrefs(local) // cultivos y fecha: solo en este navegador
-    try {
-      // null borra el campo; la prioridad solo se envía si se eligió una.
-      await updatePlot({ water_availability: water || null, ...(priority ? { priority } : {}) })
-      setSaved(true)
-    } catch (err) {
-      setSaveError(errorMessage(err))
-    } finally {
-      setBusy(false)
+    setResult(null)
+    const parts: PartResult[] = []
+
+    // Agua y prioridad: PATCH de la parcela, solo si cambiaron. null borra el agua; la prioridad solo se envía si se eligió.
+    const waterChanged = water !== (plot.water_availability ?? '')
+    const priorityChanged = priority !== '' && priority !== plot.priority
+    if (waterChanged || priorityChanged) {
+      try {
+        await updatePlot({
+          ...(waterChanged ? { water_availability: water || null } : {}),
+          ...(priorityChanged ? { priority } : {}),
+        })
+        parts.push({ label: WATER_PART_LABEL, ok: true })
+      } catch (err) {
+        parts.push({ label: WATER_PART_LABEL, ok: false, message: errorMessage(err) })
+      }
     }
+
+    // Ciclos de cultivo: solo los campos que cambiaron.
+    if (cycles) parts.push(...(await syncCropCycles(plot.id, cycles, form)))
+
+    // Se vuelve a leer lo guardado para mostrar el estado real.
+    await Promise.allSettled([refreshPlot(), reloadCycles()])
+    setResult(summarizeSave(parts))
+    setBusy(false)
   }
 
   const cropSelect = (value: string, onChange: (v: string) => void) => (
     <select
       value={crops.some((c) => c.id === value) ? value : ''}
       onChange={(e) => onChange(e.target.value)}
+      disabled={!cyclesReady || busy}
       className={inputClass}
     >
       <option value="">No sé / no aplica</option>
@@ -169,30 +192,28 @@ function PrefsForm() {
   return (
     <form onSubmit={(e) => void submit(e)}>
       <FormBlock letter="B" name="Cultivos y fechas">
+        {cyclesLoading && <Loading label="Cargando tus cultivos…" />}
+        {cyclesError && <ErrorBox message={`No se pudieron cargar tus cultivos. ${cyclesError}`} onRetry={() => void reloadCycles()} />}
         <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Cultivo anterior">
-            {cropSelect(local.previousCropId, (v) => setLocalField('previousCropId', v))}
-          </Field>
-          <Field label="Cultivo actual">
-            {cropSelect(local.currentCropId, (v) => setLocalField('currentCropId', v))}
-          </Field>
+          <Field label="Cultivo anterior">{cropSelect(form.previousCropId, (v) => setField('previousCropId', v))}</Field>
+          <Field label="Cultivo actual">{cropSelect(form.currentCropId, (v) => setField('currentCropId', v))}</Field>
         </div>
         {USE_MOCKS && (
           <div className="flex flex-wrap items-center gap-3">
             <SourceBadge kind="prototype" label="Datos de ejemplo" />
-            <span className="text-muted">La lista de cultivos es de muestra (modo ejemplo).</span>
+            <span className="text-muted">Modo ejemplo: la lista de cultivos y lo que guardes son de muestra.</span>
           </div>
         )}
         {cropsError && <ErrorBox message={`No se pudo cargar la lista de cultivos. ${cropsError}`} />}
         <Field label="Inicio previsto de la siguiente campaña">
           <input
             type="date"
-            value={local.startOn}
-            onChange={(e) => setLocalField('startOn', e.target.value)}
+            value={form.startOn}
+            onChange={(e) => setField('startOn', e.target.value)}
+            disabled={!cyclesReady || busy}
             className={`${inputClass} font-mono md:max-w-xs`}
           />
         </Field>
-        <p className="text-muted">Por ahora se guarda solo en este navegador.</p>
       </FormBlock>
 
       <FormBlock letter="C" name="Agua y prioridad">
@@ -200,9 +221,10 @@ function PrefsForm() {
           <select
             value={water}
             onChange={(e) => {
-              setSaved(false)
+              setResult(null)
               setWater(e.target.value as WaterAvailability | '')
             }}
+            disabled={busy}
             className={`${inputClass} md:max-w-md`}
           >
             <option value="">Sin indicar</option>
@@ -231,7 +253,7 @@ function PrefsForm() {
                     className="sr-only"
                     checked={on}
                     onChange={() => {
-                      setSaved(false)
+                      setResult(null)
                       setPriority(p.value)
                     }}
                   />
@@ -255,15 +277,15 @@ function PrefsForm() {
             </p>
           )}
         </fieldset>
-        {saveError && <ErrorBox message={`No se pudo guardar el agua y la prioridad. ${saveError}`} />}
+        {result && !result.ok && <ErrorBox message={result.text} />}
         <div className="flex flex-wrap items-center gap-4">
           <Button size="lg" disabled={busy}>
             {busy ? 'Guardando…' : 'Guardar →'}
           </Button>
-          {saved && (
+          {result?.ok && (
             <>
               <span role="status" className="font-mono text-base text-lima">
-                Guardado: el agua y la prioridad quedaron en tu cuenta; los cultivos y la fecha, en este navegador.
+                {result.text}
               </span>
               <ButtonLink to="/rotaciones" variant="outline">
                 Ver rotaciones →

@@ -3,6 +3,10 @@
 import type {
   ApiErrorBody,
   Crop,
+  CropCycle,
+  CropCycleCreate,
+  CropCycleUpdate,
+  CropCyclesResponse,
   NasaImportResult,
   NasaObservation,
   Plot,
@@ -13,11 +17,17 @@ import type {
   SensorReading,
   UserProfile,
 } from '../types/api'
+import { ApiError } from './apiError'
 import { supabase } from './supabase'
 import {
   MOCK_SCENARIO,
+  mockCreateCropCycle,
   mockCreatePlot,
+  mockCropCycles,
   mockCrops,
+  mockDeleteCropCycle,
+  mockGetPlot,
+  mockUpdateCropCycle,
   mockUpdatePlot,
   mockNasa,
   mockPlots,
@@ -50,21 +60,15 @@ const MESSAGES: Record<string, string> = {
     'NASA POWER no responde en este momento. Inténtalo de nuevo en unos minutos.',
   nasa_power_invalid_response:
     'NASA POWER respondió con datos incompletos o no válidos, y no los usamos.',
+  cycle_not_found: 'No encontramos ese ciclo de cultivo. Recarga la página e inténtalo de nuevo.',
+  active_cycle_exists: 'La parcela ya tiene un cultivo actual.',
+  planned_cycle_exists: 'La parcela ya tiene una próxima campaña.',
   validation_error: 'Algunos datos no son válidos. Revisa los campos e inténtalo de nuevo.',
   invalid_date_range: 'El rango de fechas no es válido.',
   network_error: 'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.',
 }
 
-export class ApiError extends Error {
-  status: number
-  /** Código estable de la API (`error.code`), o `network_error` si no hubo respuesta. */
-  code: string
-  constructor(status: number, message: string, code = 'unknown') {
-    super(message)
-    this.status = status
-    this.code = code
-  }
-}
+export { ApiError }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
@@ -83,15 +87,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     let code = 'unknown'
     let apiMessage = ''
+    let details: unknown = null
     try {
       const body = (await res.json()) as Partial<ApiErrorBody>
       if (typeof body?.error?.code === 'string') code = body.error.code
       if (typeof body?.error?.message === 'string') apiMessage = body.error.message
+      details = body?.error?.details ?? null
     } catch {
       /* sin cuerpo JSON */
     }
-    throw new ApiError(res.status, MESSAGES[code] ?? (apiMessage || `Error ${res.status} del servidor.`), code)
+    throw new ApiError(
+      res.status,
+      MESSAGES[code] ?? (apiMessage || `Error ${res.status} del servidor.`),
+      code,
+      details,
+    )
   }
+  if (res.status === 204) return undefined as T // DELETE sin cuerpo
   return (await res.json()) as T
 }
 
@@ -126,11 +138,39 @@ export const api = {
       ? wait(mockCreatePlot(input))
       : request<Plot>('/api/plots', { method: 'POST', body: JSON.stringify(input) }),
 
+  getPlot: (plotId: string): Promise<Plot> =>
+    USE_MOCKS ? wait(mockGetPlot(plotId)) : request<Plot>(`/api/plots/${plotId}`),
+
   /** Guarda solo los campos enviados y devuelve la parcela completa. null borra un campo opcional. */
   updatePlot: (plotId: string, patch: PlotUpdate): Promise<Plot> =>
     USE_MOCKS
       ? wait(mockUpdatePlot(plotId, patch))
       : request<Plot>(`/api/plots/${plotId}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  /** Cultivo anterior (previous), actual (current) y próxima campaña (planned), más el historial. */
+  getCropCycles: (plotId: string): Promise<CropCyclesResponse> =>
+    USE_MOCKS ? wait(mockCropCycles(plotId)) : request<CropCyclesResponse>(`/api/plots/${plotId}/crop-cycles`),
+
+  /** 201. Con 409 (active_cycle_exists / planned_cycle_exists) `details.cycle_id` es el ciclo a corregir con PATCH. */
+  createCropCycle: (plotId: string, body: CropCycleCreate): Promise<CropCycle> =>
+    USE_MOCKS
+      ? wait(null).then(() => mockCreateCropCycle(plotId, body))
+      : request<CropCycle>(`/api/plots/${plotId}/crop-cycles`, { method: 'POST', body: JSON.stringify(body) }),
+
+  /** Corrige un ciclo por su id: solo los campos enviados. */
+  updateCropCycle: (plotId: string, cycleId: string, body: CropCycleUpdate): Promise<CropCycle> =>
+    USE_MOCKS
+      ? wait(null).then(() => mockUpdateCropCycle(plotId, cycleId, body))
+      : request<CropCycle>(`/api/plots/${plotId}/crop-cycles/${cycleId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        }),
+
+  /** 204 sin cuerpo. */
+  deleteCropCycle: (plotId: string, cycleId: string): Promise<void> =>
+    USE_MOCKS
+      ? wait(null).then(() => mockDeleteCropCycle(plotId, cycleId))
+      : request<void>(`/api/plots/${plotId}/crop-cycles/${cycleId}`, { method: 'DELETE' }),
 
   /** Catálogo público (no necesita token). */
   listCrops: (): Promise<Crop[]> =>
