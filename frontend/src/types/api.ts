@@ -220,6 +220,9 @@ export interface Assumption {
 export interface RecommendationContext {
   /** Aviso para mostrar (p. ej. «parcela representativa, no una chacra real»). */
   notice: string
+  /** Fecha de inicio usada (la de la petición o la del ciclo planned); null si no hay. */
+  start_on?: string | null
+  /** null si no hay NASA POWER guardado. */
   power: {
     source: string
     /** "LST": hora solar local de POWER. */
@@ -230,7 +233,7 @@ export interface RecommendationContext {
     use: 'contexto_del_periodo' | 'historico'
     /** temperatura_promedio_c, precipitacion_total_mm, dias_analizados, dias_temperatura_validos, dias_precipitacion_validos… */
     indicators: Record<string, number | string | null>
-  }
+  } | null
   sensor: {
     quality_flag: string
     /** Las lecturas `test` no se usan como evidencia. */
@@ -269,6 +272,8 @@ export interface RecommendationResponse {
   mode: RecommendationMode
   engine_version: string
   plot_id: string
+  /** Momento del cálculo, ISO 8601 UTC (se muestra «Calculado: …» en hora de Perú). */
+  created_at: string
   context: RecommendationContext
   /** Con insufficient_data lista lo que falta; [] en otro caso. */
   missing: MissingItem[]

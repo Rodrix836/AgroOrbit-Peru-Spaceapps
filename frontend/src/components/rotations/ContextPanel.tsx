@@ -1,5 +1,5 @@
 import type { RecommendationContext } from '../../types/api'
-import { formatDay, formatNumber } from '../../utils/format'
+import { formatDateTime, formatDay, formatNumber } from '../../utils/format'
 import { TestBadge } from '../sensors/QualityNotice'
 import { Alert } from '../ui/Alert'
 import { Eyebrow } from '../ui/Eyebrow'
@@ -39,7 +39,16 @@ function coverage(valid: number | null, total: number | null): string | undefine
  * Bloque «Con qué datos se calculó»: aviso, NASA POWER y sensor, siempre separados.
  * PENDIENTE BACKEND: formato propuesto en el PR #7 (pendiente de confirmar por Milene).
  */
-export function ContextPanel({ context, example = false }: { context: RecommendationContext; example?: boolean }) {
+export function ContextPanel({
+  context,
+  createdAt,
+  example = false,
+}: {
+  context: RecommendationContext
+  /** created_at de la respuesta (ISO 8601 UTC). */
+  createdAt?: string
+  example?: boolean
+}) {
   const { power, sensor } = context
   const ind = power?.indicators ?? {}
   const days = num(ind.dias_analizados)
@@ -110,6 +119,11 @@ export function ContextPanel({ context, example = false }: { context: Recommenda
           </div>
         )}
       </div>
+      {createdAt && (
+        <p className="mt-6 border-t border-line pt-3 font-mono text-base text-muted">
+          Calculado: {formatDateTime(createdAt)} (hora de Perú)
+        </p>
+      )}
     </section>
   )
 }

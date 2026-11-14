@@ -1,4 +1,5 @@
 import type { Crop } from '../../types/api'
+import { formatDay } from '../../utils/format'
 import { WATER_LABELS } from '../plot/water'
 import type { WaterAvailability } from '../../types/api'
 
@@ -23,6 +24,7 @@ const FIELD_LABELS: Record<string, string> = {
   'plot.soil_salinity_ds_m': 'Salinidad del suelo',
   'plot.area_ha': 'Superficie de la parcela',
   'plot.start_on': 'Inicio de la siguiente campaña',
+  'plot.next_sowing_date': 'Fecha de inicio de la siguiente campaña',
   'climate.history': 'Histórico de clima',
 }
 
@@ -47,5 +49,6 @@ export function fieldGroup(field: string): MissingGroup {
 export function assumptionValue(field: string, value: string, crops: Crop[]): string {
   if (field === 'plot.previous_crop' || field === 'plot.current_crop') return cropName(value, crops)
   if (field === 'plot.water_availability') return WATER_LABELS[value as WaterAvailability] ?? value
+  if (field === 'plot.next_sowing_date' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDay(value)
   return value
 }

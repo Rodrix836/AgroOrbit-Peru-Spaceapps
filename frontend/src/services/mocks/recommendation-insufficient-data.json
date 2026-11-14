@@ -3,8 +3,10 @@
   "mode": "evaluacion",
   "engine_version": "<versión del motor>",
   "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "created_at": "2026-11-14T22:50:00Z",
   "context": {
     "notice": "Parcela demostrativa: ubicación representativa (Valle del Chira, Sullana), no una chacra real.",
+    "start_on": "2026-12-01",
     "power": {
       "source": "NASA POWER",
       "time_standard": "LST",
@@ -29,7 +31,7 @@
   "missing": [
     {
       "field": "plot.previous_crop",
-      "reason": "La regla de rotación necesita el cultivo anterior; aún no se guarda en la base."
+      "reason": "La regla de rotación necesita el cultivo anterior; la parcela aún no tiene un ciclo finished."
     },
     {
       "field": "plot.water_availability",

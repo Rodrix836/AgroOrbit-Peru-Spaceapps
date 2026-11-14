@@ -344,6 +344,7 @@ export function mockRecommendation(req: RecommendationRequest): RecommendationRe
     mode: demo ? 'escenario_demostracion' : 'evaluacion',
     engine_version: base.engine_version,
     plot_id: req.plot_id,
+    created_at: new Date().toISOString(),
     context: demo ? CONTEXT_DEMO : CONTEXT_OK,
     missing: [],
     selected_id: base.selected_id,
