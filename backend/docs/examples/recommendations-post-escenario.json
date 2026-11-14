@@ -21,7 +21,7 @@
       "mode": "escenario_demostracion",
       "engine_version": "<versión del motor>",
       "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
-      "calculated_at": "2026-11-14T22:50:00Z",
+      "created_at": "2026-11-14T22:50:00Z",
       "context": {
         "notice": "Escenario de demostración: los datos marcados en assumptions son supuestos, no declarados por un agricultor. Parcela representativa, no una chacra real.",
         "start_on": "2026-12-01",

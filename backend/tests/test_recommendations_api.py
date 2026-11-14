@@ -170,10 +170,10 @@ def test_start_on_optional_uses_planned_cycle(client, db, owner_headers, test_pl
     assert explicit["context"]["start_on"] == "2027-01-10"
 
 
-def test_calculated_at_is_utc_now(client, owner_headers, test_plot):
+def test_created_at_is_utc_now(client, owner_headers, test_plot):
     from datetime import datetime, timezone
     before = datetime.now(timezone.utc)
-    stamp = client.post(URL, json=body(test_plot), headers=owner_headers).json()["calculated_at"]
+    stamp = client.post(URL, json=body(test_plot), headers=owner_headers).json()["created_at"]
     assert stamp.endswith("Z")
     parsed = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
     assert before - timedelta(seconds=1) <= parsed <= datetime.now(timezone.utc) + timedelta(seconds=1)

@@ -21,7 +21,7 @@
       "mode": "evaluacion",
       "engine_version": "<versión del motor>",
       "plot_id": "<plot_id>",
-      "calculated_at": "2026-11-14T22:50:00Z",
+      "created_at": "2026-11-14T22:50:00Z",
       "context": {
         "notice": "Evaluación con datos declarados de la parcela y requisitos de cultivo con fuente.",
         "start_on": "2026-12-01",

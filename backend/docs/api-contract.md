@@ -242,12 +242,12 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 | `mode` | `evaluacion` o `escenario_demostracion` | `escenario_demostracion` = hay datos supuestos; mostrarlo **claramente** como demo |
 | `engine_version` | texto | |
 | `plot_id` | UUID | |
-| `calculated_at` | ISO 8601 UTC | Momento del cálculo (para mostrar «Calculado: …») |
+| `created_at` | ISO 8601 UTC | Momento del cálculo (para mostrar «Calculado: …» en hora de Perú). En un ejemplo estático se puede ocultar |
 | `context.start_on` | `AAAA-MM-DD` o `null` | Fecha de inicio usada (petición o ciclo `planned`) |
 | `context.notice` | texto | Aviso para mostrar (p. ej. «parcela representativa, no una chacra real») |
 | `context.power` | objeto o `null` | `source`, `time_standard`, `start`, `end`, `use` (`contexto_del_periodo` o `historico`) e `indicators`. Las claves de `indicators` son siempre las de `calcular_indicadores`, con cualquier `use`: `temperatura_promedio_c`, `temperatura_maxima_diaria_c`, `temperatura_minima_diaria_c`, `precipitacion_total_mm`, `dias_analizados`, `dias_temperatura_validos`, `dias_precipitacion_validos`, `cobertura_temperatura_pct`, `cobertura_precipitacion_pct` |
 | `context.sensor` | objeto | `quality_flag`, `used_as_evidence` y `reason`. Las lecturas `test` no se usan como evidencia |
-| `context.assumptions` | `[{ field, value, reason }]` | Solo con `escenario_demostracion`; vacío en otro caso. `value` es libre: puede ser un id de cultivo, `low`/`medium`/`high`, una fecha o un texto (p. ej. `soil_texture`). Si no es un id conocido, muéstralo tal cual |
+| `context.assumptions` | `[{ field, value, reason }]` | Solo con `escenario_demostracion`; vacío en otro caso. `value` es **siempre texto**: un código (`maiz`, `low`), una fecha (`2026-12-01`) u otro texto (`franco`). Traduce los códigos conocidos y muestra el resto tal cual. En el escenario de demostración, si se supone la fecha de inicio, va como `{ "field": "plot.next_sowing_date", "value": "2026-12-01", … }` |
 | `missing` | `[{ field, reason }]` | Con `insufficient_data` lista lo que falta; `[]` en otro caso |
 | `selected_id` | texto o `null` | `null` con `insufficient_data` |
 | `alternatives` | lista | **Vacía con `insufficient_data`** (sin `score`) |
