@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_MOCK_SCENARIO?: string
   /** mock (por defecto) | api: de dónde sale POST /api/recommendations. */
   readonly VITE_RECOMMENDATIONS_SOURCE?: string
+  /** static (por defecto) | api: de dónde sale el escenario de demostración de Rotaciones. */
+  readonly VITE_SCENARIO_SOURCE?: string
 }
 
 interface ImportMeta {

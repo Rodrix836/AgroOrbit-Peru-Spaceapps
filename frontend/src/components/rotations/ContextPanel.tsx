@@ -44,11 +44,17 @@ export function ContextPanel({
   context,
   createdAt,
   example = false,
+  title = 'Con qué datos se calculó',
+  powerTitle = 'Clima de la zona',
 }: {
   context: RecommendationContext
   /** created_at de la respuesta (ISO 8601 UTC). */
   createdAt?: string
   example?: boolean
+  /** Título del bloque. */
+  title?: string
+  /** Título de la parte de NASA POWER. */
+  powerTitle?: string
 }) {
   const { power, sensor } = context
   const ind = power?.indicators ?? {}
@@ -62,9 +68,9 @@ export function ContextPanel({
   const partial = rainValid !== null && days !== null && rainValid < days
 
   return (
-    <section className="mb-8 border border-line bg-panel p-6 md:p-8" aria-label="Con qué datos se calculó">
+    <section className="mb-8 border border-line bg-panel p-6 md:p-8" aria-label={title}>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Eyebrow tone="lima">Con qué datos se calculó</Eyebrow>
+        <Eyebrow tone="lima">{title}</Eyebrow>
         {/* PENDIENTE BACKEND: mientras la respuesta salga de mocks, las cifras no son reales. */}
         {example && <SourceBadge kind="prototype" label="Datos de ejemplo" />}
       </div>
@@ -81,7 +87,7 @@ export function ContextPanel({
         {power && (
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <Eyebrow tone="cielo">Clima de la zona</Eyebrow>
+              <Eyebrow tone="cielo">{powerTitle}</Eyebrow>
               <SourceBadge kind="nasa" label={power.source} />
             </div>
             {power.use === 'historico' ? (

@@ -13,7 +13,7 @@ const clamp = (n: number) => Math.max(0, Math.min(100, n))
  * Primera campaña: barra lima sólida. Siguientes: barra con solo borde lima.
  * Los 12 meses caben siempre en el ancho de la tarjeta (sin desplazamiento horizontal).
  */
-export function CampaignCalendar({ campaigns }: { campaigns: Campaign[] }) {
+export function CampaignCalendar({ campaigns, showList = true }: { campaigns: Campaign[]; showList?: boolean }) {
   if (campaigns.length === 0) return null
   const startIdx = (day: string) => {
     const p = parse(day)
@@ -53,6 +53,9 @@ export function CampaignCalendar({ campaigns }: { campaigns: Campaign[] }) {
           {campaigns.map((c, i) => {
             const left = clamp((pos(c.starts_on) / 12) * 100)
             const right = clamp((pos(c.ends_on, true) / 12) * 100)
+            const width = Math.max(right - left, 2)
+            // Barra angosta (menos de ~3,5 meses): el nombre va fuera de la barra para que se lea completo, también en celular.
+            const narrow = width < 29
             return (
               <div
                 key={i}
@@ -67,23 +70,33 @@ export function CampaignCalendar({ campaigns }: { campaigns: Campaign[] }) {
                   className={`absolute top-1.5 flex h-9 items-center overflow-hidden whitespace-nowrap px-2 text-sm font-semibold ${
                     i === 0 ? 'bg-lima text-bg' : 'border border-lima bg-bg text-lima'
                   }`}
-                  style={{ left: `${left}%`, width: `${Math.max(right - left, 2)}%` }}
+                  style={{ left: `${left}%`, width: `${width}%` }}
                 >
-                  <span className="min-w-0 truncate">{c.crop}</span>
+                  {!narrow && <span className="min-w-0 truncate">{c.crop}</span>}
                 </div>
+                {narrow && (
+                  <span
+                    className="absolute top-1.5 flex h-9 items-center whitespace-nowrap px-2 text-sm font-semibold text-lima"
+                    style={left > 50 ? { right: `${100 - left}%` } : { left: `${left + width}%` }}
+                  >
+                    {c.crop}
+                  </span>
+                )}
               </div>
             )
           })}
         </div>
       </div>
-      <ol className="mt-3 space-y-1">
-        {campaigns.map((c, i) => (
-          <li key={i} className="font-mono text-base text-ink">
-            <span className="text-lima">{String(i + 1).padStart(2, '0')}</span> {c.crop} · siembra{' '}
-            {formatDay(c.starts_on)} · cosecha {formatDay(c.ends_on)}
-          </li>
-        ))}
-      </ol>
+      {showList && (
+        <ol className="mt-3 space-y-1">
+          {campaigns.map((c, i) => (
+            <li key={i} className="font-mono text-base text-ink">
+              <span className="text-lima">{String(i + 1).padStart(2, '0')}</span> {c.crop} · siembra{' '}
+              {formatDay(c.starts_on)} · cosecha {formatDay(c.ends_on)}
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }

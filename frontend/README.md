@@ -24,6 +24,7 @@ Variables (`.env`, no se sube a git):
 | `VITE_USE_MOCKS` | `true` = datos de ejemplo, sin API ni login |
 | `VITE_MOCK_SCENARIO` | Escenario de ejemplo (ver abajo). Los de sensor y NASA solo tienen efecto con `VITE_USE_MOCKS=true`; los de recomendación, mientras la recomendación salga de mocks |
 | `VITE_RECOMMENDATIONS_SOURCE` | `mock` (por defecto) o `api`: de dónde sale `POST /api/recommendations` |
+| `VITE_SCENARIO_SOURCE` | `static` (por defecto) o `api`: de dónde sale el escenario de demostración de Rotaciones (ver abajo) |
 
 ## Lo que ya usa la API y lo que falta
 
@@ -35,6 +36,14 @@ Variables (`.env`, no se sube a git):
 - **Plan B (maqueta de formato):** si una respuesta `ok` trae marcadores (textos que empiezan con `<` y terminan con `>`) o todos los puntajes en 0, no se muestra como alternativas: aparece «Maqueta de formato: aún no hay resultado del motor», sin puntajes ni calendario.
 - En Rotaciones, la prioridad parte de la guardada en la parcela; cambiarla ahí solo recalcula, no guarda.
 - La fecha de inicio de la petición de Rotaciones sale de `planned.sowing_date`. Sin fecha, se muestra el aviso «Falta un dato» y los calendarios marcan «Fecha de inicio supuesta». La cabecera de Diagnóstico muestra el cultivo actual (`current.crop_code`) con su nombre.
+
+## 03 Rotaciones: evaluación real y escenario de demostración
+
+- **Evaluación real de la parcela:** `POST /api/recommendations` con `plot_id`, `horizon_days` y `priority` (`improve_soil` para «Mejorar el suelo», `save_water` para «Ahorrar agua»). **No se envía `start_on`**: la API toma la fecha del ciclo `planned`. Hoy, con los datos reales, devuelve `insufficient_data`: la pantalla lista lo que falta y, debajo, el botón **«Ver escenario de demostración»**.
+- **Escenario de demostración** (`/rotaciones?escenario=demo`, con botón «Volver a la evaluación real»): tres secuencias de dos campañas —«Referencia proyectada» (maíz → frijol caupí), «Alternativa A» (frijol caupí → camote) y «Alternativa B» (camote → frijol caupí)—, cualitativas: sin puntajes, barras ni «mejor puntaje». Cada tarjeta muestra las dos campañas con fechas y días, el calendario, «Qué se puede comparar», «Principal riesgo» y fuentes con enlace. Lleva etiquetas «Textura franca supuesta» y «Fechas ilustrativas», la lista de supuestos, la «Lectura comparativa sin puntuaciones», un bloque «Con qué datos» con el **histórico real de NASA POWER de la parcela** (el contexto de la respuesta real, nunca los indicadores sintéticos de un JSON de ejemplo; el ESP32 sigue como dato de prueba, no usado como evidencia) y los textos para el agricultor.
+- **Contenido:** `src/data/escenario-valle-chira.ts`, tomado de `backend/docs/entrega-agronomica-valle-chira.md` (Milene, rama `feat/rotaciones-valle-chira`, secciones 2, 3 y 6), con la forma del contrato (`alternatives[].campaigns`, `reasons`, `limitations`, `sources`) más un `role` opcional (`reference` | `alternative`). Las fechas son ilustrativas: inicio el 01/12/2026 y duraciones mínimas del catálogo (maíz 125 días, caupí 60, camote 80).
+- **`VITE_SCENARIO_SOURCE=static|api`** (por defecto `static`). Con `api` se pide el escenario a la API (**ruta supuesta** `POST /api/recommendations/demo`, constante `DEMO_SCENARIO_PATH` en `src/services/api.ts`: PENDIENTE BACKEND hasta que Rodrigo confirme la real) y, si falla o no trae alternativas, se usa el guardado y se avisa. Si la API no trae `role` (ni `reference_id`), todas las secuencias se tratan como alternativas. Si algún día trae `score` o `criteria`, se muestran solo con el rótulo «Puntajes de prueba (sintéticos)».
+- **Enlaces verificados (15/11/2026):** EcoCrop `id=238663` (maíz, *Zea mays*), `id=2153` (frijol caupí, *Vigna unguiculata*) e `id=1265` (camote, *Ipomoea batatas*), y las páginas de la FAO sobre necesidades de agua y secuencias de cultivo. Para el caupí existe también `id=10835` (*Vigna unguiculata* ssp. *unguiculata*, la que usa el catálogo del backend): es la misma especie con otros rangos; aquí se usa la `2153` de la entrega de Milene.
 
 ## Probar cada estado con datos de ejemplo
 

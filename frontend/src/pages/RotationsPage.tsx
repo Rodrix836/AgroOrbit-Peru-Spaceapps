@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AlternativeCard } from '../components/rotations/AlternativeCard'
 import { ContextPanel } from '../components/rotations/ContextPanel'
 import { InsufficientPanel } from '../components/rotations/InsufficientPanel'
 import { weightChanges, weightPct } from '../components/rotations/criteria'
 import { assumptionValue, cropName, fieldLabel } from '../components/rotations/labels'
+import { ScenarioView } from '../components/rotations/ScenarioView'
 import { SourcesList } from '../components/rotations/SourcesList'
 import { Alert } from '../components/ui/Alert'
 import { Button, ButtonLink } from '../components/ui/Button'
@@ -33,26 +35,32 @@ function plotPriority(plot: Plot | null): Priority {
   return plot?.priority === 'improve_soil' ? 'improve_soil' : 'save_water'
 }
 
-function buildRequest(plot: Plot, priority: Priority, startOn: string): RecommendationRequest {
+/**
+ * La petición lleva priority (improve_soil = «Mejorar el suelo», save_water = «Ahorrar agua») y el horizonte.
+ * NO lleva start_on: la API toma la fecha del ciclo `planned` de la parcela.
+ */
+function buildRequest(plot: Plot, priority: Priority): RecommendationRequest {
   return {
     plot_id: plot.id,
     horizon_days: HORIZON_DAYS,
     priority,
-    ...(startOn ? { start_on: startOn } : {}),
   }
 }
 
 /** 03 / Rotaciones */
 export function RotationsPage() {
-  const { plot, crops, loading: plotLoading, error: plotError, reload, cycles, cyclesLoading } = usePlot()
+  const { plot, crops, loading: plotLoading, error: plotError, reload, cycles } = usePlot()
   const rec = useRecommendation()
   const { run } = rec
+  // Vista del escenario de demostración: ?escenario=demo (se abre con el botón y se cierra con «Volver…»).
+  const [params, setParams] = useSearchParams()
+  const demoView = params.get('escenario') === 'demo'
 
   // La prioridad guardada en la parcela es el punto de partida; cambiarla aquí solo recalcula (no guarda).
   const [override, setOverride] = useState<Priority | null>(null)
   const priority = override ?? plotPriority(plot)
 
-  // Inicio de la primera campaña: la fecha de la próxima campaña (planned) que guarda la API.
+  // Solo para avisar si falta la fecha de la próxima campaña (planned): la API la toma sola, no se envía.
   const startOn = cycles?.planned?.sowing_date ?? ''
 
   const plotId = plot?.id
@@ -76,10 +84,10 @@ export function RotationsPage() {
   }, [rec.data])
 
   useEffect(() => {
-    if (!plot || cyclesLoading) return // se espera a conocer la fecha para no calcular dos veces
-    void run(buildRequest(plot, priority, startOn))
+    if (!plot) return
+    void run(buildRequest(plot, priority))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plotId, priority, startOn, cyclesLoading])
+  }, [plotId, priority])
 
   if (plotLoading) return <Loading label="Cargando tu parcela…" />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
@@ -92,6 +100,21 @@ export function RotationsPage() {
           action={<ButtonLink to="/parcela">Ir a Parcela →</ButtonLink>}
         />
       </>
+    )
+  }
+
+  // Escenario de demostración: vista aparte, con botón para volver a la evaluación real.
+  if (demoView) {
+    return (
+      <ScenarioView
+        plotId={plot.id}
+        context={rec.data?.context ?? null}
+        createdAt={rec.data?.created_at}
+        contextLoading={rec.loading}
+        contextError={rec.error}
+        example={RECOMMENDATIONS_ARE_MOCK}
+        onBack={() => setParams({})}
+      />
     )
   }
 
@@ -194,7 +217,7 @@ export function RotationsPage() {
       </div>
 
       {rec.loading && <Loading label="Calculando alternativas…" />}
-      {rec.error && <ErrorBox message={rec.error} onRetry={() => void run(buildRequest(plot, priority, startOn))} />}
+      {rec.error && <ErrorBox message={rec.error} onRetry={() => void run(buildRequest(plot, priority))} />}
 
       {/* Siempre visible, encima del resultado */}
       {!rec.loading && data?.context && !(mockup && contextHasPlaceholders) && (
@@ -218,6 +241,19 @@ export function RotationsPage() {
       )}
 
       {!rec.loading && insufficient && <InsufficientPanel missing={data?.missing ?? []} crops={crops} />}
+
+      {/* Con datos insuficientes: un ejemplo de cómo se comparan tres secuencias (escenario de demostración). */}
+      {!rec.loading && insufficient && (
+        <div className="mb-8 mt-6 border border-line bg-panel p-6 md:p-8">
+          <p className="max-w-prose text-ink">
+            Mientras faltan datos, puedes ver un ejemplo de cómo se comparan tres secuencias de cultivos. Es una
+            demostración, no una recomendación para tu parcela.
+          </p>
+          <Button size="lg" className="mt-4" onClick={() => setParams({ escenario: 'demo' })}>
+            Ver escenario de demostración
+          </Button>
+        </div>
+      )}
 
       {!rec.loading && data?.status === 'ok' && !mockup && alternatives.length === 0 && (
         <EmptyState title="No hay alternativas para mostrar" />

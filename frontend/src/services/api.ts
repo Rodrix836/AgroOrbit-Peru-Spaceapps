@@ -18,7 +18,10 @@ import type {
   SensorReading,
   UserProfile,
 } from '../types/api'
+import { ESCENARIO_VALLE_CHIRA } from '../data/escenario-valle-chira'
+import type { Scenario } from '../types/scenario'
 import { ApiError } from './apiError'
+import { scenarioFromApi, type ScenarioApiResponse } from './scenarioAdapter'
 import { supabase } from './supabase'
 import {
   MOCK_SCENARIO,
@@ -46,6 +49,15 @@ const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 export const RECOMMENDATIONS_SOURCE = import.meta.env.VITE_RECOMMENDATIONS_SOURCE === 'api' ? 'api' : 'mock'
 /** true = la recomendación que se muestra es de ejemplo (la pantalla lo rotula como DATOS DE EJEMPLO). */
 export const RECOMMENDATIONS_ARE_MOCK = USE_MOCKS || RECOMMENDATIONS_SOURCE !== 'api'
+
+/**
+ * De dónde sale el escenario de demostración de Rotaciones: VITE_SCENARIO_SOURCE=static (por defecto, el contenido de
+ * Milene guardado en src/data/escenario-valle-chira.ts) | api (lo entrega la API cuando Rodrigo lo publique).
+ * Con VITE_USE_MOCKS=true siempre es static.
+ */
+export const SCENARIO_SOURCE = import.meta.env.VITE_SCENARIO_SOURCE === 'api' ? 'api' : 'static'
+/** PENDIENTE BACKEND: ruta SUPUESTA del escenario. Cambiar aquí cuando Rodrigo confirme la real. */
+const DEMO_SCENARIO_PATH = '/api/recommendations/demo'
 
 /** Códigos de error de la API que significan "NASA POWER no está disponible". */
 export const NASA_ERROR_CODES = ['nasa_power_unavailable', 'nasa_power_invalid_response']
@@ -219,6 +231,29 @@ export const api = {
    * Por defecto usa mocks (DATOS DE EJEMPLO). Cuando exista la ruta: VITE_RECOMMENDATIONS_SOURCE=api
    * y VITE_USE_MOCKS=false, sin tocar código.
    */
+  /**
+   * Escenario de demostración. static: el contenido guardado en la app. api: lo pide a la API (ruta supuesta,
+   * PENDIENTE BACKEND) y, si falla o no trae alternativas, usa el guardado y lo dice en `fallback`.
+   */
+  getDemoScenario: async (plotId: string): Promise<{ scenario: Scenario; source: 'static' | 'api'; fallback?: string }> => {
+    if (USE_MOCKS || SCENARIO_SOURCE !== 'api') {
+      return wait({ scenario: ESCENARIO_VALLE_CHIRA, source: 'static' as const })
+    }
+    try {
+      const resp = await request<ScenarioApiResponse>(DEMO_SCENARIO_PATH, {
+        method: 'POST',
+        body: JSON.stringify({ plot_id: plotId, priority: 'improve_soil', horizon_days: 365 }),
+      })
+      return { scenario: scenarioFromApi(resp), source: 'api' as const }
+    } catch (e) {
+      return {
+        scenario: ESCENARIO_VALLE_CHIRA,
+        source: 'static' as const,
+        fallback: e instanceof Error ? e.message : 'No se pudo leer el escenario desde la API.',
+      }
+    }
+  },
+
   createRecommendation: (req: RecommendationRequest): Promise<RecommendationResponse> =>
     RECOMMENDATIONS_ARE_MOCK
       ? wait(mockRecommendation(req))
