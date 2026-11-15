@@ -35,7 +35,7 @@ def synthetic_catalog(monkeypatch, complete=("maiz", "frijol_caupi", "camote")):
 SYNTHETIC_ASSUMPTIONS = [
     Assumption(
         field="engine.criteria",
-        value="sint?tico",
+        value="sintético",
         reason="SYNTHETIC: puntuaciones, pesos y requisitos de prueba."
     )
 ]

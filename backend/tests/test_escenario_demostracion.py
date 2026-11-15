@@ -20,7 +20,8 @@ def test_demo_is_ok_and_declared_as_scenario(priority):
     assert (body["status"], body["mode"], body["missing"]) == ("ok", "escenario_demostracion", [])
     assert body["context"]["notice"].startswith("Escenario de demostración")
     assert {a["field"] for a in body["context"]["assumptions"]} == {
-        "plot.soil_texture", "crops.requirements", "engine.criteria", "climate.history"}
+        "plot.soil_texture", "plot.next_sowing_date", "campaigns.dates", "plot.current_crop_end",
+        "crops.requirements", "engine.criteria", "climate.history"}
     assert body["context"]["start_on"] == "2026-12-01"  # del ciclo planned
 
     alternatives = body["alternatives"]
