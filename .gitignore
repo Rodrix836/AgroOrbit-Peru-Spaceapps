@@ -38,3 +38,6 @@ dist/
 # Estado local de Supabase CLI
 supabase/.temp/
 supabase/.branches/
+
+# Datos privados del kit ESP32 (WiFi, URL de la API y clave del dispositivo)
+firmware/**/secrets.h
