@@ -93,7 +93,7 @@ def test_climate_reports_nasa_outage(client, owner_headers, test_plot, monkeypat
     assert "upstream timeout" not in response.text
 
 
-def test_climate_indicators_preserve_pending_crop_evaluation(
+def test_climate_indicators_feed_crop_evaluation(
     client, owner_headers, test_plot, monkeypatch,
 ):
     from app.data.crops import obtener_cultivo
@@ -102,9 +102,13 @@ def test_climate_indicators_preserve_pending_crop_evaluation(
     mock_nasa(monkeypatch, nasa_payload())
     response = client.get(climate_url(test_plot["id"]), headers=owner_headers)
     assert response.status_code == 200
+    # El catálogo ya trae el rango óptimo de temperatura del maíz (FAO GAEZ, 20-30 °C).
     evaluation = evaluar_temperatura(response.json()["indicadores"], obtener_cultivo("maiz"))
-    assert evaluation["estado"] == "pendiente_datos_agronomicos"
-    assert evaluation["compatible"] is None
+    assert evaluation["estado"] == "evaluado"
+    assert evaluation["rango_referencia_c"] == [20, 30]
+    # Sin rango de temperatura, la evaluación queda pendiente y no se infiere compatibilidad.
+    pending = evaluar_temperatura(response.json()["indicadores"], {"temperatura_min_c": None, "temperatura_max_c": None})
+    assert (pending["estado"], pending["compatible"]) == ("pendiente_datos_agronomicos", None)
 
 
 def test_climate_rejects_invalid_nasa_data(client, owner_headers, test_plot, monkeypatch):

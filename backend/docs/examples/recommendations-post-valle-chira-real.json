@@ -1,0 +1,63 @@
+{
+  "status": "insufficient_data",
+  "mode": "evaluacion",
+  "engine_version": "motor-1.0",
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "created_at": "2026-11-15T15:22:58.854957Z",
+  "context": {
+    "notice": "Revisamos los datos de tu parcela. Mientras falten datos importantes, no mostramos alternativas.",
+    "start_on": null,
+    "power": {
+      "source": "NASA POWER",
+      "time_standard": "LST",
+      "start": "2024-11-14",
+      "end": "2026-11-15",
+      "use": "historico",
+      "indicators": {
+        "temperatura_promedio_c": 26.39,
+        "temperatura_maxima_diaria_c": 29.88,
+        "temperatura_minima_diaria_c": 22.35,
+        "precipitacion_total_mm": 629.1,
+        "dias_analizados": 732,
+        "dias_temperatura_validos": 729,
+        "dias_precipitacion_validos": 729,
+        "cobertura_temperatura_pct": 99.59,
+        "cobertura_precipitacion_pct": 99.59
+      }
+    },
+    "sensor": {
+      "quality_flag": "test",
+      "used_as_evidence": false,
+      "reason": "Las lecturas del sensor son de prueba, tomadas fuera del campo, y no se usan para el cálculo."
+    },
+    "assumptions": []
+  },
+  "missing": [
+    {
+      "field": "plot.next_sowing_date",
+      "reason": "Falta la fecha en que piensas sembrar la siguiente campaña."
+    },
+    {
+      "field": "plot.previous_crop",
+      "reason": "Falta indicar qué cultivo tuviste antes en esta parcela."
+    },
+    {
+      "field": "plot.soil_texture",
+      "reason": "Falta indicar qué tipo de suelo tiene la parcela, por ejemplo arenoso, franco o arcilloso."
+    },
+    {
+      "field": "crops.maiz.requirements",
+      "reason": "Todavía no tenemos, de una fuente confiable, estos datos del cultivo «Maíz»: pH del suelo, salinidad que tolera y tipos de suelo."
+    },
+    {
+      "field": "crops.frijol_caupi.requirements",
+      "reason": "Todavía no tenemos, de una fuente confiable, estos datos del cultivo «Frijol caupí»: agua por campaña, pH del suelo, salinidad que tolera y tipos de suelo."
+    },
+    {
+      "field": "crops.camote.requirements",
+      "reason": "Todavía no tenemos, de una fuente confiable, estos datos del cultivo «Camote»: agua por campaña, pH del suelo, salinidad que tolera y tipos de suelo."
+    }
+  ],
+  "selected_id": null,
+  "alternatives": []
+}
