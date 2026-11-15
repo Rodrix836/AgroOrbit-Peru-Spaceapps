@@ -29,7 +29,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.config import Settings, get_settings
 from app.data import crops as crops_module
-from app.database.models import Base, Crop, NasaObservation
+from app.database.models import Base, Crop, NasaObservation, Plot
 from app.database.session import get_db_session
 from app.main import app
 from app.schemas.recommendation import Assumption
@@ -53,6 +53,13 @@ WATER_AVAILABLE = {"low": 30, "medium": 60, "high": 90}
 ASSUMPTIONS = [
     Assumption(field="plot.soil_texture", value="franco",
                reason="Textura supuesta para la demostración: la parcela aún no la tiene registrada."),
+    Assumption(field="plot.next_sowing_date", value="2026-12-01",
+               reason="Fecha de inicio del escenario de demostración, no una fecha agronómica certificada."),
+    Assumption(field="campaigns.dates", value="duración mínima del catálogo",
+               reason="Las fechas de campaña usan la duración mínima general de cada cultivo (maíz 125 días, "
+                      "frijol caupí 60, camote 80), sin pausas entre campañas; varían según variedad y manejo."),
+    Assumption(field="plot.current_crop_end", value="antes de 2026-12-01",
+               reason="Se supone que el frijol caupí activo termina antes de la siembra: no tiene fecha registrada."),
     Assumption(field="crops.requirements", value="sintético",
                reason="Los requisitos de pH, salinidad, suelos y agua de los cultivos son de prueba, sin fuente real."),
     Assumption(field="engine.criteria", value="sintético",
@@ -79,9 +86,12 @@ def synthetic_catalog() -> dict:
 
 def synthetic_evaluator(plot, request, candidates):
     """Puntuaciones SINTÉTICAS. Usan los datos reales que recibe el motor: clima de las fechas de cada
-    campaña, agua y textura de la parcela, y cultivo actual del historial."""
+    campaña, agua y textura de la parcela, y cultivo actual del historial. Con `_strategy_ids`, solo
+    puntúa esas estrategias (las demás no llegan al motor)."""
     evaluations = {}
     for c in candidates:
+        if _strategy_ids is not None and c["id"] not in _strategy_ids:
+            continue
         first, second = c["crops"]
         catalog = crops_module.obtener_cultivos()
         temps = [i["temperatura_promedio_c"] for i in c["climate_indicators"]]
@@ -112,6 +122,19 @@ def synthetic_evaluator(plot, request, candidates):
 
 
 _active_assumptions: list[Assumption] = []
+_strategy_ids: list[str] | None = None
+
+# Estrategias documentadas por Milene (docs/entrega-agronomica-valle-chira.md, sección 2).
+VALLE_CHIRA_PLOT_ID = "f544f739-bc06-45c6-9cf9-052c44499ab6"
+VALLE_CHIRA_STRATEGIES = [
+    {"id": "maiz__frijol_caupi", "rol": "referencia", "nombre": "Referencia proyectada",
+     "descripcion": "Repite el orden del historial (maíz → frijol caupí) desde la próxima siembra. "
+                    "Es una proyección hipotética, no una reconstrucción del calendario real."},
+    {"id": "frijol_caupi__camote", "rol": "alternativa", "nombre": "Alternativa A",
+     "descripcion": "Frijol caupí → camote. Podría repetir el frijol caupí justo después del cultivo activo."},
+    {"id": "camote__frijol_caupi", "rol": "alternativa", "nombre": "Alternativa B",
+     "descripcion": "Camote → frijol caupí. Cambia el primer cultivo respecto del frijol caupí activo."},
+]
 
 
 def synthetic_climate(day: date) -> tuple[float, float]:
@@ -146,11 +169,16 @@ def _patched(catalog: dict):
 
 
 def run(priority: str = "save_water", start_on: str | None = None, clima: str = "sintetico",
-        horizon_days: int | None = None) -> dict:
-    """Ejecuta el escenario y devuelve {"request", "http_status", "response"} (sin token)."""
-    global _active_assumptions
+        horizon_days: int | None = None, strategies: list[str] | None = None,
+        plot_id: str | None = None) -> dict:
+    """Ejecuta el escenario y devuelve {"request", "http_status", "response"} (sin token).
+
+    `strategies`: ids de candidatos a puntuar (por defecto, todos). `plot_id`: id fijo de la parcela
+    en la base en memoria (por defecto, uno nuevo)."""
+    global _active_assumptions, _strategy_ids
     climate = _nasa_climate() if clima == "nasa" else None
     _active_assumptions = ASSUMPTIONS + ([] if climate else [CLIMATE_ASSUMPTION])
+    _strategy_ids = strategies
 
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     event.listen(engine, "connect", lambda conn, _: conn.execute("PRAGMA foreign_keys=ON"))
@@ -165,16 +193,29 @@ def run(priority: str = "save_water", start_on: str | None = None, clima: str = 
 
     app.dependency_overrides[get_db_session] = session_override
     app.dependency_overrides[get_settings] = lambda: Settings(
-        _env_file=None, supabase_jwt_secret=JWT_SECRET, supabase_url=None)
+        _env_file=None, supabase_jwt_secret=JWT_SECRET, supabase_url=None,
+        test_device_external_ids="kit-lote4b-01")
     now = datetime.now(timezone.utc)
     token = jwt.encode({"sub": str(uuid4()), "aud": "authenticated", "role": "authenticated",
                         "iat": now, "exp": now + timedelta(minutes=10)}, JWT_SECRET, algorithm="HS256")
     headers = {"Authorization": f"Bearer {token}"}
 
     with _patched(synthetic_catalog()), TestClient(app) as client:
-        client.post("/api/users/me", json={"display_name": "Escenario de demostración"}, headers=headers)
-        plot = client.post("/api/plots", json={**CHIRA, "water_availability": "medium", "soil_texture": "franco"},
-                           headers=headers).json()
+        user = client.post("/api/users/me", json={"display_name": "Escenario de demostración"}, headers=headers).json()
+        plot_data = {**CHIRA, "water_availability": "medium", "soil_texture": "franco", "priority": priority}
+        if plot_id:
+            with sessions() as session:
+                session.add(Plot(id=UUID(plot_id), user_id=UUID(user["id"]), **{
+                    **plot_data, "latitude": Decimal("-4.970000"), "longitude": Decimal("-80.890000")}))
+                session.commit()
+            plot = {"id": plot_id}
+        else:
+            plot = client.post("/api/plots", json=plot_data, headers=headers).json()
+        # Kit de prueba, como en la ficha: su lectura queda con quality_flag=test y no se usa como evidencia.
+        kit = client.post(f"/api/plots/{plot['id']}/devices", json={"external_id": "kit-lote4b-01"},
+                          headers=headers).json()
+        client.post("/api/sensors/readings", headers={"X-Device-Key": kit["device_key"]}, json={
+            "device_id": "kit-lote4b-01", "soil_moisture_pct": 0.0, "soil_moisture_raw": 2926, "soil_temp_c": 30.12})
         url = f"/api/plots/{plot['id']}/crop-cycles"
         for cycle in ({"status": "finished", "crop_code": "maiz"}, {"status": "active", "crop_code": "frijol_caupi"},
                       {"status": "planned", "sowing_date": "2026-12-01"}):
@@ -195,4 +236,43 @@ def run(priority: str = "save_water", start_on: str | None = None, clima: str = 
         if horizon_days is not None:
             request["horizon_days"] = horizon_days
         response = client.post("/api/recommendations", json=request, headers=headers)
+        _strategy_ids = None
         return {"request": request, "http_status": response.status_code, "response": response.json()}
+
+
+def valle_chira_demo(priority: str = "improve_soil", clima: str = "nasa") -> dict:
+    """Archivo de demo de Rotaciones: referencia proyectada + alternativas A y B (Milene).
+
+    `response` es una respuesta real de la API (mismo contrato, sin campos nuevos); `demo` añade, solo en
+    este archivo, el rol de cada estrategia y qué datos son supuestos o sintéticos."""
+    ids = [s["id"] for s in VALLE_CHIRA_STRATEGIES]
+    result = run(priority, clima=clima, horizon_days=365, strategies=ids, plot_id=VALLE_CHIRA_PLOT_ID)
+    returned = {a["id"] for a in result["response"]["alternatives"]}
+    if result["response"]["status"] != "ok" or returned != set(ids):
+        raise RuntimeError(f"La demo no devolvió las tres estrategias: {result['response'].get('missing')}")
+    climate_text = ("NASA POWER real (T2M y PRECTOTCORR diarios, 2016-01-01 a 2026-11-15, -4.97, -80.89)"
+                    if clima == "nasa" else "SINTÉTICO: serie estacional de prueba, no NASA POWER")
+    return {
+        "demo": {
+            "tipo": "escenario_demostracion",
+            "aviso": "Comparación de demostración. No es una recomendación validada para la parcela.",
+            "reference_id": "maiz__frijol_caupi",
+            "estrategias": VALLE_CHIRA_STRATEGIES,
+            "supuestos": {
+                "textura": "«franco» es un supuesto: la parcela no tiene textura registrada.",
+                "fechas": "Inicio 2026-12-01 y duraciones mínimas del catálogo (maíz 125, frijol caupí 60, "
+                          "camote 80 días) son supuestos; se supone que el frijol caupí activo termina antes.",
+            },
+            "sintetico": {
+                "puntuaciones": "SINTÉTICAS: score, criteria (puntuación por criterio) y pesos por prioridad "
+                                "son de prueba, no agronómicos; textos con prefijo SYNTHETIC.",
+                "requisitos_cultivo": "SINTÉTICOS donde el catálogo no tiene fuente (agua de frijol caupí y "
+                                      "camote; pH, salinidad y suelos de los tres); fuente example.invalid.",
+                "clima": climate_text,
+            },
+            "comando": f"python scripts/generar_demo_rotaciones.py --priority {priority} --clima {clima}",
+        },
+        "request": result["request"],
+        "http_status": result["http_status"],
+        "response": result["response"],
+    }
