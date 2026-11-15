@@ -1,0 +1,39 @@
+
+{
+  "status": "insufficient_data",
+  "mode": "evaluacion",
+  "engine_version": "motor-1.0",
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "created_at": "2026-11-15T17:53:54.295Z",
+  "context": {
+    "notice": "Ejemplo estático ilustrativo basado en la ficha del 15/11/2026, no respuesta autenticada de la API. El histórico NASA POWER existe según la ficha, pero aquí no se recalcularon sus indicadores; power=null no describe el estado real del almacenamiento.",
+    "start_on": "2026-12-01",
+    "power": null,
+    "sensor": {
+      "quality_flag": "test",
+      "used_as_evidence": false,
+      "reason": "Lecturas del ESP32 obtenidas en pruebas fuera del campo; se excluyen del cálculo."
+    },
+    "assumptions": []
+  },
+  "missing": [
+    {
+      "field": "plot.soil_texture",
+      "reason": "No hay textura del suelo registrada en la ficha de la parcela."
+    },
+    {
+      "field": "crops.maiz.requirements",
+      "reason": "Faltan requisitos completos y respaldados del maíz (pH, salinidad, textura) para aplicar el motor."
+    },
+    {
+      "field": "crops.frijol_caupi.requirements",
+      "reason": "Faltan requisitos completos y respaldados del caupí (agua por campaña, pH, salinidad, textura)."
+    },
+    {
+      "field": "crops.camote.requirements",
+      "reason": "Faltan requisitos completos y respaldados del camote (agua por campaña, pH, salinidad, textura)."
+    }
+  ],
+  "selected_id": null,
+  "alternatives": []
+}
