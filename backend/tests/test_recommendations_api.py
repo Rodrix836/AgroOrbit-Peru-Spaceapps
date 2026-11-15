@@ -126,7 +126,7 @@ def test_engine_hook_returns_ok(client, db, owner_headers, test_plot, monkeypatc
     complete_catalog(monkeypatch)
     calls = []
 
-    def fake_engine(plot, request, context, *, climate_days):
+    def fake_engine(plot, request, context, *, climate_days, history):
         calls.append((str(plot.id), request.priority, context.power.use))
         alternative = Alternative(
             id="rot-a", rank=1, score=70,
@@ -192,7 +192,7 @@ def test_engine_receives_resolved_start_on(client, db, owner_headers, test_plot,
     seen = []
     alternative = Alternative(id="rot-a", rank=1, score=50, campaigns=[], reasons=[], limitations=[], sources=[])
     monkeypatch.setattr(recommendation_service, "ROTATION_ENGINE",
-                        lambda plot, request, context, climate_days: seen.append(request.start_on)
+                        lambda plot, request, context, climate_days, history: seen.append(request.start_on)
                         or ("evaluacion", [], [alternative]))
     no_date = body(test_plot)
     no_date.pop("start_on")

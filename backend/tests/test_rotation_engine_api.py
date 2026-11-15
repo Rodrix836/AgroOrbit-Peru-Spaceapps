@@ -3,8 +3,9 @@
 Dos casos de extremo a extremo:
 - Valle del Chira con el estado REAL de la parcela demostrativa en Supabase (15/11/2026): agua `low`,
   sin suelo ni cultivo anterior, ~2 años de NASA POWER y lecturas `test`. Con el catálogo real → insufficient_data.
-- Caso CONTROLADO con datos SINTÉTICOS (catálogo y evaluador marcados SYNTHETIC_*): llega a status ok.
-  Sus puntuaciones, pesos y fuentes (example.invalid) no son agronómicos ni una recomendación.
+- Caso CONTROLADO con datos SINTÉTICOS (catálogo y evaluador marcados SYNTHETIC_*): llega a status ok
+  como `escenario_demostracion`, con los supuestos declarados. Sus puntuaciones, pesos y fuentes
+  (example.invalid) no son agronómicos ni una recomendación.
 """
 
 from copy import deepcopy
@@ -47,10 +48,16 @@ def synthetic_catalog(monkeypatch, complete=("maiz", "frijol_caupi", "camote")):
     monkeypatch.setattr(crops_module, "CULTIVOS", catalog)
 
 
-def synthetic_evaluator(calls, mode="evaluacion", assumptions=()):
-    """SYNTHETIC: evaluador de prueba que usa el agua declarada en la parcela."""
+SYNTHETIC_ASSUMPTIONS = [Assumption(field="engine.criteria", value="sintético",
+                                    reason="SYNTHETIC: puntuaciones, pesos y requisitos de prueba.")]
+
+
+def synthetic_evaluator(calls, mode="escenario_demostracion", assumptions=tuple(SYNTHETIC_ASSUMPTIONS)):
+    """SYNTHETIC: evaluador de prueba que usa el agua declarada en la parcela. Por defecto se declara
+    escenario de demostración: un ok con datos sintéticos nunca debe salir como `evaluacion`."""
     def evaluate(plot, request, candidates):
-        calls.append({"water": [c["water_availability"] for c in candidates], "ids": [c["id"] for c in candidates]})
+        calls.append({"water": [c["water_availability"] for c in candidates], "ids": [c["id"] for c in candidates],
+                      "candidates": candidates})
         evaluations = {}
         for c in candidates:
             a, b = c["crops"]
@@ -172,14 +179,17 @@ def test_controlled_complete_case_returns_ok_with_alternatives(client, db, owner
     assert response.status_code == 200, response.text
     data = response.json()
 
-    assert (data["status"], data["mode"], data["missing"]) == ("ok", "evaluacion", [])
-    assert data["context"]["assumptions"] == []
+    assert (data["status"], data["mode"], data["missing"]) == ("ok", "escenario_demostracion", [])
+    assert data["context"]["assumptions"] == [a.model_dump() for a in SYNTHETIC_ASSUMPTIONS]
+    assert data["context"]["notice"].startswith("Escenario de demostración")
     assert data["context"]["start_on"] == "2026-12-01"
     stamp = datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
     assert data["created_at"].endswith("Z") and before - timedelta(seconds=1) <= stamp
 
-    # El agua sale de la parcela (low), no de la petición.
+    # El agua sale de la parcela (low), no de la petición; textura e historial, de la parcela y crop_cycle.
     assert calls[0]["water"] == ["low"] * 6
+    assert {(c["soil_texture"], c["previous_crop"], c["current_crop"]) for c in calls[0]["candidates"]} == {
+        ("franco", "maiz", None)}
 
     alternatives = data["alternatives"]
     assert len(alternatives) == 3 and [a["rank"] for a in alternatives] == [1, 2, 3]
@@ -283,3 +293,57 @@ def test_foreign_account_gets_404(client, db, auth_headers, owner_headers, chira
 
 def test_water_is_not_accepted_in_the_request(client, owner_headers, chira):
     assert_error(post(client, owner_headers, chira, water_availability="high"), 422, "validation_error")
+
+
+def test_evaluacion_mode_mechanics_drop_assumptions(client, db, owner_headers, chira, monkeypatch):
+    """Solo mecánica del modo `evaluacion` (el que usarán las reglas reales con fuentes): sin supuestos."""
+    complete_chira(client, db, owner_headers, chira)
+    synthetic_catalog(monkeypatch)
+    monkeypatch.setattr(rotation_engine, "EVALUATION_PROVIDER", synthetic_evaluator([], mode="evaluacion", assumptions=()))
+    data = post(client, owner_headers, chira).json()
+    assert (data["status"], data["mode"], data["context"]["assumptions"]) == ("ok", "evaluacion", [])
+
+
+def test_history_reaches_the_rules(client, db, owner_headers, chira, monkeypatch):
+    """Cultivo anterior (último finished) y actual (active) llegan a las reglas en cada candidato."""
+    complete_chira(client, db, owner_headers, chira)
+    client.post(f"/api/plots/{chira['id']}/crop-cycles", json={"status": "active", "crop_code": "frijol_caupi"},
+                headers=owner_headers)
+    synthetic_catalog(monkeypatch)
+    calls = []
+    monkeypatch.setattr(rotation_engine, "EVALUATION_PROVIDER", synthetic_evaluator(calls))
+    post(client, owner_headers, chira)
+    assert {(c["previous_crop"], c["current_crop"]) for c in calls[0]["candidates"]} == {("maiz", "frijol_caupi")}
+
+
+def test_climate_is_evaluated_on_campaign_dates(client, db, owner_headers, chira, monkeypatch):
+    """Con un clima que cambia por mes, cada campaña recibe la temperatura de SUS fechas en años anteriores."""
+    complete_chira(client, db, owner_headers, chira)
+    # Rehace el clima: diciembre-marzo a 30 °C y 8 mm/día; el resto del año a 20 °C y 0 mm.
+    db.query(NasaObservation).delete()
+    db.commit()
+    day = date(2019, 1, 1)
+    while day <= date(2026, 11, 15):
+        hot = day.month in (12, 1, 2, 3)
+        for variable, value, unit in (("T2M", 30.0 if hot else 20.0, "C"), ("PRECTOTCORR", 8.0 if hot else 0.0, "mm/day")):
+            db.add(NasaObservation(plot_id=UUID(chira["id"]), variable=variable, observed_on=day, value=value, unit=unit,
+                                   latitude=Decimal("-4.970000"), longitude=Decimal("-80.890000")))
+        day += timedelta(days=1)
+    db.commit()
+    synthetic_catalog(monkeypatch)
+    calls = []
+    monkeypatch.setattr(rotation_engine, "EVALUATION_PROVIDER", synthetic_evaluator(calls))
+    post(client, owner_headers, chira, start_on="2026-12-01")
+    c = next(c for c in calls[0]["candidates"] if c["id"] == "maiz__frijol_caupi")
+    first, second = c["climate_indicators"]
+    # Campaña 1: 2026-12-01 + 100 días -> 2027-03-10, toda en meses cálidos. Campaña 2: 2027-03-11..06-18.
+    assert c["campaigns"][0]["ends_on"] == date(2027, 3, 10)
+    assert first["temperatura_promedio_c"] == 30.0
+    # 21 días de marzo a 30 °C + 79 días a 20 °C -> 22.1 °C: la ventana corta en el día exacto.
+    assert second["temperatura_promedio_c"] == 22.1
+    # Lluvia de una campaña: media por año, no la suma de 5 años. 100 días x 8 mm = 800 mm; la ventana
+    # 2023-12-01..2024-03-10 tiene 101 días (29 de febrero) -> 808 mm, y cuenta como año completo.
+    assert first["precipitacion_campana_mm"] == {"promedio": 801.6, "min_anual": 800.0, "max_anual": 808.0,
+                                                 "anios_completos": 5}
+    assert first["precipitacion_total_mm"] == 4008.0
+    assert first["anios_analizados"] == 5

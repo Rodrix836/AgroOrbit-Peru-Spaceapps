@@ -17,7 +17,9 @@ EVALUATION_PROVIDER(plot, request, candidates) -> dict | None, con:
      "assumptions": [Assumption, ...],                       # solo en escenario_demostracion
      "priority_weights": {"save_water": {"clima": 0.1, ...}, "improve_soil": {...}},
      "evaluations": {candidate_id: {criterio: {"score", "reasons", "limitations", "sources"}}}}
-`candidates[i]["water_availability"]` es el agua declarada en la parcela: la petición no la trae.
+Cada candidato trae, además, los datos de la parcela que necesitan las reglas (la petición no los trae):
+`water_availability` y `soil_texture` (de `plot`), `previous_crop` y `current_crop` (de `crop_cycle`:
+último `finished` y el `active`), y `climate_indicators[i]` por campaña (ver window_indicators).
 """
 
 from collections.abc import Callable
@@ -103,16 +105,45 @@ def _shift_years(day: date, years: int) -> date:
 
 
 def window_indicators(climate_days: list[dict], starts_on: date, ends_on: date) -> dict:
-    """Indicadores de NASA POWER de las mismas fechas de la campaña en años anteriores."""
+    """Clima de NASA POWER en las mismas fechas de la campaña, en los CLIMATE_YEARS_BACK años anteriores.
+
+    Las claves de calcular_indicadores se calculan sobre todos esos días juntos: la temperatura es la
+    media de todos los años, pero `precipitacion_total_mm` es la SUMA de todos los años. Para la lluvia de
+    una campaña usa `precipitacion_campana_mm` (media por año y rango entre años: incertidumbre).
+    """
     by_day = {date.fromisoformat(d["fecha"]): d for d in climate_days}
-    selected = []
+    selected, rain_by_year, temp_by_year = [], [], []
     for k in range(1, CLIMATE_YEARS_BACK + 1):
         start, end = _shift_years(starts_on, -k), _shift_years(ends_on, -k)
-        selected += [by_day[d] for d in sorted(by_day) if start <= d <= end]
-    return calcular_indicadores(selected) if selected else {"temperatura_promedio_c": None}
+        year = [by_day[d] for d in sorted(by_day) if start <= d <= end]
+        selected += year
+        temps = [d["temperatura_c"] for d in year if d["temperatura_c"] is not None]
+        rains = [d["precipitacion_mm_dia"] for d in year if d["precipitacion_mm_dia"] is not None]
+        days = (end - start).days + 1  # la ventana de ese año (un año bisiesto puede tener un día más)
+        if temps:
+            temp_by_year.append(sum(temps) / len(temps))
+        # Solo años con la campaña completa: un año a medias subestimaría la lluvia.
+        if len(rains) == days:
+            rain_by_year.append(sum(rains))
+    if not selected:
+        return {"temperatura_promedio_c": None}
+    indicators = calcular_indicadores(selected)
+    indicators["anios_analizados"] = len(temp_by_year)
+    indicators["temperatura_campana_c"] = {
+        "promedio": indicators["temperatura_promedio_c"],
+        "min_anual": round(min(temp_by_year), 2) if temp_by_year else None,
+        "max_anual": round(max(temp_by_year), 2) if temp_by_year else None,
+    }
+    indicators["precipitacion_campana_mm"] = {
+        "promedio": round(sum(rain_by_year) / len(rain_by_year), 2) if rain_by_year else None,
+        "min_anual": round(min(rain_by_year), 2) if rain_by_year else None,
+        "max_anual": round(max(rain_by_year), 2) if rain_by_year else None,
+        "anios_completos": len(rain_by_year),
+    }
+    return indicators
 
 
-def _candidates(plot, request, climate_days: list[dict]) -> tuple[list[dict], list[str]]:
+def _candidates(plot, request, climate_days: list[dict], history: dict) -> tuple[list[dict], list[str]]:
     gaps = crop_requirement_gaps()
     complete = [c for c, fields in gaps.items() if not fields]
     catalog = crops_catalog.obtener_cultivos()
@@ -142,6 +173,9 @@ def _candidates(plot, request, climate_days: list[dict]) -> tuple[list[dict], li
             "campaigns": campaigns,
             "climate_indicators": indicators,
             "water_availability": plot.water_availability,
+            "soil_texture": plot.soil_texture,
+            "previous_crop": history.get("previous_crop"),
+            "current_crop": history.get("current_crop"),
             "requirement_sources": _requirement_sources(crops[0]) + _requirement_sources(crops[1]),
         })
     if not candidates and too_long:
@@ -158,9 +192,9 @@ def _candidates(plot, request, climate_days: list[dict]) -> tuple[list[dict], li
     return candidates, notes
 
 
-def recommend_rotations(plot, request, context, *, climate_days: list[dict]):
+def recommend_rotations(plot, request, context, *, climate_days: list[dict], history: dict | None = None):
     """ROTATION_ENGINE del servicio: devuelve (mode, assumptions, alternatives) o lanza EngineBlocked."""
-    candidates, notes = _candidates(plot, request, climate_days)
+    candidates, notes = _candidates(plot, request, climate_days, history or {})
 
     if EVALUATION_PROVIDER is None:
         raise EngineBlocked([
