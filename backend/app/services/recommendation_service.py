@@ -22,7 +22,7 @@ from app.schemas.recommendation import (
     RecommendationResponse,
     SensorContext,
 )
-from app.services import rotation_engine
+from app.services import crop_cycle_service, rotation_engine
 from app.services.indicators import calcular_indicadores
 from app.services.rotation_engine import EngineBlocked
 
@@ -150,9 +150,14 @@ def recommend(session: Session, plot: Plot, request: RecommendationRequest) -> R
         return _insufficient(plot, created_at, context, missing)
 
     try:
-        # El motor recibe la petición con start_on ya resuelto y los días de clima anteriores a start_on.
+        # El motor recibe la petición con start_on ya resuelto, los días de clima anteriores a start_on
+        # y el historial de cultivos (último finished y el active de crop_cycle).
+        cycles = crop_cycle_service.summary(session, plot)
+        history = {"previous_crop": cycles.previous.crop_code if cycles.previous else None,
+                   "current_crop": cycles.current.crop_code if cycles.current else None}
         mode, assumptions, alternatives = ROTATION_ENGINE(
-            plot, request.model_copy(update={"start_on": start_on}), context, climate_days=climate_days)
+            plot, request.model_copy(update={"start_on": start_on}), context,
+            climate_days=climate_days, history=history)
     except EngineBlocked as blocked:
         return _insufficient(plot, created_at, context, blocked.missing)
     if not alternatives:
