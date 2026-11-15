@@ -72,8 +72,17 @@ export interface RangeStat {
   median: number | null
   max: number | null
   sufficient: boolean
+  /** Año (o temporada, p. ej. «2016–17» si la ventana cruza el año) del mínimo y del máximo; null si el rango es insuficiente. */
+  minLabel: string | null
+  maxLabel: string | null
   /** Valor de cada año válido (sin ordenar), por si hace falta. */
   values: number[]
+}
+
+/** Un valor de un año válido con el año (o temporada) al que corresponde. */
+export interface YearValue {
+  value: number
+  label: string
 }
 
 function median(sorted: number[]): number {
@@ -81,17 +90,29 @@ function median(sorted: number[]): number {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
 }
 
-export function rangeStat(values: number[]): RangeStat {
-  const s = [...values].sort((a, b) => a - b)
+/** Mínimo, mediana y máximo de los años válidos. Si hay empate, el año del mínimo/máximo es el primero (el más antiguo). */
+export function rangeStat(entries: YearValue[]): RangeStat {
+  const sorted = [...entries].sort((a, b) => a.value - b.value)
+  const s = sorted.map((e) => e.value)
   const ok = s.length >= MIN_WINDOW_YEARS
+  const lastValue = s[s.length - 1]
   return {
     n: s.length,
     min: ok ? s[0] : null,
     median: ok ? median(s) : null,
-    max: ok ? s[s.length - 1] : null,
+    max: ok ? lastValue : null,
     sufficient: ok,
-    values,
+    minLabel: ok ? sorted[0].label : null,
+    maxLabel: ok ? (sorted.find((e) => e.value === lastValue) as YearValue).label : null,
+    values: entries.map((e) => e.value),
   }
+}
+
+/** «2017» si la ventana cae en un solo año; «2016–17» si cruza el año. */
+export function seasonLabel(start: string, end: string): string {
+  const a = start.slice(0, 4)
+  const b = end.slice(0, 4)
+  return a === b ? a : `${a}–${b.slice(2)}`
 }
 
 export interface CampaignWindow {
@@ -140,9 +161,9 @@ export function strategyStats(windows: CampaignWindow[], rain: DailyMap, temp: D
   const lo = Number.isFinite(firstYear) ? firstYear - baseYear - 1 : 0
   const hi = Number.isFinite(lastYear) ? lastYear - baseYear : 0
 
-  const perCampaign: { rain: number[]; temp: number[] }[] = windows.map(() => ({ rain: [], temp: [] }))
-  const stratRain: number[] = []
-  const stratTemp: number[] = []
+  const perCampaign: { rain: YearValue[]; temp: YearValue[] }[] = windows.map(() => ({ rain: [], temp: [] }))
+  const stratRain: YearValue[] = []
+  const stratTemp: YearValue[] = []
 
   for (let s = lo; s <= hi; s++) {
     let rainOk = true
@@ -155,16 +176,19 @@ export function strategyStats(windows: CampaignWindow[], rain: DailyMap, temp: D
       const b = shiftYears(w.ends_on, s)
       const r = windowSample(rain, a, b)
       const t = windowSample(temp, a, b)
-      if (valid(r)) perCampaign[i].rain.push(r.sum)
+      const label = seasonLabel(a, b)
+      if (valid(r)) perCampaign[i].rain.push({ value: r.sum, label })
       else rainOk = false
-      if (valid(t)) perCampaign[i].temp.push(t.sum / t.n)
+      if (valid(t)) perCampaign[i].temp.push({ value: t.sum / t.n, label })
       else tempOk = false
       rainSum += r.sum
       tSum += t.sum
       tN += t.n
     })
-    if (rainOk) stratRain.push(rainSum)
-    if (tempOk && tN > 0) stratTemp.push(tSum / tN)
+    // Año (o temporada) de la estrategia: del inicio de la primera campaña al fin de la última, en ese año del histórico.
+    const label = seasonLabel(shiftYears(windows[0].starts_on, s), shiftYears(windows[windows.length - 1].ends_on, s))
+    if (rainOk) stratRain.push({ value: rainSum, label })
+    if (tempOk && tN > 0) stratTemp.push({ value: tSum / tN, label })
   }
 
   const rainStat = rangeStat(stratRain)

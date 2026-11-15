@@ -13,6 +13,8 @@ export function RangeBar({
   unit,
   decimals = 0,
   label,
+  minLabel,
+  maxLabel,
 }: {
   min: number
   median: number
@@ -23,6 +25,9 @@ export function RangeBar({
   decimals?: number
   /** Para lectores de pantalla: qué mide la barra. */
   label: string
+  /** Año (o temporada) del mínimo y del máximo; si llegan, se escriben bajo la barra («máx. 652 mm en 2016–17»). */
+  minLabel?: string | null
+  maxLabel?: string | null
 }) {
   const span = scaleMax - scaleMin || 1
   const pct = (v: number) => Math.min(100, Math.max(0, ((v - scaleMin) / span) * 100))
@@ -52,6 +57,16 @@ export function RangeBar({
       <p className="font-mono text-base text-cielo">
         mediana {f(median)} <span className="text-muted">{unit}</span>
       </p>
+      {maxLabel && (
+        <p className="font-mono text-[13px] text-ink">
+          máx. {f(max)} {unit} en {maxLabel}
+        </p>
+      )}
+      {minLabel && (
+        <p className="font-mono text-[13px] text-ink">
+          mín. {f(min)} {unit} en {minLabel}
+        </p>
+      )}
     </div>
   )
 }
