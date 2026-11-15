@@ -145,7 +145,8 @@ def _patched(catalog: dict):
         app.dependency_overrides.clear()
 
 
-def run(priority: str = "save_water", start_on: str | None = None, clima: str = "sintetico") -> dict:
+def run(priority: str = "save_water", start_on: str | None = None, clima: str = "sintetico",
+        horizon_days: int | None = None) -> dict:
     """Ejecuta el escenario y devuelve {"request", "http_status", "response"} (sin token)."""
     global _active_assumptions
     climate = _nasa_climate() if clima == "nasa" else None
@@ -191,5 +192,7 @@ def run(priority: str = "save_water", start_on: str | None = None, clima: str = 
         request = {"plot_id": plot["id"], "priority": priority}
         if start_on:
             request["start_on"] = start_on
+        if horizon_days is not None:
+            request["horizon_days"] = horizon_days
         response = client.post("/api/recommendations", json=request, headers=headers)
         return {"request": request, "http_status": response.status_code, "response": response.json()}

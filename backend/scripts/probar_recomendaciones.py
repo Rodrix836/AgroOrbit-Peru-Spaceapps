@@ -6,6 +6,8 @@ Desde backend/:
   # SUPABASE_ANON_KEY de backend/.env). Por defecto contra Render; --api local = http://localhost:8000.
   .venv/Scripts/python.exe scripts/probar_recomendaciones.py real
   .venv/Scripts/python.exe scripts/probar_recomendaciones.py real --api local --priority improve_soil
+  # Cuerpo de la ficha de Valle del Chira: {"plot_id": ..., "priority": "improve_soil", "horizon_days": 365}
+  .venv/Scripts/python.exe scripts/probar_recomendaciones.py real --priority improve_soil --horizon-days 365
 
   # Escenario de demostración (datos SINTÉTICOS, en memoria, sin credenciales ni red):
   .venv/Scripts/python.exe scripts/probar_recomendaciones.py demo
@@ -53,6 +55,8 @@ def real(args) -> dict:
     request = {"plot_id": PLOT, "priority": args.priority}
     if args.start_on:
         request["start_on"] = args.start_on
+    if args.horizon_days is not None:
+        request["horizon_days"] = args.horizon_days
     response = requests.post(f"{api}/api/recommendations", json=request, headers=headers, timeout=120)
     return {"api": api, "request": request, "http_status": response.status_code, "response": response.json()}
 
@@ -60,7 +64,8 @@ def real(args) -> dict:
 def demo(args) -> dict:
     from scripts.escenario_demostracion import run
 
-    return {"api": "en memoria (TestClient + SQLite)", **run(args.priority, args.start_on, args.clima)}
+    return {"api": "en memoria (TestClient + SQLite)",
+            **run(args.priority, args.start_on, args.clima, args.horizon_days)}
 
 
 def main() -> None:
@@ -71,6 +76,7 @@ def main() -> None:
         p = sub.add_parser(name)
         p.add_argument("--priority", choices=["save_water", "improve_soil"], default="save_water")
         p.add_argument("--start-on", help="AAAA-MM-DD; si no se da, se usa el ciclo planned")
+        p.add_argument("--horizon-days", type=int, help="90-730; si no se da, la API usa 365")
         p.add_argument("--out", help="Archivo JSON de salida (por defecto, uno junto a este script)")
         if name == "real":
             p.add_argument("--api", default="render", help="render, local o una URL")
@@ -84,7 +90,7 @@ def main() -> None:
     print("Solicitud: POST /api/recommendations", json.dumps(result["request"], ensure_ascii=False))
     print(f"HTTP {result['http_status']}")
     print(f"status={body.get('status')} mode={body.get('mode')} engine_version={body.get('engine_version')} "
-          f"selected_id={body.get('selected_id')}")
+          f"selected_id={body.get('selected_id')} start_on={body.get('context', {}).get('start_on')}")
     for m in body.get("missing", []):
         print(f"  falta {m['field']}: {m['reason']}")
     for a in body.get("alternatives", []):
