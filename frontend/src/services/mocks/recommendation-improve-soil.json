@@ -33,32 +33,28 @@
           "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/"
         }
       ],
-      "criteria": [
-        {
-          "id": "clima",
+      "criteria": {
+        "clima": {
           "score": 80,
           "weight": 0.2,
           "contribution": 16.0
         },
-        {
-          "id": "agua",
+        "agua": {
           "score": 70,
           "weight": 0.15,
           "contribution": 10.5
         },
-        {
-          "id": "suelo",
+        "suelo": {
           "score": 65,
           "weight": 0.4,
           "contribution": 26.0
         },
-        {
-          "id": "diversificacion",
+        "diversificacion": {
           "score": 70,
           "weight": 0.25,
           "contribution": 17.5
         }
-      ]
+      }
     },
     {
       "id": "alt-b",
@@ -88,32 +84,28 @@
           "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/"
         }
       ],
-      "criteria": [
-        {
-          "id": "clima",
+      "criteria": {
+        "clima": {
           "score": 60,
           "weight": 0.2,
           "contribution": 12.0
         },
-        {
-          "id": "agua",
+        "agua": {
           "score": 55,
           "weight": 0.15,
           "contribution": 8.25
         },
-        {
-          "id": "suelo",
+        "suelo": {
           "score": 60,
           "weight": 0.4,
           "contribution": 24.0
         },
-        {
-          "id": "diversificacion",
+        "diversificacion": {
           "score": 60,
           "weight": 0.25,
           "contribution": 15.0
         }
-      ]
+      }
     }
   ]
 }

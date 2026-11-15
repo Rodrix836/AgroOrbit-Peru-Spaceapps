@@ -1,10 +1,9 @@
 import {
-  Area,
   Bar,
   BarChart,
   CartesianGrid,
-  ComposedChart,
   Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,43 +17,28 @@ import { addDays } from '../../utils/period'
 import { Eyebrow } from '../ui/Eyebrow'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
 
-type Band = [number, number] | null
-
 interface DayRow {
   day: string
   /** null = POWER no tiene el dato: queda un hueco, no se interpola ni se pone en 0. */
   T2M: number | null
   PRECTOTCORR: number | null
-  /** Rango diario T2M_MIN–T2M_MAX (solo si llegan las dos). */
-  band: Band
 }
 
 function dailyRows(observations: NasaObservation[]): DayRow[] {
-  const byDay = new Map<string, { day: string; T2M: number | null; PRECTOTCORR: number | null; min: number | null; max: number | null }>()
+  const byDay = new Map<string, DayRow>()
   for (const o of observations) {
-    const key =
-      o.variable === 'T2M' ? 'T2M' : o.variable === 'PRECTOTCORR' ? 'PRECTOTCORR' : o.variable === 'T2M_MIN' ? 'min' : o.variable === 'T2M_MAX' ? 'max' : null
-    if (!key) continue
-    const row = byDay.get(o.observed_on) ?? { day: o.observed_on, T2M: null, PRECTOTCORR: null, min: null, max: null }
-    row[key] = o.value
+    if (o.variable !== 'T2M' && o.variable !== 'PRECTOTCORR') continue
+    const row = byDay.get(o.observed_on) ?? { day: o.observed_on, T2M: null, PRECTOTCORR: null }
+    row[o.variable] = o.value
     byDay.set(o.observed_on, row)
   }
-  return [...byDay.values()]
-    .sort((a, b) => a.day.localeCompare(b.day))
-    .map((r) => ({
-      day: r.day,
-      T2M: r.T2M,
-      PRECTOTCORR: r.PRECTOTCORR,
-      band: r.min !== null && r.max !== null ? [r.min, r.max] : null,
-    }))
+  return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day))
 }
 
 interface MonthRow {
   key: string // AAAA-MM
   /** Promedio mensual de T2M; null si el mes no tiene ningún día con dato. */
   T2M: number | null
-  /** Promedio mensual del mínimo y del máximo diarios. */
-  band: Band
   /** Suma mensual de PRECTOTCORR; null si el mes no tiene ningún día con dato. */
   PRECTOTCORR: number | null
   tempDays: number
@@ -65,12 +49,20 @@ interface MonthRow {
 
 /** Un registro por mes del período, también los que no tienen datos (quedan vacíos, no en 0). */
 function monthlyRows(observations: NasaObservation[], from: string, to: string): MonthRow[] {
-  type Acc = { key: string; tSum: number; tN: number; rSum: number; rN: number; minSum: number; minN: number; maxSum: number; maxN: number; monthDays: number }
-  const rows = new Map<string, Acc>()
+  const rows = new Map<string, MonthRow & { tSum: number; rSum: number }>()
   // Meses del período con los días que caen dentro.
   for (let day = from; day <= to; day = addDays(day, 1)) {
     const key = day.slice(0, 7)
-    const r = rows.get(key) ?? { key, tSum: 0, tN: 0, rSum: 0, rN: 0, minSum: 0, minN: 0, maxSum: 0, maxN: 0, monthDays: 0 }
+    const r = rows.get(key) ?? {
+      key,
+      T2M: null,
+      PRECTOTCORR: null,
+      tempDays: 0,
+      rainDays: 0,
+      monthDays: 0,
+      tSum: 0,
+      rSum: 0,
+    }
     r.monthDays++
     rows.set(key, r)
   }
@@ -79,16 +71,10 @@ function monthlyRows(observations: NasaObservation[], from: string, to: string):
     if (!r || o.value === null) continue
     if (o.variable === 'T2M') {
       r.tSum += o.value
-      r.tN++
+      r.tempDays++
     } else if (o.variable === 'PRECTOTCORR') {
       r.rSum += o.value
-      r.rN++
-    } else if (o.variable === 'T2M_MIN') {
-      r.minSum += o.value
-      r.minN++
-    } else if (o.variable === 'T2M_MAX') {
-      r.maxSum += o.value
-      r.maxN++
+      r.rainDays++
     }
   }
   const r1 = (n: number) => Math.round(n * 10) / 10
@@ -96,11 +82,10 @@ function monthlyRows(observations: NasaObservation[], from: string, to: string):
     .sort((a, b) => a.key.localeCompare(b.key))
     .map((r) => ({
       key: r.key,
-      T2M: r.tN > 0 ? r1(r.tSum / r.tN) : null,
-      band: r.minN > 0 && r.maxN > 0 ? [r1(r.minSum / r.minN), r1(r.maxSum / r.maxN)] : null,
-      PRECTOTCORR: r.rN > 0 ? r1(r.rSum) : null,
-      tempDays: r.tN,
-      rainDays: r.rN,
+      T2M: r.tempDays > 0 ? r1(r.tSum / r.tempDays) : null,
+      PRECTOTCORR: r.rainDays > 0 ? r1(r.rSum) : null,
+      tempDays: r.tempDays,
+      rainDays: r.rainDays,
       monthDays: r.monthDays,
     }))
 }
@@ -121,9 +106,8 @@ const Y_WIDTH = 48
 const valuesOf = (values: (number | null)[]) => values.flatMap((v) => (v === null ? [] : [v]))
 
 /**
- * Gráficos azules de NASA POWER. 90 días: un punto por día. 1 y 2 años: temperatura promedio mensual
- * y lluvia sumada por mes, para que se lea. La temperatura lleva como banda el rango T2M_MIN–T2M_MAX
- * (diario, o su promedio mensual) cuando esas variables llegan. Los días o meses sin dato quedan en blanco.
+ * Gráficos azules de NASA POWER (T2M y PRECTOTCORR). 90 días: un punto por día. 1 y 2 años: temperatura
+ * promedio mensual y lluvia sumada por mes, para que se lea. Los días o meses sin dato quedan en blanco.
  */
 export function NasaChart({ observations, view }: { observations: NasaObservation[]; view: NasaView }) {
   const monthly = view.period.days > 90
@@ -136,13 +120,11 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
 
   const temps = data.map((d) => d.T2M)
   const rains = data.map((d) => d.PRECTOTCORR)
-  const bandValues = data.flatMap((d) => (d.band ? d.band : []))
   const hasTemp = temps.some((v) => v !== null)
-  const hasBand = data.some((d) => d.band !== null)
   const hasRain = rains.some((v) => v !== null)
   if (!hasTemp && !hasRain) return null
 
-  const tAxis = hasTemp ? integerAxis([...valuesOf(temps), ...bandValues]) : null
+  const tAxis = hasTemp ? integerAxis(valuesOf(temps)) : null
   const rAxis = hasRain ? integerAxis(valuesOf(rains), true) : null
 
   const xProps = monthly
@@ -161,18 +143,14 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
           </Eyebrow>
           <div className="mt-3 h-56 w-full">
             <ResponsiveContainer>
-              <ComposedChart data={data} margin={MARGIN}>
+              <LineChart data={data} margin={MARGIN}>
                 <CartesianGrid stroke={GRID_STROKE} vertical={false} />
                 <XAxis {...xProps} tick={AXIS_TICK} stroke="#3a4b41" />
                 <YAxis {...yStyle} domain={tAxis?.domain} ticks={tAxis?.ticks} />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
                   labelFormatter={labelFormatter}
-                  formatter={(v, name, item) => {
-                    if (name === 'band') {
-                      const b = v as unknown as Band
-                      return [b ? `${formatNumber(b[0], 1)} a ${formatNumber(b[1], 1)} ${tUnit}` : 'sin dato', monthly ? 'Mín.–máx. (promedio del mes)' : 'Mín.–máx. del día']
-                    }
+                  formatter={(v, _n, item) => {
                     const row = item.payload as MonthRow
                     const extra = monthly ? ` · ${row.tempDays} de ${row.monthDays} días con dato` : ''
                     return [
@@ -181,18 +159,6 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
                     ]
                   }}
                 />
-                {hasBand && (
-                  <Area
-                    type="monotone"
-                    dataKey="band"
-                    name="band"
-                    stroke="none"
-                    fill="#7fbbff"
-                    fillOpacity={0.22}
-                    connectNulls={false}
-                    isAnimationActive={false}
-                  />
-                )}
                 <Line
                   type="monotone"
                   dataKey="T2M"
@@ -202,14 +168,9 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
                   dot={monthly ? { r: 3, fill: '#7fbbff' } : false}
                   connectNulls={false}
                 />
-              </ComposedChart>
+              </LineChart>
             </ResponsiveContainer>
           </div>
-          {hasBand && (
-            <p className="mt-1 text-muted">
-              La banda azul es el rango entre la mínima y la máxima {monthly ? '(promedio de cada mes)' : 'de cada día'}.
-            </p>
-          )}
         </div>
       )}
 

@@ -3,8 +3,8 @@ import { formatNumber } from '../../utils/format'
 import { Eyebrow } from '../ui/Eyebrow'
 import { SourceBadge } from '../ui/SourceBadge'
 import {
+  CRITERIA,
   contributionsSum,
-  criterionLabel,
   hasCriteria,
   isValidCriterion,
   sumMatches,
@@ -13,8 +13,7 @@ import {
 } from './criteria'
 
 /**
- * Desglose por criterio de una alternativa: una barra por criterio (en el orden que manda la API:
- * clima, agua, suelo, diversificación) con su puntaje (0 a 100), el peso en el total y su aporte.
+ * Desglose por criterio de una alternativa: una barra por criterio (clima, agua, suelo, diversificación) con su puntaje (0 a 100), el peso en el total y su aporte.
  * Si no viene `criteria`, no se muestra. Con `previous` (los criterios de la misma alternativa con la otra
  * prioridad) se resalta qué criterios cambiaron de peso, para ver la compensación.
  * Los valores son los de la API: si la suma de los aportes no coincide con el total, se avisa y no se corrige.
@@ -46,13 +45,14 @@ export function CriteriaBreakdown({
         {example && <SourceBadge kind="prototype" label="Datos de ejemplo" />}
       </div>
       <ul className="space-y-4">
-        {criteria.map((c) => {
+        {CRITERIA.map((def) => {
+          const c = criteria[def.id]
           const ok = isValidCriterion(c)
-          const ch = changed.get(c.id)
+          const ch = changed.get(def.id)
           return (
-            <li key={c.id} className={ch ? 'border-l-2 border-lima pl-3' : ''}>
+            <li key={def.id} className={ch ? 'border-l-2 border-lima pl-3' : ''}>
               <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                <span className="font-medium text-ink">{criterionLabel(c.id)}</span>
+                <span className="font-medium text-ink">{def.label}</span>
                 {ok ? (
                   <span className="font-mono text-base text-ink">
                     {formatNumber(c.score, 0)}
@@ -64,7 +64,7 @@ export function CriteriaBreakdown({
               </div>
               <div
                 role="meter"
-                aria-label={`${criterionLabel(c.id)}: puntaje del prototipo`}
+                aria-label={`${def.label}: puntaje del prototipo`}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={ok ? Math.round(c.score) : undefined}

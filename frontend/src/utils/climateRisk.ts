@@ -31,6 +31,8 @@ export interface RiskResult {
   nMax: number
   /** years ≥ MIN_YEARS (si no, se muestra «Histórico insuficiente»). */
   sufficient: boolean
+  /** Años de datos guardados: del primer al último día con valor (0 si no hay ninguno). */
+  spanYears: number
 }
 
 const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate()
@@ -99,6 +101,17 @@ export function monthlyHistory(observations: NasaObservation[], kind: 'sum' | 'm
     })
   }
 
+  // Años de datos guardados (primer y último día con valor), con independencia de si cada mes cumple el 80 %.
+  let first: string | null = null
+  let lastDay: string | null = null
+  for (const o of observations) {
+    if (o.value === null) continue
+    if (first === null || o.observed_on < first) first = o.observed_on
+    if (lastDay === null || o.observed_on > lastDay) lastDay = o.observed_on
+  }
+  const spanYears =
+    first && lastDay ? (Date.parse(lastDay + 'T00:00:00Z') - Date.parse(first + 'T00:00:00Z') + 86_400_000) / 86_400_000 / 365.25 : 0
+
   const yearSet = new Set([...valid.keys()].map((ym) => Number(ym.slice(0, 4))))
   const ns = stats.map((s) => s.n).filter((n) => n > 0)
   const nMax = ns.length ? Math.max(...ns) : 0
@@ -111,5 +124,6 @@ export function monthlyHistory(observations: NasaObservation[], kind: 'sum' | 'm
     nMin: ns.length ? Math.min(...ns) : 0,
     nMax,
     sufficient: nMax >= MIN_YEARS,
+    spanYears,
   }
 }

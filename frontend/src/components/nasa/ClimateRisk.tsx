@@ -32,6 +32,12 @@ const toRows = (r: RiskResult): Row[] =>
     n: s.n,
   }))
 
+/** «2 años», «1 año», «2.5 años» (años de datos guardados). */
+const storedYears = (n: number) => {
+  const v = Math.round(n * 10) / 10
+  return `${formatNumber(v, 1)} ${v === 1 ? 'año' : 'años'}`
+}
+
 /** Texto de cuántos años entran: «10 años, 2016–2026». */
 const yearsText = (r: RiskResult) =>
   `${r.years} ${r.years === 1 ? 'año' : 'años'}, ${r.firstYear}–${r.lastYear}`
@@ -70,10 +76,16 @@ function RiskChart({
         <Eyebrow tone="cielo">{title}</Eyebrow>
         <div className="mt-3 border border-dashed border-ambar bg-ambar-bg p-4">
           <p className="font-semibold text-ink">Histórico insuficiente para mostrar el rango</p>
-          <p className="mt-1 text-muted">
-            Solo hay {result.years} {result.years === 1 ? 'año' : 'años'} con meses que tienen al menos 80 % de
-            sus días con dato; hacen falta {MIN_YEARS}. No rellenamos lo que falta.
+          <p className="mt-1 text-ink">
+            Hay {storedYears(result.spanYears)} de datos guardados; se necesitan al menos {MIN_YEARS} para mostrar el
+            rango.
           </p>
+          {result.spanYears >= MIN_YEARS && (
+            <p className="mt-1 text-muted">
+              Hay datos de ese período, pero muy pocos meses tienen al menos 80 % de sus días con dato. No
+              rellenamos lo que falta.
+            </p>
+          )}
         </div>
       </div>
     )

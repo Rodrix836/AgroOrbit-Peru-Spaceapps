@@ -50,14 +50,7 @@ function Row({
   )
 }
 
-/** Tarjetas pequeñas: promedio del período de humedad relativa, viento y radiación (si la API las trae). */
-const SMALL_CARDS = [
-  { key: 'RH2M', label: 'Humedad relativa del aire', digits: 0 },
-  { key: 'WS2M', label: 'Viento a 2 m', digits: 1 },
-  { key: 'ALLSKY_SFC_SW_DWN', label: 'Radiación solar', digits: 1 },
-] as const
-
-/** Temperatura media y lluvia acumulada del período, más tres tarjetas pequeñas (RH2M, WS2M y radiación). */
+/** Temperatura media (T2M) y lluvia acumulada (PRECTOTCORR) del período, con sus días con dato. */
 export function NasaCards({ observations, view }: { observations: NasaObservation[]; view: NasaView }) {
   const temp = nasaSeries(observations, 'T2M')
   const rain = nasaSeries(observations, 'PRECTOTCORR')
@@ -74,10 +67,6 @@ export function NasaCards({ observations, view }: { observations: NasaObservatio
 
   const total = view.period.days
   const coverage = (valid: number) => `${valid} de ${total} días con dato`
-  const smallCards = SMALL_CARDS.filter((c) => observations.some((o) => o.variable === c.key)).map((c) => {
-    const series = nasaSeries(observations, c.key)
-    return { ...c, series, unit: displayUnit(observations.find((o) => o.variable === c.key)?.unit ?? '') }
-  })
   const lastValid = [...temp, ...rain]
     .map((o) => o.observed_on)
     .sort()
@@ -99,22 +88,6 @@ export function NasaCards({ observations, view }: { observations: NasaObservatio
           detail={`${coverage(rain.length)} · suma de ${displayUnit(rain[0]?.unit ?? 'mm/day')}`}
         />
       </dl>
-      {smallCards.length > 0 && (
-        <div className="mb-3 grid grid-cols-3 gap-px border border-line bg-line">
-          {smallCards.map((c) => (
-            <div key={c.key} className="min-w-0 bg-panel p-3">
-              <p className="text-[13px] leading-4 text-muted">{c.label} · promedio</p>
-              <p className="mt-2 font-mono text-xl text-cielo">
-                {c.series.length ? formatNumber(mean(c.series), c.digits) : <span className="text-base text-muted">Sin dato</span>}
-              </p>
-              <p className="font-mono text-[13px] leading-4 text-muted">{c.series.length ? c.unit : ''}</p>
-              <p className="mt-1 font-mono text-[13px] leading-4 text-muted">
-                {c.series.length} de {total} días con dato
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
       <div className="border-t border-line pt-4">
         <Eyebrow>Período</Eyebrow>
         <p className="mt-1 font-mono text-base text-ink">

@@ -153,12 +153,7 @@ const todayLima = () => new Date(Date.now() - 5 * HOUR)
 
 const NASA_UNITS: Record<NasaVariable, string> = {
   T2M: 'C',
-  T2M_MAX: 'C',
-  T2M_MIN: 'C',
   PRECTOTCORR: 'mm/day',
-  RH2M: '%',
-  WS2M: 'm/s',
-  ALLSKY_SFC_SW_DWN: 'MJ/m^2/day',
   GWETTOP: '1',
   GWETROOT: '1',
 }
@@ -174,23 +169,12 @@ function nasaExampleValue(variable: NasaVariable, i: number, day: string): numbe
   const doy = Math.floor((Date.UTC(year, Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10))) - Date.UTC(year, 0, 0)) / DAY)
   const season = Math.sin((2 * Math.PI * (doy - 30)) / 365) // época de lluvias: verano
   const yf = 0.6 + 0.8 * yearFactor(year)
-  const t2m = 25 + 3 * season + 0.8 * Math.sin(i / 5) + (yf - 1)
   const r2 = (n: number) => Math.round(n * 100) / 100
   switch (variable) {
     case 'T2M':
-      return r2(t2m)
-    case 'T2M_MAX':
-      return r2(t2m + 4 + 0.5 * Math.sin(i / 3))
-    case 'T2M_MIN':
-      return r2(t2m - 4 - 0.5 * Math.cos(i / 4))
+      return r2(25 + 3 * season + 0.8 * Math.sin(i / 5) + (yf - 1))
     case 'PRECTOTCORR':
       return (doy + year) % 6 === 0 ? r2((2 + 10 * Math.max(0, season)) * yf) : 0
-    case 'RH2M':
-      return r2(Math.min(95, 70 + 8 * Math.cos(i / 6)))
-    case 'WS2M':
-      return r2(2.5 + 0.6 * Math.sin(i / 9))
-    case 'ALLSKY_SFC_SW_DWN':
-      return r2(18 + 3 * Math.sin(i / 7))
     case 'GWETTOP':
       return r2(Math.min(0.95, Math.max(0.05, 0.32 + 0.12 * Math.sin(i / 11) + 0.06 * season)))
     case 'GWETROOT':
@@ -200,7 +184,7 @@ function nasaExampleValue(variable: NasaVariable, i: number, day: string): numbe
 
 /**
  * Observaciones guardadas de UNA variable (como `GET .../nasa/observations?variable=&from=&to=`):
- * hasta 11 años (4018 días) con unidades tal como las da POWER, ordenadas por día. Los últimos 4 días vienen null
+ * hasta 11 años (4018 días) con unidades tal como las da POWER (solo las 4 variables que admite la API), ordenadas por día. Los últimos 4 días vienen null
  * (POWER publica con retraso), hay un hueco suelto, un tramo de ~45 días sin datos y marzo de 2019 sin datos.
  * En `nasa_down` lo guardado es de una importación antigua (hace 12 días). Con `sin_extras` solo existen
  * T2M y PRECTOTCORR, como antes de las 9 variables.
@@ -389,9 +373,9 @@ export function mockRecommendation(req: RecommendationRequest): RecommendationRe
   }
   const base = req.priority === 'improve_soil' ? recommendationSoil : recommendationSave
   const demo = RECOMMENDATION_SCENARIO === 'demo_mode' || RECOMMENDATION_SCENARIO === 'sin_extras'
-  // Sin extras: las alternativas llegan sin desglose por criterio, como hoy.
+  // Sin extras: las alternativas llegan sin desglose por criterio (`criteria: {}`).
   const alternatives = (base.alternatives as RecommendationResponse['alternatives']).map((a) =>
-    RECOMMENDATION_SCENARIO === 'sin_extras' ? { ...a, criteria: undefined } : a,
+    RECOMMENDATION_SCENARIO === 'sin_extras' ? { ...a, criteria: {} } : a,
   )
   return {
     status: 'ok',
