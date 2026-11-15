@@ -1,51 +1,56 @@
-import type { Campaign, Criteria, SourceRef } from './api'
+import type { Alternative, Priority, RecommendationContext, RecommendationResponse } from './api'
 
 /** "reference" = referencia proyectada (no es mejor ni peor); "alternative" = alternativa para comparar. */
 export type ScenarioRole = 'reference' | 'alternative'
 
-/**
- * Una secuencia de dos campañas del escenario de demostración. Misma forma que `alternatives[]` del contrato de
- * POST /api/recommendations (campaigns, reasons, limitations, sources) más un `role` opcional. El escenario de
- * Milene es cualitativo: no trae ranking ni puntajes, así que `rank`, `score` y `criteria` son opcionales.
- */
-export interface ScenarioAlternative {
+/** Una estrategia de `demo.estrategias` (se une con `response.alternatives` por `id`). */
+export interface DemoStrategy {
   id: string
-  /** Opcional. Si la API no trae `role`, todas se tratan como alternativas. */
-  role?: ScenarioRole
-  /** Rótulo de la tarjeta: «Referencia proyectada», «Alternativa A»… (opcional: si falta se deduce del orden). */
-  label?: string
-  /** Solo si algún día la API los trae: se muestran únicamente como «Puntajes de prueba (sintéticos)». */
-  rank?: number
-  score?: number
-  criteria?: Criteria
-  /** Ids de GET /api/crops, con fechas de inicio y fin (AAAA-MM-DD). */
-  campaigns: Campaign[]
-  /** «Qué se puede comparar» (columna «Posible ventaja a evaluar»). */
-  reasons: string[]
-  /** «Principal riesgo». */
-  limitations: string[]
-  sources: SourceRef[]
-  /** Nota breve bajo el título (opcional). */
-  note?: string
+  /** "referencia" | "alternativa". */
+  rol: string
+  nombre: string
+  descripcion?: string
 }
 
-/** Bloque de «Lectura comparativa sin puntuaciones»: un texto con sus fuentes. */
-export interface ScenarioReading {
-  title: string
-  text: string
-  sources: SourceRef[]
+/** Bloque `demo` de los archivos que entrega Rodrigo (backend/docs/demo-rotaciones-valle-chira.md). */
+export interface DemoMeta {
+  tipo?: string
+  aviso?: string
+  reference_id?: string | null
+  estrategias?: DemoStrategy[]
+  supuestos?: { textura?: string; fechas?: string }
+  /** Textos que declaran qué es sintético y qué es real. */
+  sintetico?: { puntuaciones?: string; requisitos_cultivo?: string; clima?: string }
+  comando?: string
 }
 
-/** Contenido completo del escenario de demostración. */
-export interface Scenario {
-  /** Aviso ámbar de arriba. */
-  notice: string
-  /** Etiquetas visibles junto a la comparación. */
-  tags: string[]
-  /** Supuestos del escenario. */
-  assumptions: string[]
-  alternatives: ScenarioAlternative[]
-  comparativeReading: ScenarioReading[]
-  /** Textos para el agricultor. */
-  farmerTexts: string[]
+/** Forma de cada archivo `demo-rotaciones-valle-chira-<prioridad>.json`: `demo` más la respuesta normal de la API. */
+export interface DemoFile {
+  demo?: DemoMeta
+  request?: { plot_id: string; priority: Priority; horizon_days: number }
+  http_status?: number
+  /** RecommendationResponse (el mismo contrato de POST /api/recommendations). */
+  response: RecommendationResponse
+}
+
+/** Una tarjeta del escenario: la estrategia unida con su alternativa por `id`. */
+export interface ScenarioCardModel {
+  id: string
+  role: ScenarioRole
+  nombre: string
+  descripcion?: string
+  /** campaigns, reasons, limitations, sources y, solo como datos de prueba, score y criteria. */
+  alt: Alternative
+}
+
+/** Lo que muestra la vista del escenario. El orden de `cards` es el de `demo.estrategias` (no el de rank ni score). */
+export interface ScenarioModel {
+  priority: Priority | null
+  aviso: string
+  cards: ScenarioCardModel[]
+  supuestos: { textura?: string; fechas?: string }
+  assumptions: NonNullable<RecommendationContext['assumptions']>
+  sintetico: { puntuaciones?: string; requisitos_cultivo?: string; clima?: string }
+  context: RecommendationContext | null
+  createdAt?: string
 }

@@ -46,6 +46,7 @@ export function ContextPanel({
   example = false,
   title = 'Con qué datos se calculó',
   powerTitle = 'Clima de la zona',
+  powerNote,
 }: {
   context: RecommendationContext
   /** created_at de la respuesta (ISO 8601 UTC). */
@@ -55,6 +56,8 @@ export function ContextPanel({
   title?: string
   /** Título de la parte de NASA POWER. */
   powerTitle?: string
+  /** Texto bajo los datos de NASA POWER (p. ej. de dónde sale el histórico). */
+  powerNote?: string
 }) {
   const { power, sensor } = context
   const ind = power?.indicators ?? {}
@@ -127,6 +130,7 @@ export function ContextPanel({
                 />
               )}
             </dl>
+            {powerNote && <p className="mt-3 text-muted">{powerNote}</p>}
           </div>
         )}
 

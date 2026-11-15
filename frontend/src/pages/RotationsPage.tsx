@@ -108,11 +108,8 @@ export function RotationsPage() {
     return (
       <ScenarioView
         plotId={plot.id}
-        context={rec.data?.context ?? null}
-        createdAt={rec.data?.created_at}
-        contextLoading={rec.loading}
-        contextError={rec.error}
-        example={RECOMMENDATIONS_ARE_MOCK}
+        priority={priority}
+        onPriorityChange={setOverride}
         onBack={() => setParams({})}
       />
     )

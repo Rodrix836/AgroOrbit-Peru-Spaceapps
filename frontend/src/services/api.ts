@@ -13,15 +13,16 @@ import type {
   Plot,
   PlotInput,
   PlotUpdate,
+  Priority,
   RecommendationRequest,
   RecommendationResponse,
   SensorReading,
   UserProfile,
 } from '../types/api'
-import { ESCENARIO_VALLE_CHIRA } from '../data/escenario-valle-chira'
-import type { Scenario } from '../types/scenario'
+import { DEMO_FILES } from '../data/escenario-valle-chira'
+import type { DemoFile, ScenarioModel } from '../types/scenario'
 import { ApiError } from './apiError'
-import { scenarioFromApi, type ScenarioApiResponse } from './scenarioAdapter'
+import { buildScenario } from './scenarioAdapter'
 import { supabase } from './supabase'
 import {
   MOCK_SCENARIO,
@@ -51,8 +52,8 @@ export const RECOMMENDATIONS_SOURCE = import.meta.env.VITE_RECOMMENDATIONS_SOURC
 export const RECOMMENDATIONS_ARE_MOCK = USE_MOCKS || RECOMMENDATIONS_SOURCE !== 'api'
 
 /**
- * De dónde sale el escenario de demostración de Rotaciones: VITE_SCENARIO_SOURCE=static (por defecto, el contenido de
- * Milene guardado en src/data/escenario-valle-chira.ts) | api (lo entrega la API cuando Rodrigo lo publique).
+ * De dónde sale el escenario de demostración de Rotaciones: VITE_SCENARIO_SOURCE=static (por defecto, los dos JSON de
+ * Rodrigo guardados en src/data) | api (lo lee de la API cuando Rodrigo publique la ruta).
  * Con VITE_USE_MOCKS=true siempre es static.
  */
 export const SCENARIO_SOURCE = import.meta.env.VITE_SCENARIO_SOURCE === 'api' ? 'api' : 'static'
@@ -232,22 +233,28 @@ export const api = {
    * y VITE_USE_MOCKS=false, sin tocar código.
    */
   /**
-   * Escenario de demostración. static: el contenido guardado en la app. api: lo pide a la API (ruta supuesta,
-   * PENDIENTE BACKEND) y, si falla o no trae alternativas, usa el guardado y lo dice en `fallback`.
+   * Escenario de demostración de la prioridad elegida. static: el archivo de esa prioridad (improve_soil = «Mejorar el
+   * suelo», save_water = «Ahorrar agua»). api: lo pide a la API (ruta supuesta, PENDIENTE BACKEND; puede responder
+   * `{ demo, response }` o solo la respuesta normal) y, si falla o no trae alternativas, usa el guardado y lo dice.
    */
-  getDemoScenario: async (plotId: string): Promise<{ scenario: Scenario; source: 'static' | 'api'; fallback?: string }> => {
+  getDemoScenario: async (
+    plotId: string,
+    priority: Priority,
+  ): Promise<{ scenario: ScenarioModel; source: 'static' | 'api'; fallback?: string }> => {
+    const fromFile = () => buildScenario(DEMO_FILES[priority], priority)
     if (USE_MOCKS || SCENARIO_SOURCE !== 'api') {
-      return wait({ scenario: ESCENARIO_VALLE_CHIRA, source: 'static' as const })
+      return wait({ scenario: fromFile(), source: 'static' as const })
     }
     try {
-      const resp = await request<ScenarioApiResponse>(DEMO_SCENARIO_PATH, {
+      const resp = await request<DemoFile | DemoFile['response']>(DEMO_SCENARIO_PATH, {
         method: 'POST',
-        body: JSON.stringify({ plot_id: plotId, priority: 'improve_soil', horizon_days: 365 }),
+        body: JSON.stringify({ plot_id: plotId, priority, horizon_days: 365 }),
       })
-      return { scenario: scenarioFromApi(resp), source: 'api' as const }
+      const file: DemoFile = 'response' in resp ? resp : { response: resp }
+      return { scenario: buildScenario(file, priority), source: 'api' as const }
     } catch (e) {
       return {
-        scenario: ESCENARIO_VALLE_CHIRA,
+        scenario: fromFile(),
         source: 'static' as const,
         fallback: e instanceof Error ? e.message : 'No se pudo leer el escenario desde la API.',
       }
