@@ -37,6 +37,16 @@ Variables (`.env`, no se sube a git):
 - En Rotaciones, la prioridad parte de la guardada en la parcela; cambiarla ahí solo recalcula, no guarda.
 - La fecha de inicio de la petición de Rotaciones sale de `planned.sowing_date`. Sin fecha, se muestra el aviso «Falta un dato» y los calendarios marcan «Fecha de inicio supuesta». La cabecera de Diagnóstico muestra el cultivo actual (`current.crop_code`) con su nombre.
 
+## 01 Parcela: mapa
+
+Mapa interactivo (Leaflet + react-leaflet, carga aparte con `React.lazy`) en `src/components/plot/PlotMap.tsx`; reemplaza a la antigua cuadrícula `MapFrame`.
+
+- **Base:** OpenStreetMap (`tile.openstreetmap.org`), con su atribución visible. Se oscurece con un filtro CSS solo en esa capa, así que la imagen satelital no se altera.
+- **Parcela registrada:** marcador en sus coordenadas, mapa ajustado a su celda, zoom y arrastre activos. **Registrar otra parcela:** un clic en el mapa coloca el punto y rellena latitud y longitud (4 decimales); también se pueden escribir a mano (acepta coma decimal).
+- **Celda de NASA POWER:** rectángulo azul con la celda de la rejilla meteorológica (½° de latitud × ⅝° de longitud) cuyo centro está más cerca (`src/utils/powerGrid.ts`). El tamaño sale de la metodología de POWER (Release 9). La alineación no está en la documentación: se comprobó consultando la API de POWER a ambos lados de los bordes (centros en múltiplos de 0,5° de latitud y en −180° + j·0,625° de longitud).
+- **Imagen satelital NASA (opcional, apagada):** NASA GIBS por WMTS, sin clave: capa `MODIS_Terra_CorrectedReflectance_TrueColor`, `GoogleMapsCompatible_Level9`, JPEG, fecha de hace 3 días en UTC (la de hoy puede no estar publicada); la fecha se muestra siempre. Si no cargan los mosaicos, el interruptor avisa «Imagen no disponible» y el mapa base sigue funcionando. Atribución «NASA GIBS / EOSDIS».
+- **Celular (< 768 px o puntero táctil):** alto fijo de 280 px; el mapa empieza bloqueado para que un dedo siga desplazando la página, y el botón «Activar mapa» lo desbloquea.
+
 ## 03 Rotaciones: evaluación real y escenario de demostración
 
 - **Evaluación real de la parcela:** `POST /api/recommendations` con `plot_id`, `horizon_days` y `priority` (`improve_soil` para «Mejorar el suelo», `save_water` para «Ahorrar agua»). **No se envía `start_on`**: la API toma la fecha del ciclo `planned`. Hoy, con los datos reales, devuelve `insufficient_data`: la pantalla lista lo que falta y, debajo, el botón **«Ver escenario de demostración»**.
