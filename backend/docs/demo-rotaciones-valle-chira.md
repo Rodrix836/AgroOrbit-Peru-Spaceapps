@@ -6,7 +6,7 @@ Es un **escenario de demostración**, no una recomendación validada. La evaluac
 
 ## Tres estrategias
 
-Son las de [`entrega-agronomica-valle-chira.md`](entrega-agronomica-valle-chira.md), sección 2 (Milene), con las mismas fechas:
+Son las de [`ficha-comparativa-estrategias-valle-chira.md`](ficha-comparativa-estrategias-valle-chira.md) (Milene), con las mismas fechas y los textos de sus tarjetas:
 
 | Rol | `id` | Campaña 1 | Campaña 2 |
 |---|---|---|---|
@@ -20,10 +20,18 @@ Son las de [`entrega-agronomica-valle-chira.md`](entrega-agronomica-valle-chira.
 {
   "demo": {
     "tipo": "escenario_demostracion",
-    "aviso": "Comparación de demostración. No es una recomendación validada para la parcela.",
+    "aviso": "Opciones ilustrativas de comparación. No constituyen recomendaciones agronómicas validadas.",
+    "sin_ganadora": "No se asigna estrategia ganadora: rank, score y selected_id …",
     "reference_id": "maiz__frijol_caupi",
-    "estrategias": [{ "id": "maiz__frijol_caupi", "rol": "referencia", "nombre": "Referencia proyectada", "descripcion": "…" }, "…A", "…B"],
-    "supuestos": { "textura": "…«franco» es un supuesto…", "fechas": "…2026-12-01 y duraciones mínimas…" },
+    "estrategias": [{
+      "id": "maiz__frijol_caupi", "rol": "referencia", "nombre": "Referencia proyectada",
+      "titulo": "Maíz → Frijol caupí", "duracion_dias": 185, "periodo": "01/12/2026 al 03/06/2027",
+      "descripcion": "Proyección del orden de cultivos…", "advertencia": "Fechas ilustrativas; …",
+      "fuentes": [{ "titulo": "FAO — Necesidades de agua de los cultivos", "url": "https://…" }, "…"]
+    }, "…A", "…B"],
+    "supuestos": { "textura": "…«franco» es un supuesto…",
+                   "textura_etiqueta": "Textura del suelo: franco (valor supuesto para demostración; pendiente de medición).",
+                   "fechas": "…2026-12-01 y duraciones mínimas…" },
     "sintetico": { "puntuaciones": "SINTÉTICAS…", "requisitos_cultivo": "SINTÉTICOS…", "clima": "NASA POWER real…" },
     "comando": "python scripts/generar_demo_rotaciones.py --priority improve_soil --clima nasa"
   },
@@ -35,7 +43,8 @@ Son las de [`entrega-agronomica-valle-chira.md`](entrega-agronomica-valle-chira.
 
 - **`response`** es la salida de la ruta real de la API (servicio y motor reales, en memoria): se lee con los tipos actuales (`RecommendationResponse`, `criteria` como objeto).
 - **La referencia se identifica solo en este archivo**: `demo.reference_id` y `demo.estrategias[].rol` / `nombre`, enlazados por `alternatives[].id`. **La API no tiene un campo de referencia.** Si se quiere en la API, hay que acordar antes nombre y compatibilidad; la propuesta es `reference_id: string | null` opcional en la respuesta, con el mismo significado que aquí.
-- `rank`, `score` y `selected_id` salen de puntuaciones **sintéticas**: no muestran una ganadora real. En la demo, mejor ordenar o rotular por `demo.estrategias[].nombre` y mostrar `score` como «criterio de prueba».
+- **Tarjetas:** `titulo`, `duracion_dias`, `periodo`, `descripcion`, `advertencia` y `fuentes` son los textos de la sección 5 de la ficha comparativa. El generador comprueba que la duración y el periodo coincidan con `alternatives[].campaigns`; si no coinciden, falla. `demo.aviso` es el aviso común de las tres tarjetas, y la textura se muestra con `demo.supuestos.textura_etiqueta`.
+- **Sin ganadora** (ficha, sección 7): `rank`, `score` y `selected_id` salen de puntuaciones **sintéticas**. En la demo no se resaltan como resultado: se ordena por `demo.estrategias` (referencia, A, B) y, si se muestra `score`, va como «criterio de prueba». Tampoco se afirman porcentajes de ahorro de agua, mejora del suelo ni productividad.
 
 ## Qué es supuesto y qué es sintético
 

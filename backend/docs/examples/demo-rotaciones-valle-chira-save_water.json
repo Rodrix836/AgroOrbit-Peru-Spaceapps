@@ -1,30 +1,86 @@
 {
   "demo": {
     "tipo": "escenario_demostracion",
-    "aviso": "Comparación de demostración. No es una recomendación validada para la parcela.",
+    "aviso": "Opciones ilustrativas de comparación. No constituyen recomendaciones agronómicas validadas.",
+    "sin_ganadora": "No se asigna estrategia ganadora: rank, score y selected_id salen de puntuaciones sintéticas y no deben mostrarse como resultado. No se afirman porcentajes de ahorro de agua, mejora del suelo ni productividad.",
     "reference_id": "maiz__frijol_caupi",
     "estrategias": [
       {
         "id": "maiz__frijol_caupi",
         "rol": "referencia",
         "nombre": "Referencia proyectada",
-        "descripcion": "Repite el orden del historial (maíz → frijol caupí) desde la próxima siembra. Es una proyección hipotética, no una reconstrucción del calendario real."
+        "titulo": "Maíz → Frijol caupí",
+        "duracion_dias": 185,
+        "periodo": "01/12/2026 al 03/06/2027",
+        "descripcion": "Proyección del orden de cultivos registrado en la parcela. Sirve como referencia para comparar calendario y necesidades de agua.",
+        "advertencia": "Fechas ilustrativas; falta confirmar la finalización del cultivo actual y las condiciones de siembra.",
+        "fuentes": [
+          {
+            "titulo": "FAO — Necesidades de agua de los cultivos",
+            "url": "https://www.fao.org/4/s2022e/s2022e02.htm"
+          },
+          {
+            "titulo": "FAO — Duración de los periodos de crecimiento",
+            "url": "https://www.fao.org/4/s2022e/s2022e07.htm"
+          },
+          {
+            "titulo": "FAO EcoCrop — Frijol caupí",
+            "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=10835"
+          }
+        ]
       },
       {
         "id": "frijol_caupi__camote",
         "rol": "alternativa",
         "nombre": "Alternativa A",
-        "descripcion": "Frijol caupí → camote. Podría repetir el frijol caupí justo después del cultivo activo."
+        "titulo": "Frijol caupí → Camote",
+        "duracion_dias": 140,
+        "periodo": "01/12/2026 al 19/04/2027",
+        "descripcion": "Secuencia alternativa para estudiar el manejo del suelo y comparar los requerimientos de ambos cultivos.",
+        "advertencia": "Debe verificarse que el caupí actual haya terminado y que sea adecuado sembrar caupí nuevamente.",
+        "fuentes": [
+          {
+            "titulo": "FAO EcoCrop — Frijol caupí",
+            "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=10835"
+          },
+          {
+            "titulo": "FAO EcoCrop — Camote",
+            "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=1265"
+          },
+          {
+            "titulo": "FAO — Sistemas y secuencias de cultivo",
+            "url": "https://www.fao.org/4/y5146e/y5146e0a.htm"
+          }
+        ]
       },
       {
         "id": "camote__frijol_caupi",
         "rol": "alternativa",
         "nombre": "Alternativa B",
-        "descripcion": "Camote → frijol caupí. Cambia el primer cultivo respecto del frijol caupí activo."
+        "titulo": "Camote → Frijol caupí",
+        "duracion_dias": 140,
+        "periodo": "01/12/2026 al 19/04/2027",
+        "descripcion": "Secuencia con un orden diferente de cultivos, útil para comparar calendario, manejo y necesidades hídricas.",
+        "advertencia": "Faltan análisis del suelo y datos de riego para evaluar su viabilidad.",
+        "fuentes": [
+          {
+            "titulo": "FAO EcoCrop — Camote",
+            "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=1265"
+          },
+          {
+            "titulo": "FAO EcoCrop — Frijol caupí",
+            "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=10835"
+          },
+          {
+            "titulo": "FAO — Sistemas y secuencias de cultivo",
+            "url": "https://www.fao.org/4/y5146e/y5146e0a.htm"
+          }
+        ]
       }
     ],
     "supuestos": {
       "textura": "«franco» es un supuesto: la parcela no tiene textura registrada.",
+      "textura_etiqueta": "Textura del suelo: franco (valor supuesto para demostración; pendiente de medición).",
       "fechas": "Inicio 2026-12-01 y duraciones mínimas del catálogo (maíz 125, frijol caupí 60, camote 80 días) son supuestos; se supone que el frijol caupí activo termina antes."
     },
     "sintetico": {
@@ -45,7 +101,7 @@
     "mode": "escenario_demostracion",
     "engine_version": "motor-1.0",
     "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
-    "created_at": "2026-11-15T22:07:12.660979Z",
+    "created_at": "2026-11-15T23:08:40.160271Z",
     "context": {
       "notice": "Escenario de demostración: parte de los datos son supuestos, no medidos.",
       "start_on": "2026-12-01",

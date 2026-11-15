@@ -124,17 +124,49 @@ def synthetic_evaluator(plot, request, candidates):
 _active_assumptions: list[Assumption] = []
 _strategy_ids: list[str] | None = None
 
-# Estrategias documentadas por Milene (docs/entrega-agronomica-valle-chira.md, sección 2).
+# Estrategias y textos de tarjeta de Milene (docs/ficha-comparativa-estrategias-valle-chira.md).
 VALLE_CHIRA_PLOT_ID = "f544f739-bc06-45c6-9cf9-052c44499ab6"
+_FAO_AGUA = {"titulo": "FAO — Necesidades de agua de los cultivos", "url": "https://www.fao.org/4/s2022e/s2022e02.htm"}
+_FAO_DURACION = {"titulo": "FAO — Duración de los periodos de crecimiento",
+                 "url": "https://www.fao.org/4/s2022e/s2022e07.htm"}
+_ECOCROP_CAUPI = {"titulo": "FAO EcoCrop — Frijol caupí",
+                  "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=10835"}
+_ECOCROP_CAMOTE = {"titulo": "FAO EcoCrop — Camote", "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=1265"}
+_FAO_SECUENCIAS = {"titulo": "FAO — Sistemas y secuencias de cultivo", "url": "https://www.fao.org/4/y5146e/y5146e0a.htm"}
+VALLE_CHIRA_AVISO = "Opciones ilustrativas de comparación. No constituyen recomendaciones agronómicas validadas."
 VALLE_CHIRA_STRATEGIES = [
     {"id": "maiz__frijol_caupi", "rol": "referencia", "nombre": "Referencia proyectada",
-     "descripcion": "Repite el orden del historial (maíz → frijol caupí) desde la próxima siembra. "
-                    "Es una proyección hipotética, no una reconstrucción del calendario real."},
+     "titulo": "Maíz → Frijol caupí", "duracion_dias": 185, "periodo": "01/12/2026 al 03/06/2027",
+     "descripcion": "Proyección del orden de cultivos registrado en la parcela. Sirve como referencia para "
+                    "comparar calendario y necesidades de agua.",
+     "advertencia": "Fechas ilustrativas; falta confirmar la finalización del cultivo actual y las condiciones "
+                    "de siembra.",
+     "fuentes": [_FAO_AGUA, _FAO_DURACION, _ECOCROP_CAUPI]},
     {"id": "frijol_caupi__camote", "rol": "alternativa", "nombre": "Alternativa A",
-     "descripcion": "Frijol caupí → camote. Podría repetir el frijol caupí justo después del cultivo activo."},
+     "titulo": "Frijol caupí → Camote", "duracion_dias": 140, "periodo": "01/12/2026 al 19/04/2027",
+     "descripcion": "Secuencia alternativa para estudiar el manejo del suelo y comparar los requerimientos de "
+                    "ambos cultivos.",
+     "advertencia": "Debe verificarse que el caupí actual haya terminado y que sea adecuado sembrar caupí "
+                    "nuevamente.",
+     "fuentes": [_ECOCROP_CAUPI, _ECOCROP_CAMOTE, _FAO_SECUENCIAS]},
     {"id": "camote__frijol_caupi", "rol": "alternativa", "nombre": "Alternativa B",
-     "descripcion": "Camote → frijol caupí. Cambia el primer cultivo respecto del frijol caupí activo."},
+     "titulo": "Camote → Frijol caupí", "duracion_dias": 140, "periodo": "01/12/2026 al 19/04/2027",
+     "descripcion": "Secuencia con un orden diferente de cultivos, útil para comparar calendario, manejo y "
+                    "necesidades hídricas.",
+     "advertencia": "Faltan análisis del suelo y datos de riego para evaluar su viabilidad.",
+     "fuentes": [_ECOCROP_CAMOTE, _ECOCROP_CAUPI, _FAO_SECUENCIAS]},
 ]
+
+
+def _check_cards(alternatives: list[dict]) -> None:
+    """Las duraciones y periodos de las tarjetas deben coincidir con las campañas de la respuesta."""
+    by_id = {a["id"]: a["campaigns"] for a in alternatives}
+    for s in VALLE_CHIRA_STRATEGIES:
+        camps = by_id[s["id"]]
+        first, last = date.fromisoformat(camps[0]["starts_on"]), date.fromisoformat(camps[-1]["ends_on"])
+        periodo = f"{first:%d/%m/%Y} al {last:%d/%m/%Y}"
+        if ((last - first).days + 1, periodo) != (s["duracion_dias"], s["periodo"]):
+            raise RuntimeError(f"La tarjeta {s['id']} no coincide con sus campañas: {periodo}")
 
 
 def synthetic_climate(day: date) -> tuple[float, float]:
@@ -250,16 +282,22 @@ def valle_chira_demo(priority: str = "improve_soil", clima: str = "nasa") -> dic
     returned = {a["id"] for a in result["response"]["alternatives"]}
     if result["response"]["status"] != "ok" or returned != set(ids):
         raise RuntimeError(f"La demo no devolvió las tres estrategias: {result['response'].get('missing')}")
+    _check_cards(result["response"]["alternatives"])
     climate_text = ("NASA POWER real (T2M y PRECTOTCORR diarios, 2016-01-01 a 2026-11-15, -4.97, -80.89)"
                     if clima == "nasa" else "SINTÉTICO: serie estacional de prueba, no NASA POWER")
     return {
         "demo": {
             "tipo": "escenario_demostracion",
-            "aviso": "Comparación de demostración. No es una recomendación validada para la parcela.",
+            "aviso": VALLE_CHIRA_AVISO,
+            "sin_ganadora": "No se asigna estrategia ganadora: rank, score y selected_id salen de puntuaciones "
+                            "sintéticas y no deben mostrarse como resultado. No se afirman porcentajes de ahorro "
+                            "de agua, mejora del suelo ni productividad.",
             "reference_id": "maiz__frijol_caupi",
             "estrategias": VALLE_CHIRA_STRATEGIES,
             "supuestos": {
                 "textura": "«franco» es un supuesto: la parcela no tiene textura registrada.",
+                "textura_etiqueta": "Textura del suelo: franco (valor supuesto para demostración; pendiente "
+                                    "de medición).",
                 "fechas": "Inicio 2026-12-01 y duraciones mínimas del catálogo (maíz 125, frijol caupí 60, "
                           "camote 80 días) son supuestos; se supone que el frijol caupí activo termina antes.",
             },

@@ -19,6 +19,7 @@ sys.path.insert(0, str(BACKEND))
 
 def main() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    sys.stdout.reconfigure(errors="replace")  # consola cp1252 en Windows
     from scripts.escenario_demostracion import valle_chira_demo
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)

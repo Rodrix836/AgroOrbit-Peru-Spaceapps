@@ -45,6 +45,21 @@ def check_demo(data: dict, priority: str) -> None:
         k: (EXPECTED[k][0], NAMES[k]) for k in EXPECTED}
     assert sorted(a["rank"] for a in body["alternatives"]) == [1, 2, 3]
 
+    # Tarjetas de la ficha comparativa de Milene: duración y periodo salen de las campañas.
+    cards = {s["id"]: s for s in demo["estrategias"]}
+    assert {k: (c["duracion_dias"], c["periodo"]) for k, c in cards.items()} == {
+        "maiz__frijol_caupi": (185, "01/12/2026 al 03/06/2027"),
+        "frijol_caupi__camote": (140, "01/12/2026 al 19/04/2027"),
+        "camote__frijol_caupi": (140, "01/12/2026 al 19/04/2027"),
+    }
+    for c in cards.values():
+        assert c["titulo"] and c["descripcion"] and c["advertencia"]
+        assert c["fuentes"] and all(f["url"].startswith("https://") for f in c["fuentes"])
+    assert demo["aviso"] == ("Opciones ilustrativas de comparación. "
+                             "No constituyen recomendaciones agronómicas validadas.")
+    assert "ganadora" in demo["sin_ganadora"]
+    assert "pendiente de medición" in demo["supuestos"]["textura_etiqueta"]
+
     # «franco» y las fechas, declarados como supuestos; puntuaciones, como sintéticas.
     assumptions = {a["field"]: a["value"] for a in body["context"]["assumptions"]}
     assert assumptions["plot.soil_texture"] == "franco"
