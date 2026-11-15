@@ -2,6 +2,8 @@
 
 Reglas (backend/docs/nasa-persistence.md):
 - Una fila por parcela, variable y día LST; upsert por (plot_id, variable, observed_on).
+- Variables: las 9 de NASA_UNITS (T2M, PRECTOTCORR, entradas de ETo FAO-56 y humedad del suelo
+  GWETTOP/GWETROOT). Si POWER declara otra unidad, no se guarda nada (502).
 - header.fill_value se guarda como null; 0 mm de lluvia es un día válido.
 - Un null nuevo no reemplaza un valor válido ya guardado para el mismo punto.
 - El historial solo devuelve filas del punto actual de la parcela.
@@ -9,6 +11,7 @@ Reglas (backend/docs/nasa-persistence.md):
 
 from datetime import date, datetime, timedelta, timezone
 from math import isfinite
+from numbers import Real
 from uuid import uuid4
 
 from sqlalchemy import and_, case, select
@@ -16,17 +19,20 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ApiError, BadRequestError, ServiceUnavailableError
 from app.database.models import NasaObservation, Plot
-from app.database.models.nasa_observation import NASA_SOURCE, NASA_TIME_STANDARD, NASA_UNITS
+from app.database.models.nasa_observation import (
+    NASA_SOURCE,
+    NASA_TIME_STANDARD,
+    NASA_UNITS,
+    nasa_value_is_valid,
+)
 from app.schemas.climate import NasaImportResult
-from app.services.nasa.normalization import normalizar_datos
+from app.services.nasa.normalization import _faltante_a_none, obtener_fill_value
 from app.services.nasa.power_client import obtener_datos_nasa
 
 DEFAULT_DAYS = 90
-MAX_DAYS = 731  # dos años por petición
+MAX_DAYS = 4018  # 11 años por petición (POWER responde 9 variables x 11 años en ~2 s)
 CHUNK = 500
-
-# Campo normalizado de Milene -> variable de POWER.
-FIELDS = {"T2M": "temperatura_c", "PRECTOTCORR": "precipitacion_mm_dia"}
+VARIABLES = tuple(NASA_UNITS)
 
 
 def resolve_range(start: date | None, end: date | None) -> tuple[date, date]:
@@ -46,22 +52,35 @@ def _invalid(message: str = "NASA POWER devolvió datos climáticos inválidos."
     return ApiError(502, "nasa_power_invalid_response", message)
 
 
-def _build_rows(plot: Plot, registros: list[dict], start: date, end: date, fetched_at: datetime) -> list[dict]:
+def _series(datos: dict) -> dict[str, dict[date, float | None]]:
+    """Variable -> {día LST: valor o None}. Verifica unidades y tipos; fill_value -> None."""
+    metadata = datos["parameters"]
+    parameters = datos["properties"]["parameter"]
+    fill_value = obtener_fill_value(datos)
+    series = {}
+    for variable, unit in NASA_UNITS.items():
+        if metadata[variable]["units"] != unit:
+            raise ValueError(f"Unidad inesperada para {variable}: {metadata[variable]['units']}")
+        days = {}
+        for day, value in parameters[variable].items():
+            if value is not None and (isinstance(value, bool) or not isinstance(value, Real)
+                                      or not isfinite(value)):
+                raise ValueError(f"Valor inválido en {variable}.")
+            days[datetime.strptime(day, "%Y%m%d").date()] = _faltante_a_none(value, fill_value)
+        series[variable] = days
+    return series
+
+
+def _build_rows(plot: Plot, series: dict[str, dict[date, float | None]], start: date, end: date,
+                fetched_at: datetime) -> list[dict]:
     rows = []
-    for registro in registros:
-        observed_on = date.fromisoformat(registro["fecha"])
-        if not start <= observed_on <= end:
-            continue
-        for variable, field in FIELDS.items():
-            value = registro[field]
-            if value is not None:
-                if not isfinite(value):
-                    raise _invalid()
-                # Mismas reglas que el check de la tabla: evita un 500 por IntegrityError.
-                if variable == "T2M" and not -900 < value < 900:
-                    raise _invalid()
-                if variable == "PRECTOTCORR" and value < 0:
-                    raise _invalid()
+    for variable, days in series.items():
+        for observed_on, value in sorted(days.items()):
+            if not start <= observed_on <= end:
+                continue
+            # Mismas reglas que el check de la tabla: evita un 500 por IntegrityError.
+            if value is not None and not nasa_value_is_valid(variable, value):
+                raise _invalid()
             rows.append({
                 "id": uuid4(),
                 "plot_id": plot.id,
@@ -117,16 +136,17 @@ def import_power(session: Session, plot: Plot, start: date | None = None,
     start, end = resolve_range(start, end)
     datos = obtener_datos_nasa(
         float(plot.latitude), float(plot.longitude), start.strftime("%Y%m%d"), end.strftime("%Y%m%d"),
+        variables=VARIABLES,
     )
     if datos is None:
         raise ServiceUnavailableError("NASA POWER no está disponible.", code="nasa_power_unavailable")
     try:
-        registros = normalizar_datos(datos)
+        series = _series(datos)
     except (KeyError, TypeError, ValueError, AttributeError) as error:
         raise _invalid() from error
 
     fetched_at = datetime.now(timezone.utc)
-    rows = _build_rows(plot, registros, start, end, fetched_at)
+    rows = _build_rows(plot, series, start, end, fetched_at)
     if rows:
         try:
             _upsert(session, rows)
@@ -143,7 +163,7 @@ def import_power(session: Session, plot: Plot, start: date | None = None,
         end=end,
         source=NASA_SOURCE,
         time_standard=NASA_TIME_STANDARD,
-        variables=list(FIELDS),
+        variables=list(VARIABLES),
         unidades=dict(NASA_UNITS),
         dias=len({row["observed_on"] for row in rows}),
         filas_guardadas=len(rows),
