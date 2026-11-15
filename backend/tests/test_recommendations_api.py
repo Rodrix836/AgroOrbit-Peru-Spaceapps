@@ -43,10 +43,14 @@ def complete_plot(client, db, owner_headers, plot):
 
 
 def complete_catalog(monkeypatch):
+    """Catálogo SINTÉTICO: todos los requisitos con valor y una fuente de prueba que los cita."""
     catalog = deepcopy(crops_module.CULTIVOS)
+    fields = list(recommendation_service.rotation_engine.REQUIRED_CROP_FIELDS)
     for crop in catalog.values():
         crop.update(temperatura_min_c=1, temperatura_max_c=2, agua_min_mm_campana=3, agua_max_mm_campana=4,
-                    fuentes=[{"title": "Fuente de prueba", "url": "https://example.org"}])
+                    duration_min_days=60, duration_max_days=120, soil_ph_min=5, soil_ph_max=8,
+                    soil_salinity_max_ds_m=4, soil_texture_accepted=["franco arenoso"],
+                    fuentes=[{"titulo": "Fuente de prueba", "url": "https://example.org", "campos": fields}])
     monkeypatch.setattr(crops_module, "CULTIVOS", catalog)
 
 
@@ -110,6 +114,7 @@ def test_declared_plot_data_removes_its_missing_items(client, db, owner_headers,
 def test_without_engine_never_invents_alternatives(client, db, owner_headers, test_plot, monkeypatch):
     complete_plot(client, db, owner_headers, test_plot)
     complete_catalog(monkeypatch)
+    monkeypatch.setattr(recommendation_service, "ROTATION_ENGINE", None)
     response = client.post(URL, json=body(test_plot), headers=owner_headers)
     data = response.json()
     assert data["status"] == "insufficient_data" and data["alternatives"] == []
@@ -121,7 +126,7 @@ def test_engine_hook_returns_ok(client, db, owner_headers, test_plot, monkeypatc
     complete_catalog(monkeypatch)
     calls = []
 
-    def fake_engine(plot, request, context):
+    def fake_engine(plot, request, context, *, climate_days):
         calls.append((str(plot.id), request.priority, context.power.use))
         alternative = Alternative(
             id="rot-a", rank=1, score=70,
@@ -185,8 +190,10 @@ def test_engine_receives_resolved_start_on(client, db, owner_headers, test_plot,
     client.post(f"/api/plots/{test_plot['id']}/crop-cycles", json={"status": "planned", "sowing_date": "2026-12-15"},
                 headers=owner_headers)
     seen = []
+    alternative = Alternative(id="rot-a", rank=1, score=50, campaigns=[], reasons=[], limitations=[], sources=[])
     monkeypatch.setattr(recommendation_service, "ROTATION_ENGINE",
-                        lambda plot, request, context: seen.append(request.start_on) or ("evaluacion", [], []))
+                        lambda plot, request, context, climate_days: seen.append(request.start_on)
+                        or ("evaluacion", [], [alternative]))
     no_date = body(test_plot)
     no_date.pop("start_on")
     assert client.post(URL, json=no_date, headers=owner_headers).json()["status"] == "ok"
@@ -197,7 +204,8 @@ def test_reasons_are_plain_language(client, owner_headers, test_plot):
     data = client.post(URL, json=body(test_plot), headers=owner_headers).json()
     reasons = {m["field"]: m["reason"] for m in data["missing"]}
     assert reasons["plot.previous_crop"] == "Falta indicar qué cultivo tuviste antes en esta parcela."
-    assert reasons["crops.maiz.requirements"].endswith("necesita el cultivo «Maíz».")
+    assert reasons["crops.maiz.requirements"] == ("Todavía no tenemos, de una fuente confiable, estos datos del "
+                                                  "cultivo «Maíz»: pH del suelo, salinidad que tolera y tipos de suelo.")
     jargon = ("POST ", "/api/", "quality_flag", "finished", "planned", "start_on", "POWER", "motor")
     for text in [*reasons.values(), data["context"]["notice"], data["context"]["sensor"]["reason"]]:
         assert not any(word in text for word in jargon), text

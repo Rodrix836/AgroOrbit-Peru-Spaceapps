@@ -200,13 +200,13 @@ Los requisitos agronómicos no se exponen aquí. Mientras no tengan fuente, el m
 
 ## Recomendaciones de rotación
 
-> **Estado:** la ruta **ya responde**, pero **sin motor de rotaciones**: devuelve siempre `insufficient_data` con lo que falta de verdad, nunca alternativas. El formato está acordado con Luis (frontend) y **pendiente de que Milene (motor) lo confirme**.
+> **Estado:** la ruta usa el **motor de rotaciones** (`app/engine/recommendation.py`, Milene) a través de `app/services/rotation_engine.py`. Con los datos reales de hoy devuelve `insufficient_data`: el catálogo no tiene, con fuente, todos los requisitos de los cultivos, y aún no hay puntuaciones ni pesos por criterio con fuente. Ver [recommendations-post-valle-chira-real.json](examples/recommendations-post-valle-chira-real.json).
 
 ### `POST /api/recommendations` → 200
 
 Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot_not_found`; cuerpo inválido (`priority` distinta de las dos, `horizon_days` fuera de 90–730, campos extra) → **422** `validation_error`.
 
-**Cómo se calcula hoy** (`app/services/recommendation_service.py`; criterios provisionales):
+**Cómo se calcula** (`app/services/recommendation_service.py` y `app/services/rotation_engine.py`). Primero los datos de la parcela, el catálogo y el clima; **solo si están todos** se llama al motor, y entonces pueden aparecer sus faltantes propios (`engine.*`, `request.horizon_days`):
 
 | `missing[].field` | Aparece si… |
 |---|---|
@@ -214,14 +214,19 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 | `plot.previous_crop` | la parcela no tiene ningún ciclo `finished` en `crop_cycle` |
 | `plot.water_availability` | la parcela no lo tiene (se guarda con `PATCH /api/plots/{id}`) |
 | `plot.soil_texture` | la parcela no lo tiene (igual) |
-| `crops.<id>.requirements` | el cultivo del catálogo tiene algún rango de temperatura o agua en `null` o no tiene `fuentes` |
+| `crops.<id>.requirements` | **menos de dos** cultivos tienen todos sus requisitos con valor y una fuente que los cite en `fuentes[].campos` (temperatura, agua por campaña, duración, pH, salinidad, texturas). Si hay dos o más completos, los incompletos no salen en `missing`: se omiten y se avisa en `limitations` |
 | `climate.history` | no hay NASA POWER guardado anterior a `start_on`, o hay menos de 365 días con `T2M` válido |
-| `engine` | están todos los datos, pero el motor aún no está integrado |
+| `engine.criteria` | no hay puntuaciones con fuente por criterio (clima, agua, suelo, diversificación) para las rotaciones (`EVALUATION_PROVIDER` en `rotation_engine.py` es `None`) |
+| `engine.priority_weights.<priority>` | no hay pesos con fuente para la prioridad pedida |
+| `request.horizon_days` | ninguna rotación de dos campañas (duración mínima del catálogo) cabe en `horizon_days` |
+| `engine` | el motor rechazó las evaluaciones (texto del motor en `reason`), o `ROTATION_ENGINE` es `None` |
 
 - `context.power` sale de `nasa_observation`: los días guardados del punto actual **anteriores a `start_on`** (todos, si no hay fecha). `use` es `historico` con ≥ 365 días y `contexto_del_periodo` si hay menos. Es `null` si no hay datos.
 - La disponibilidad de agua **no va en la petición**: se lee de la parcela guardada (`PATCH /api/plots/{id}`). En un escenario de demostración, si el motor la supone, la declara en `assumptions`.
 - `context.sensor` resume las lecturas del kit. Las `quality_flag: "test"` nunca se usan como evidencia.
-- **Para integrar el motor (Milene):** asigna `ROTATION_ENGINE` en `recommendation_service.py` a una función `motor(plot, request, context) -> (mode, assumptions, alternatives)`. La ruta ya rellena `status: "ok"`, `selected_id` y `engine_version` (atributo `version` de la función).
+- **Motor (Milene):** `ROTATION_ENGINE = rotation_engine.recommend_rotations`, firma `motor(plot, request, context, *, climate_days) -> (mode, assumptions, alternatives)` o lanza `EngineBlocked(missing)`. Candidatos: pares ordenados de cultivos completos, con su duración mínima, campañas seguidas desde `start_on` y, para cada campaña, los indicadores NASA POWER de esas mismas fechas en años anteriores (hasta 5). El motor ordena por la suma ponderada y devuelve como máximo 3; `selected_id` es la de `rank` 1. `engine_version` = `motor-<versión>`.
+- **Para pasar a `ok` con datos reales** hacen falta: (1) los requisitos con fuente que faltan en `app/data/crops.py`; (2) un `EVALUATION_PROVIDER(plot, request, candidates)` que devuelva `mode`, `assumptions`, `priority_weights` y `evaluations[candidate_id][criterio] = {score, reasons, limitations, sources}`. Cada candidato trae `water_availability` de la parcela.
+- `ok` siempre trae al menos una alternativa; `assumptions` solo con `escenario_demostracion`, y ese modo exige al menos un supuesto.
 
 ```json
 { "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6", "priority": "save_water", "start_on": "2026-12-01", "horizon_days": 365 }
@@ -256,7 +261,12 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 | `alternatives[].reasons`, `limitations` | texto[] | |
 | `alternatives[].sources` | `[{ title, url }]` | Fuente de cada requisito usado |
 
-**Tres casos de ejemplo** (los de `ok` y escenario solo muestran la **forma**; sus textos `<...>` y puntuaciones no son recomendaciones):
+**Ejemplos.** Respuestas reales generadas por el motor:
+
+- [recommendations-post-valle-chira-real.json](examples/recommendations-post-valle-chira-real.json): parcela demostrativa con sus datos reales en Supabase (15/11/2026), sin `start_on`.
+- [recommendations-post-ok-controlado-sintetico.json](examples/recommendations-post-ok-controlado-sintetico.json): `ok` del caso controlado de `tests/test_rotation_engine_api.py`. **Catálogo, puntuaciones, pesos y fuentes (`example.invalid`) son sintéticos** (textos `SYNTHETIC …`): solo muestran la forma real de un `ok`.
+
+Ejemplos de forma (sus textos `<...>` y puntuaciones no son recomendaciones):
 
 - [recommendations-post-insufficient-data.json](examples/recommendations-post-insufficient-data.json): `insufficient_data` con lo que hoy le falta de verdad a la parcela demostrativa.
 - [recommendations-post-escenario.json](examples/recommendations-post-escenario.json): `ok` + `escenario_demostracion`, con `assumptions`.

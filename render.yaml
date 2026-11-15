@@ -1,0 +1,32 @@
+# Despliegue de la API FastAPI en Render (Blueprint). Guía: backend/README.md, «Despliegue en Render».
+# Los secretos (sync: false) se escriben en el panel de Render, nunca en este archivo.
+services:
+  - type: web
+    name: agroorbit-api
+    runtime: python
+    plan: free
+    region: virginia          # la región de Render más cercana a Supabase (sa-east-1)
+    rootDir: backend
+    branch: main
+    autoDeploy: true          # cada push a main redespliega
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SUPABASE_JWT_AUDIENCE
+        value: authenticated
+      - key: TEST_DEVICE_EXTERNAL_IDS
+        value: kit-lote4b-01
+      # Secretos o valores por entorno: se piden al crear el Blueprint.
+      - key: DATABASE_URL         # Session pooler de Supabase (puerto 5432)
+        sync: false
+      - key: SUPABASE_URL         # https://<ref>.supabase.co (JWKS ES256)
+        sync: false
+      - key: CORS_ORIGINS         # http://localhost:5173 y la URL publicada del frontend, separadas por comas
+        sync: false

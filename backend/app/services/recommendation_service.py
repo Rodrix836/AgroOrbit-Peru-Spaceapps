@@ -1,12 +1,10 @@
 """POST /api/recommendations: arma el contexto real y decide qué falta.
 
 Esta capa NO inventa recomendaciones. Comprueba los datos esenciales y, si están todos,
-delega en el motor de rotaciones (ROTATION_ENGINE). Mientras el motor no esté integrado,
-la respuesta es siempre `insufficient_data` con `engine` en `missing`.
-
-Para integrar el motor (Milene): asigna ROTATION_ENGINE a una función
-    motor(plot, request, context) -> (mode, assumptions, alternatives)
-que devuelva alternativas con fuentes reales. Ver backend/docs/api-contract.md.
+delega en el motor de rotaciones (ROTATION_ENGINE = app.services.rotation_engine.recommend_rotations):
+    motor(plot, request, context, *, climate_days) -> (mode, assumptions, alternatives)
+Si el motor no puede comparar, lanza EngineBlocked con sus faltantes y la respuesta es
+`insufficient_data`. Ver backend/docs/api-contract.md.
 """
 
 from collections.abc import Callable
@@ -15,7 +13,6 @@ from datetime import date, datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.data.crops import obtener_cultivos
 from app.database.models import CropCycle, Device, NasaObservation, Plot, SensorReading
 from app.schemas.recommendation import (
     MissingItem,
@@ -25,14 +22,15 @@ from app.schemas.recommendation import (
     RecommendationResponse,
     SensorContext,
 )
+from app.services import rotation_engine
 from app.services.indicators import calcular_indicadores
+from app.services.rotation_engine import EngineBlocked
 
-API_LAYER_VERSION = "api-0.1"
-ROTATION_ENGINE: Callable | None = None  # se asigna al integrar el motor de Milene
+API_LAYER_VERSION = "api-0.2"
+ROTATION_ENGINE: Callable | None = rotation_engine.recommend_rotations
 
 # Criterio provisional: un año de días con T2M válido para evaluar campañas futuras.
 MIN_HISTORY_DAYS = 365
-CROP_REQUIREMENT_FIELDS = ("temperatura_min_c", "temperatura_max_c", "agua_min_mm_campana", "agua_max_mm_campana")
 
 
 def _resolve_start_on(session: Session, plot: Plot, request: RecommendationRequest) -> date | None:
@@ -43,7 +41,8 @@ def _resolve_start_on(session: Session, plot: Plot, request: RecommendationReque
         CropCycle.plot_id == plot.id, CropCycle.status == "planned"))
 
 
-def _power_context(session: Session, plot: Plot, start_on: date | None) -> tuple[PowerContext | None, int]:
+def _power_context(session: Session, plot: Plot,
+                   start_on: date | None) -> tuple[PowerContext | None, int, list[dict]]:
     query = select(NasaObservation).where(
         NasaObservation.plot_id == plot.id,
         NasaObservation.latitude == plot.latitude,
@@ -53,7 +52,7 @@ def _power_context(session: Session, plot: Plot, start_on: date | None) -> tuple
         query = query.where(NasaObservation.observed_on < start_on)
     rows = list(session.scalars(query.order_by(NasaObservation.observed_on)))
     if not rows:
-        return None, 0
+        return None, 0, []
     by_day: dict = {}
     for row in rows:
         day = by_day.setdefault(row.observed_on, {"fecha": row.observed_on.isoformat(),
@@ -67,7 +66,7 @@ def _power_context(session: Session, plot: Plot, start_on: date | None) -> tuple
         end=registros[-1]["fecha"],
         use="historico" if valid_days >= MIN_HISTORY_DAYS else "contexto_del_periodo",
         indicators=calcular_indicadores(registros),
-    ), valid_days
+    ), valid_days, registros
 
 
 def _sensor_context(session: Session, plot: Plot) -> SensorContext:
@@ -102,10 +101,8 @@ def _missing(session: Session, plot: Plot, power: PowerContext | None, valid_day
                                    reason="Falta indicar cuánta agua tienes para regar: poca, media o mucha."))
     if plot.soil_texture is None:
         missing.append(MissingItem(field="plot.soil_texture", reason="Falta indicar qué tipo de suelo tiene la parcela, por ejemplo arenoso, franco o arcilloso."))
-    for crop_id, crop in obtener_cultivos().items():
-        if any(crop.get(f) is None for f in CROP_REQUIREMENT_FIELDS) or not crop.get("fuentes"):
-            missing.append(MissingItem(field=f"crops.{crop_id}.requirements",
-                                       reason=f"Todavía no tenemos, de una fuente confiable, qué temperaturas y cuánta agua necesita el cultivo «{crop['nombre']}»."))
+    # Solo si bloquean: con dos cultivos completos ya se puede rotar (los demás van en limitations).
+    missing.extend(rotation_engine.crop_requirement_missing())
     if power is None:
         missing.append(MissingItem(field="climate.history",
                                    reason="Todavía no hay datos del clima de la NASA guardados para esta parcela."))
@@ -116,32 +113,55 @@ def _missing(session: Session, plot: Plot, power: PowerContext | None, valid_day
     return missing
 
 
+def _insufficient(plot: Plot, created_at: datetime, context: RecommendationContext,
+                  missing: list[MissingItem]) -> RecommendationResponse:
+    return RecommendationResponse(
+        status="insufficient_data", mode="evaluacion", engine_version=_engine_version(),
+        plot_id=plot.id, created_at=created_at, context=context, missing=missing,
+        selected_id=None, alternatives=[],
+    )
+
+
+def _engine_version() -> str:
+    return getattr(ROTATION_ENGINE, "version", API_LAYER_VERSION)
+
+
 def recommend(session: Session, plot: Plot, request: RecommendationRequest) -> RecommendationResponse:
     created_at = datetime.now(timezone.utc)
     start_on = _resolve_start_on(session, plot, request)
-    power, valid_days = _power_context(session, plot, start_on)
+    power, valid_days, climate_days = _power_context(session, plot, start_on)
     context = RecommendationContext(
         notice="Revisamos los datos de tu parcela. Mientras falten datos importantes, no mostramos alternativas.",
         start_on=start_on,
         power=power,
         sensor=_sensor_context(session, plot),
     )
+    # El motor solo se llama con todos los datos: sus faltantes propios no se mezclan con los de la parcela.
     missing = _missing(session, plot, power, valid_days, start_on)
-
     if not missing and ROTATION_ENGINE is None:
         missing.append(MissingItem(field="engine", reason="El sistema de recomendaciones todavía no está listo."))
     if missing:
-        return RecommendationResponse(
-            status="insufficient_data", mode="evaluacion", engine_version=API_LAYER_VERSION,
-            plot_id=plot.id, created_at=created_at, context=context, missing=missing,
-            selected_id=None, alternatives=[],
-        )
+        return _insufficient(plot, created_at, context, missing)
 
-    # El motor recibe la petición con start_on ya resuelto.
-    mode, assumptions, alternatives = ROTATION_ENGINE(plot, request.model_copy(update={"start_on": start_on}), context)
-    context.assumptions = assumptions
+    try:
+        # El motor recibe la petición con start_on ya resuelto y los días de clima anteriores a start_on.
+        mode, assumptions, alternatives = ROTATION_ENGINE(
+            plot, request.model_copy(update={"start_on": start_on}), context, climate_days=climate_days)
+    except EngineBlocked as blocked:
+        return _insufficient(plot, created_at, context, blocked.missing)
+    if not alternatives:
+        return _insufficient(plot, created_at, context, [MissingItem(
+            field="engine", reason="No encontramos rotaciones que se puedan comparar con los datos actuales.")])
+    if mode == "escenario_demostracion" and not assumptions:
+        raise ValueError("Un escenario de demostración debe declarar sus supuestos.")
+
+    context.assumptions = assumptions if mode == "escenario_demostracion" else []
+    context.notice = ("Escenario de demostración: parte de los datos son supuestos, no medidos."
+                      if mode == "escenario_demostracion"
+                      else "Estas alternativas se calcularon con los datos de tu parcela y fuentes citadas.")
+    alternatives = sorted(alternatives, key=lambda a: a.rank)
     return RecommendationResponse(
-        status="ok", mode=mode, engine_version=getattr(ROTATION_ENGINE, "version", API_LAYER_VERSION),
+        status="ok", mode=mode, engine_version=_engine_version(),
         plot_id=plot.id, created_at=created_at, context=context, missing=[],
-        selected_id=alternatives[0].id if alternatives else None, alternatives=alternatives,
+        selected_id=alternatives[0].id, alternatives=alternatives,
     )
