@@ -23,9 +23,20 @@ const FIELD_LABELS: Record<string, string> = {
   'plot.soil_ph': 'pH del suelo',
   'plot.soil_salinity_ds_m': 'Salinidad del suelo',
   'plot.area_ha': 'Superficie de la parcela',
+  'plot.current_crop_end': 'Fin del cultivo actual',
+  'campaigns.dates': 'Fechas de campaña',
+  'crops.requirements': 'Requisitos de los cultivos',
   'plot.start_on': 'Inicio de la siguiente campaña',
   'plot.next_sowing_date': 'Fecha de inicio de la siguiente campaña',
   'climate.history': 'Histórico de clima',
+  'engine.criteria': 'Puntuaciones por criterio con fuente',
+  'engine': 'Motor de rotaciones',
+  'request.horizon_days': 'Horizonte de tiempo de la consulta',
+}
+
+const PRIORITY_LABELS: Record<string, string> = {
+  save_water: 'ahorrar agua',
+  improve_soil: 'mejorar el suelo',
 }
 
 /** Etiqueta legible de un `field` del contrato. Un campo desconocido se muestra tal cual. */
@@ -33,15 +44,18 @@ export function fieldLabel(field: string, crops: Crop[]): string {
   if (FIELD_LABELS[field]) return FIELD_LABELS[field]
   const m = /^crops\.([^.]+)\.requirements$/.exec(field)
   if (m) return cropName(m[1], crops)
+  const w = /^engine\.priority_weights\.([^.]+)$/.exec(field)
+  if (w) return `Pesos por criterio con fuente (${PRIORITY_LABELS[w[1]] ?? w[1]})`
   return field
 }
 
-export type MissingGroup = 'plot' | 'crops' | 'climate' | 'other'
+export type MissingGroup = 'plot' | 'crops' | 'climate' | 'system' | 'other'
 
 export function fieldGroup(field: string): MissingGroup {
   if (field.startsWith('plot.')) return 'plot'
   if (field.startsWith('crops.')) return 'crops'
   if (field.startsWith('climate.')) return 'climate'
+  if (field === 'engine' || field.startsWith('engine.') || field.startsWith('request.')) return 'system'
   return 'other'
 }
 

@@ -54,10 +54,28 @@ export function formatNumber(value: number, digits = 1): string {
   })
 }
 
+/** Número con siempre `digits` decimales (26 → «26.0»), para que los rangos se lean parejos. */
+export function formatFixed(value: number, digits = 1): string {
+  return value.toLocaleString('es-PE', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+}
+
 /** Pasado este tiempo sin lecturas nuevas, el sensor se considera "sin actualización". */
-export const SENSOR_STALE_MINUTES = 15
-export function isStale(iso: string, minutes = SENSOR_STALE_MINUTES): boolean {
-  return Date.now() - new Date(iso).getTime() > minutes * 60_000
+export const SENSOR_STALE_MINUTES = 2 // el kit envía cada 10 s
+export function isStale(iso: string, now = Date.now(), minutes = SENSOR_STALE_MINUTES): boolean {
+  return now - new Date(iso).getTime() > minutes * 60_000
+}
+
+/** Cuánto pasó desde `iso`: «hace 12 s», «hace 3 min», «hace 2 h», «hace 4 d». */
+export function formatAgo(iso: string, now = Date.now()): string {
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return '—'
+  const s = Math.max(0, Math.round((now - t) / 1000))
+  if (s < 60) return `hace ${s} s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `hace ${m} min`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `hace ${h} h`
+  return `hace ${Math.floor(h / 24)} d`
 }
 
 /** Unidades de la API (tal como las da POWER) a texto para mostrar. */

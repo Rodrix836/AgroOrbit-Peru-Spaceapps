@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { MapFrame } from '../components/plot/MapFrame'
+import { LocationMap } from '../components/plot/LocationMap'
 import { WATER_OPTIONS } from '../components/plot/water'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { ErrorBox } from '../components/ui/ErrorBox'
@@ -71,7 +71,7 @@ function NewPlotForm({ onDone }: { onDone?: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-6 md:grid-cols-2">
+    <form onSubmit={submit} className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
       <div className="space-y-5">
         <Field label="Nombre de la parcela">
           <input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
@@ -98,13 +98,22 @@ function NewPlotForm({ onDone }: { onDone?: () => void }) {
             />
           </Field>
         </div>
-        <p className="text-muted">Usa las coordenadas reales de tu parcela, no las del pueblo.</p>
+        <p className="text-muted">
+          Toca el mapa para colocar el punto o escribe las coordenadas. Usa las de tu parcela, no las del pueblo.
+        </p>
         {error && <ErrorBox message={error} />}
         <Button size="lg" disabled={busy}>
           {busy ? 'Guardando…' : 'Guardar parcela →'}
         </Button>
       </div>
-      <MapFrame lat={lat.trim() === '' ? null : lat} lng={lng.trim() === '' ? null : lng} />
+      <LocationMap
+        lat={lat.trim() === '' ? null : lat}
+        lng={lng.trim() === '' ? null : lng}
+        onPick={(la, lo) => {
+          setLat(la.toFixed(4))
+          setLng(lo.toFixed(4))
+        }}
+      />
     </form>
   )
 }
@@ -318,7 +327,7 @@ export function PlotPage() {
       ) : (
         <>
           <FormBlock letter="A" name="Ubicación">
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
               <div>
                 <Eyebrow>Parcela registrada</Eyebrow>
                 <p className="mt-1 font-display text-3xl font-extrabold leading-none tracking-[-0.02em]">
@@ -333,7 +342,7 @@ export function PlotPage() {
                   </Button>
                 )}
               </div>
-              <MapFrame lat={plot.latitude} lng={plot.longitude} />
+              <LocationMap lat={plot.latitude} lng={plot.longitude} />
             </div>
             {adding && (
               <div className="border-t border-line pt-5">

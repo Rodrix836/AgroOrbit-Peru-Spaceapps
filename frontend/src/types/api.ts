@@ -151,8 +151,11 @@ export interface SensorReading {
 
 // ---------- NASA POWER ----------
 
-/** Variables que guarda la API hoy. */
-export type NasaVariable = 'T2M' | 'PRECTOTCORR'
+/**
+ * Las 4 variables de NASA POWER que admite la API (cualquier otra da 422): T2M (C), PRECTOTCORR (mm/day),
+ * GWETTOP y GWETROOT ("1": fracción de saturación del suelo, 0 a 1). Unidades tal como las da POWER.
+ */
+export type NasaVariable = 'T2M' | 'PRECTOTCORR' | 'GWETTOP' | 'GWETROOT'
 
 export interface NasaObservation {
   id: string
@@ -256,11 +259,31 @@ export interface SourceRef {
   url?: string
 }
 
+export type CriterionId = 'clima' | 'agua' | 'suelo' | 'diversificacion'
+
+/**
+ * Un criterio de la alternativa: `score` 0 a 100, `weight` 0 a 1 (según la prioridad pedida; los cuatro suman 1)
+ * y `contribution` = score × weight (2 decimales). La suma de los cuatro aportes es el `score` total, salvo redondeo.
+ */
+export interface CriterionScore {
+  score: number
+  weight: number
+  contribution: number
+}
+
+/**
+ * Desglose por criterio de una alternativa: `{ clima, agua, suelo, diversificacion }`, cada uno con
+ * `{ score, weight, contribution }`. `{}` (o ausente) si la alternativa no trae desglose: entonces no se muestra.
+ */
+export type Criteria = Partial<Record<CriterionId, CriterionScore>>
+
 export interface Alternative {
   id: string
   rank: number
   /** Criterio del prototipo (0-100). No es probabilidad de éxito ni rendimiento. */
   score: number
+  /** Opcional: desglose por criterio (`{}` si no hay). */
+  criteria?: Criteria
   campaigns: Campaign[]
   reasons: string[]
   limitations: string[]

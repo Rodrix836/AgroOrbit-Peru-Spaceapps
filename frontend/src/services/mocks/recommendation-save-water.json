@@ -8,8 +8,16 @@
       "rank": 1,
       "score": 72,
       "campaigns": [
-        { "crop": "frijol_caupi", "starts_on": "2027-01-15", "ends_on": "2027-04-10" },
-        { "crop": "maiz", "starts_on": "2027-05-01", "ends_on": "2027-09-15" }
+        {
+          "crop": "frijol_caupi",
+          "starts_on": "2027-01-15",
+          "ends_on": "2027-04-10"
+        },
+        {
+          "crop": "maiz",
+          "starts_on": "2027-05-01",
+          "ends_on": "2027-09-15"
+        }
       ],
       "reasons": [
         "[Ejemplo] Primera campaña con un cultivo de ciclo corto, para priorizar menor uso de agua.",
@@ -24,20 +32,84 @@
           "title": "INIA: material de caupí INIA 432 (Tumbes y Piura)",
           "url": "https://repositorio.inia.gob.pe/server/api/core/bitstreams/8ca06907-9eae-42a0-b6ce-2ecd0dcd4799/content"
         },
-        { "title": "NASA POWER, API diaria", "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/" }
-      ]
+        {
+          "title": "NASA POWER, API diaria",
+          "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/"
+        }
+      ],
+      "criteria": {
+        "clima": {
+          "score": 80,
+          "weight": 0.3,
+          "contribution": 24.0
+        },
+        "agua": {
+          "score": 70,
+          "weight": 0.4,
+          "contribution": 28.0
+        },
+        "suelo": {
+          "score": 65,
+          "weight": 0.15,
+          "contribution": 9.75
+        },
+        "diversificacion": {
+          "score": 70,
+          "weight": 0.15,
+          "contribution": 10.5
+        }
+      }
     },
     {
       "id": "alt-b",
       "rank": 2,
       "score": 58,
       "campaigns": [
-        { "crop": "maiz", "starts_on": "2027-01-15", "ends_on": "2027-06-01" },
-        { "crop": "frijol_caupi", "starts_on": "2027-06-20", "ends_on": "2027-09-15" }
+        {
+          "crop": "maiz",
+          "starts_on": "2027-01-15",
+          "ends_on": "2027-06-01"
+        },
+        {
+          "crop": "frijol_caupi",
+          "starts_on": "2027-06-20",
+          "ends_on": "2027-09-15"
+        }
       ],
-      "reasons": ["[Ejemplo] Alternativa con el orden de cultivos invertido, para comparar."],
-      "limitations": ["[Ejemplo] Respuesta de muestra: no proviene del motor de reglas."],
-      "sources": [{ "title": "NASA POWER, API diaria", "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/" }]
+      "reasons": [
+        "[Ejemplo] Alternativa con el orden de cultivos invertido, para comparar."
+      ],
+      "limitations": [
+        "[Ejemplo] Respuesta de muestra: no proviene del motor de reglas."
+      ],
+      "sources": [
+        {
+          "title": "NASA POWER, API diaria",
+          "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/"
+        }
+      ],
+      "criteria": {
+        "clima": {
+          "score": 60,
+          "weight": 0.3,
+          "contribution": 18.0
+        },
+        "agua": {
+          "score": 55,
+          "weight": 0.4,
+          "contribution": 22.0
+        },
+        "suelo": {
+          "score": 60,
+          "weight": 0.15,
+          "contribution": 9.0
+        },
+        "diversificacion": {
+          "score": 60,
+          "weight": 0.15,
+          "contribution": 9.0
+        }
+      }
     }
   ]
 }

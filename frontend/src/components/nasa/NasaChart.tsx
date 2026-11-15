@@ -106,8 +106,8 @@ const Y_WIDTH = 48
 const valuesOf = (values: (number | null)[]) => values.flatMap((v) => (v === null ? [] : [v]))
 
 /**
- * Gráficos azules de NASA POWER. 90 días: un punto por día. 1 y 2 años: temperatura promedio mensual
- * y lluvia sumada por mes, para que se lea. Los días o meses sin dato quedan en blanco.
+ * Gráficos azules de NASA POWER (T2M y PRECTOTCORR). 90 días: un punto por día. 1 y 2 años: temperatura
+ * promedio mensual y lluvia sumada por mes, para que se lea. Los días o meses sin dato quedan en blanco.
  */
 export function NasaChart({ observations, view }: { observations: NasaObservation[]; view: NasaView }) {
   const monthly = view.period.days > 90
@@ -116,9 +116,10 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
 
   const daily = monthly ? [] : dailyRows(observations)
   const months = monthly ? monthlyRows(observations, view.from, view.to) : []
+  const data: (DayRow | MonthRow)[] = monthly ? months : daily
 
-  const temps = monthly ? months.map((m) => m.T2M) : daily.map((d) => d.T2M)
-  const rains = monthly ? months.map((m) => m.PRECTOTCORR) : daily.map((d) => d.PRECTOTCORR)
+  const temps = data.map((d) => d.T2M)
+  const rains = data.map((d) => d.PRECTOTCORR)
   const hasTemp = temps.some((v) => v !== null)
   const hasRain = rains.some((v) => v !== null)
   if (!hasTemp && !hasRain) return null
@@ -129,7 +130,6 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
   const xProps = monthly
     ? { dataKey: 'key', tickFormatter: monthLabel, minTickGap: 24 }
     : { dataKey: 'day', tickFormatter: formatDayShort, minTickGap: 50 }
-  const data = monthly ? months : daily
   const labelFormatter = (v: unknown) => (monthly ? monthLabel(String(v)) : formatDay(String(v)))
   const yStyle = { tick: AXIS_TICK, width: Y_WIDTH, stroke: '#3a4b41', allowDecimals: false }
 

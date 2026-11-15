@@ -50,7 +50,7 @@ function Row({
   )
 }
 
-/** Solo T2M y PRECTOTCORR, que son las variables que entrega la API hoy. */
+/** Temperatura media (T2M) y lluvia acumulada (PRECTOTCORR) del período, con sus días con dato. */
 export function NasaCards({ observations, view }: { observations: NasaObservation[]; view: NasaView }) {
   const temp = nasaSeries(observations, 'T2M')
   const rain = nasaSeries(observations, 'PRECTOTCORR')

@@ -4,11 +4,11 @@ import type { SensorReading } from '../types/api'
 import { errorMessage } from './useAsync'
 
 /** Cada cuánto se vuelven a pedir las lecturas mientras el panel está abierto. */
-export const SENSOR_REFRESH_MS = 30_000
+export const SENSOR_REFRESH_MS = 10_000
 
 /**
  * Lecturas del sensor ESP32 de la parcela (orden ascendente por recorded_at).
- * Se refrescan cada 30 s mientras el componente que usa el hook está montado.
+ * Se refrescan cada 10 s (la cadencia del kit) mientras el componente que usa el hook está montado.
  * Si un refresco en segundo plano falla, se conservan las últimas lecturas
  * (el aviso de "sensor sin actualización" sale por la antigüedad de la lectura).
  */

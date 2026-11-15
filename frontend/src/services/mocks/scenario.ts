@@ -9,6 +9,8 @@ export const SCENARIOS = [
   'insufficient_data', // la recomendación responde insufficient_data (missing con motivos, sin alternativas)
   'demo_mode', // la recomendación llega con mode = escenario_demostracion (por defecto en las recomendaciones)
   'format_mockup', // la recomendación llega con marcadores <...> y puntajes 0 (maqueta de formato)
+  'historico_corto', // NASA solo guarda ~2 años: el bloque de riesgo muestra «Histórico insuficiente»
+  'sin_extras', // como hoy: NASA sin GWETTOP/GWETROOT y alternativas sin desglose por criterio
   'sensor_test', // lecturas con quality_flag = test (kit de prueba)
   'sensor_suspect', // última humedad con quality_flag = suspect
   'sensor_dry', // última humedad en 0 % (clamped_dry): la barra queda vacía pero con marca
@@ -31,7 +33,7 @@ export const MOCK_SCENARIO: MockScenario =
     ? (requested as MockScenario)
     : 'normal'
 
-export type RecommendationScenario = 'demo_mode' | 'normal' | 'insufficient_data' | 'format_mockup'
+export type RecommendationScenario = 'demo_mode' | 'normal' | 'insufficient_data' | 'format_mockup' | 'sin_extras'
 
 /**
  * Escenario de la recomendación de ejemplo. Por defecto es demo_mode (ok + escenario_demostracion),
@@ -40,6 +42,9 @@ export type RecommendationScenario = 'demo_mode' | 'normal' | 'insufficient_data
  * Se respeta aunque VITE_USE_MOCKS sea false, porque la recomendación puede seguir saliendo de mocks.
  */
 export const RECOMMENDATION_SCENARIO: RecommendationScenario =
-  requested === 'normal' || requested === 'insufficient_data' || requested === 'format_mockup'
+  requested === 'normal' ||
+  requested === 'insufficient_data' ||
+  requested === 'format_mockup' ||
+  requested === 'sin_extras'
     ? requested
     : 'demo_mode'
