@@ -3,7 +3,7 @@
   "mode": "escenario_demostracion",
   "engine_version": "motor-1.0",
   "plot_id": "11111111-1111-4111-8111-111111111111",
-  "created_at": "2026-11-15T17:10:30.413768Z",
+  "created_at": "2026-11-15T18:22:34.391902Z",
   "context": {
     "notice": "Escenario de demostración: parte de los datos son supuestos, no medidos.",
     "start_on": "2026-12-01",
@@ -70,6 +70,28 @@
       "id": "frijol_caupi__camote",
       "rank": 1,
       "score": 69.0,
+      "criteria": {
+        "clima": {
+          "score": 50.0,
+          "weight": 0.1,
+          "contribution": 5.0
+        },
+        "agua": {
+          "score": 75.0,
+          "weight": 0.7,
+          "contribution": 52.5
+        },
+        "suelo": {
+          "score": 65.0,
+          "weight": 0.1,
+          "contribution": 6.5
+        },
+        "diversificacion": {
+          "score": 50.0,
+          "weight": 0.1,
+          "contribution": 5.0
+        }
+      },
       "campaigns": [
         {
           "crop": "frijol_caupi",
@@ -112,6 +134,28 @@
       "id": "camote__frijol_caupi",
       "rank": 2,
       "score": 69.0,
+      "criteria": {
+        "clima": {
+          "score": 50.0,
+          "weight": 0.1,
+          "contribution": 5.0
+        },
+        "agua": {
+          "score": 75.0,
+          "weight": 0.7,
+          "contribution": 52.5
+        },
+        "suelo": {
+          "score": 65.0,
+          "weight": 0.1,
+          "contribution": 6.5
+        },
+        "diversificacion": {
+          "score": 50.0,
+          "weight": 0.1,
+          "contribution": 5.0
+        }
+      },
       "campaigns": [
         {
           "crop": "camote",
@@ -154,6 +198,28 @@
       "id": "maiz__camote",
       "rank": 3,
       "score": 51.5,
+      "criteria": {
+        "clima": {
+          "score": 50.0,
+          "weight": 0.1,
+          "contribution": 5.0
+        },
+        "agua": {
+          "score": 55.0,
+          "weight": 0.7,
+          "contribution": 38.5
+        },
+        "suelo": {
+          "score": 30.0,
+          "weight": 0.1,
+          "contribution": 3.0
+        },
+        "diversificacion": {
+          "score": 50.0,
+          "weight": 0.1,
+          "contribution": 5.0
+        }
+      },
       "campaigns": [
         {
           "crop": "maiz",

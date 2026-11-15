@@ -16,9 +16,15 @@ from test_plots import assert_error
 from app.database.models import CropCycle, SensorReading
 from app.schemas.recommendation import Assumption
 from app.services import recommendation_service, rotation_engine
+
 from synthetic_recommendation import (
-    SYNTHETIC_SOURCE, store_power, synthetic_catalog, synthetic_evaluator,
+    SYNTHETIC_SOURCE,
+    SYNTHETIC_WEIGHTS,
+    store_power,
+    synthetic_catalog,
+    synthetic_evaluator,
 )
+
 
 URL = "/api/recommendations"
 CHIRA = {"name": "Parcela demostrativa – Valle del Chira (Sullana, Piura)", "latitude": -4.97, "longitude": -80.89}
