@@ -31,6 +31,9 @@ ROTATION_ENGINE: Callable | None = rotation_engine.recommend_rotations
 
 # Criterio provisional: un año de días con T2M válido para evaluar campañas futuras.
 MIN_HISTORY_DAYS = 365
+# Variables de nasa_observation que usa el motor -> campo de calcular_indicadores. La lluvia es solo
+# PRECTOTCORR: GWETTOP/GWETROOT (humedad del suelo) y cualquier otra variable se ignoran aquí.
+POWER_FIELDS = {"T2M": "temperatura_c", "PRECTOTCORR": "precipitacion_mm_dia"}
 
 
 def _resolve_start_on(session: Session, plot: Plot, request: RecommendationRequest) -> date | None:
@@ -47,6 +50,7 @@ def _power_context(session: Session, plot: Plot,
         NasaObservation.plot_id == plot.id,
         NasaObservation.latitude == plot.latitude,
         NasaObservation.longitude == plot.longitude,
+        NasaObservation.variable.in_(tuple(POWER_FIELDS)),
     )
     if start_on is not None:
         query = query.where(NasaObservation.observed_on < start_on)
@@ -58,7 +62,9 @@ def _power_context(session: Session, plot: Plot,
         day = by_day.setdefault(row.observed_on, {"fecha": row.observed_on.isoformat(),
                                                    "temperatura_c": None, "precipitacion_mm_dia": None})
         value = float(row.value) if row.value is not None else None
-        day["temperatura_c" if row.variable == "T2M" else "precipitacion_mm_dia"] = value
+        field = POWER_FIELDS.get(row.variable)
+        if field is not None:
+            day[field] = value
     registros = [by_day[d] for d in sorted(by_day)]
     valid_days = sum(r["temperatura_c"] is not None for r in registros)
     return PowerContext(

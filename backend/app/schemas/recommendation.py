@@ -68,10 +68,25 @@ class Source(BaseModel):
     url: str
 
 
+CriterionId = Literal["clima", "agua", "suelo", "diversificacion"]
+
+
+class CriterionScore(BaseModel):
+    """Un criterio del desglose de `score`: score = suma de contribution (redondeo a 2 decimales)."""
+
+    score: float = Field(ge=0, le=100, description="Puntuación del criterio, 0-100")
+    weight: float = Field(ge=0, le=1, description="Peso del criterio en la prioridad pedida; suman 1")
+    contribution: float = Field(ge=0, le=100, description="score x weight")
+
+
 class Alternative(BaseModel):
     id: str
     rank: int = Field(ge=1)
     score: float = Field(ge=0, le=100)
+    criteria: dict[CriterionId, CriterionScore] = Field(
+        default_factory=dict,
+        description="Desglose por criterio: {clima, agua, suelo, diversificacion} -> {score, weight, contribution}",
+    )
     campaigns: list[Campaign]
     reasons: list[str]
     limitations: list[str]

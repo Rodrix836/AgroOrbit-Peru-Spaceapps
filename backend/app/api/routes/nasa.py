@@ -19,9 +19,10 @@ router = APIRouter(prefix="/plots", tags=["NASA POWER"])
 
 @router.post("/{plot_id}/nasa/power", response_model=NasaImportResult)
 def import_nasa_power(plot: OwnedPlot, session: DbSession, body: NasaImportRequest | None = None) -> NasaImportResult:
-    """Consulta POWER diario (T2M y PRECTOTCORR, AG, LST) en el punto de la parcela y lo guarda.
+    """Consulta POWER diario (T2M, PRECTOTCORR, GWETTOP, GWETROOT; AG, LST) y lo guarda.
 
-    Sin cuerpo (o `{}`) importa los últimos 90 días. Se puede repetir: actualiza sin duplicar.
+    Sin cuerpo (o `{}`) importa los últimos 90 días; como máximo 4018 días (11 años) por petición.
+    Se puede repetir: actualiza sin duplicar.
     """
     body = body or NasaImportRequest()
     return persistence.import_power(session, plot, body.start, body.end)

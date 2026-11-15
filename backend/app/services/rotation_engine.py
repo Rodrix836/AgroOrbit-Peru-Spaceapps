@@ -28,7 +28,7 @@ from urllib.parse import urlparse
 from app.data import crops as crops_catalog
 from app.engine import recommendation as engine
 from app.engine.scoring import CRITERIOS
-from app.schemas.recommendation import Alternative, Assumption, MissingItem
+from app.schemas.recommendation import Alternative, Assumption, CriterionScore, MissingItem
 from app.services.indicators import calcular_indicadores
 
 REQUIRED_CROP_FIELDS = engine.REQUIRED_CROP_FIELDS
@@ -204,7 +204,13 @@ def recommend_rotations(plot, request, context, *, climate_days: list[dict]):
     api_mode = MODE_TO_API[engine_mode]
     return (api_mode,
             assumptions if api_mode == "escenario_demostracion" else [],
-            [Alternative(**a) for a in alternatives])
+            [Alternative(**a, criteria=_criteria(evaluations[a["id"]], weights)) for a in alternatives])
+
+
+def _criteria(evaluation: dict, weights: dict) -> dict[str, CriterionScore]:
+    """Desglose por criterio con las mismas puntuaciones y pesos que usó el motor para ordenar."""
+    return {c: CriterionScore(score=evaluation[c]["score"], weight=weights[c],
+                              contribution=round(evaluation[c]["score"] * weights[c], 2)) for c in CRITERIOS}
 
 
 recommend_rotations.version = f"motor-{engine.motor.version}"

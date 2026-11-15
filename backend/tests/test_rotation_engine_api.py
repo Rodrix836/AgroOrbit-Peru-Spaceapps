@@ -132,6 +132,20 @@ def test_controlled_complete_case_returns_ok_with_alternatives(client, db, owner
     assert [a["score"] for a in alternatives] == sorted((a["score"] for a in alternatives), reverse=True)
 
     best = alternatives[0]
+    # Desglose por criterio: mismas puntuaciones y pesos (save_water) que usó el motor; suma = score.
+    # Forma acordada con el frontend (frontend/src/types/api.ts, Criteria): objeto con claves por criterio.
+    assert best["criteria"] == {
+        "clima": {"score": 50.0, "weight": 0.1, "contribution": 5.0},
+        "agua": {"score": 75.0, "weight": 0.7, "contribution": 52.5},
+        "suelo": {"score": 65.0, "weight": 0.1, "contribution": 6.5},
+        "diversificacion": {"score": 50.0, "weight": 0.1, "contribution": 5.0},
+    }
+    for alternative in alternatives:
+        criteria = alternative["criteria"]
+        assert list(criteria) == ["clima", "agua", "suelo", "diversificacion"]
+        assert all(0 <= c["score"] <= 100 and 0 <= c["weight"] <= 1 for c in criteria.values())
+        assert sum(c["weight"] for c in criteria.values()) == pytest.approx(1)
+        assert sum(c["contribution"] for c in criteria.values()) == pytest.approx(alternative["score"], abs=0.02)
     # Campañas: 100 días cada una (duración mínima del catálogo), seguidas desde start_on.
     assert best["campaigns"] == [
         {"crop": "frijol_caupi", "starts_on": "2026-12-01", "ends_on": "2027-03-10"},
@@ -154,6 +168,8 @@ def test_controlled_case_priority_changes_ranking(client, db, owner_headers, chi
     assert data["status"] == "ok"
     assert "frijol_caupi" in data["selected_id"]
     assert data["selected_id"] in {"frijol_caupi__camote", "camote__frijol_caupi"}
+    weights = {k: c["weight"] for k, c in data["alternatives"][0]["criteria"].items()}
+    assert weights == SYNTHETIC_WEIGHTS["improve_soil"]
 
 
 def test_scenario_mode_keeps_structured_assumptions(client, db, owner_headers, chira, monkeypatch):
