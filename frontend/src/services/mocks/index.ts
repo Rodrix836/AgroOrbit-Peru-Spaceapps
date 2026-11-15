@@ -105,8 +105,8 @@ const DEVICE_ID = 'dca83203-c87b-41d5-bfb3-1c5cc7ee5c0b'
 export function mockReadings(): SensorReading[] {
   if (MOCK_SCENARIO === 'sensor_empty') return []
 
-  // Última lectura: hace 2 min (al día) o hace 3 h (sin actualización).
-  const lastAt = Date.now() - (MOCK_SCENARIO === 'sensor_stale' ? 3 * HOUR : 2 * MINUTE)
+  // Última lectura: hace unos segundos (al día; el kit envía cada 10 s) o hace 3 h (sin actualización).
+  const lastAt = Date.now() - (MOCK_SCENARIO === 'sensor_stale' ? 3 * HOUR : 4_000)
   const STEP = 15 * MINUTE
   const out: SensorReading[] = []
 

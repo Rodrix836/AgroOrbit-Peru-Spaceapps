@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import type { SensorReading, SensorType } from '../../types/api'
-import { formatDateTime, formatNumber, isStale, SENSOR_STALE_MINUTES } from '../../utils/format'
+import { useNow } from '../../hooks/useNow'
+import { formatDateTime, formatHour24, formatNumber, formatShortTime, isStale } from '../../utils/format'
 import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { Eyebrow } from '../ui/Eyebrow'
 import { SourceBadge } from '../ui/SourceBadge'
 import { StatCard } from '../ui/StatCard'
+import { Freshness } from './Freshness'
 import { QualityNotice } from './QualityNotice'
 
 const SOURCE_DETAIL = 'Sensor ESP32 en tu parcela'
@@ -66,6 +68,7 @@ function Gauge({ value }: { value: number }) {
 
 export function SensorCards({ readings }: { readings: SensorReading[] }) {
   const [showTech, setShowTech] = useState(false)
+  const now = useNow(1000) // «hace 12 s» avanza solo, sin recargar
   const moisture = latest(readings, 'soil_moisture')
   const temp = latest(readings, 'soil_temperature')
 
@@ -84,15 +87,17 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
     .map((r) => r.recorded_at)
     .sort()
     .pop()
-  const stale = lastAt ? isStale(lastAt) : false
+  const stale = lastAt ? isStale(lastAt, now) : false
+  // «desde las 16:51»; si la última lectura no es de hoy, con la fecha.
+  const day = (ms: number | string) => new Date(ms).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })
+  const since = lastAt ? (day(lastAt) === day(now) ? `las ${formatHour24(lastAt)}` : `el ${formatShortTime(lastAt)}`) : ''
 
   return (
     <div className="space-y-6">
       {stale && (
-        <Alert tone="warn" title="Sensor sin actualización">
-          La última lectura es del {lastAt ? formatDateTime(lastAt) : 'una fecha desconocida'} (hora de
-          Perú): hace más de {SENSOR_STALE_MINUTES} minutos que el sensor no envía datos. Revisa que el
-          equipo tenga energía y conexión.
+        <Alert tone="warn">
+          <span className="font-semibold">Sensor sin actualización desde {since}.</span> Revisa que el kit esté
+          encendido y con WiFi.
         </Alert>
       )}
 
@@ -103,16 +108,17 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
         </div>
         {moisture?.calibrated_value != null ? (
           <>
-            <p className="mt-2 flex items-baseline gap-3 font-mono text-ambar">
+            <p className={`mt-2 flex items-baseline gap-3 font-mono text-ambar ${stale ? 'opacity-40' : ''}`}>
               <span className="text-[clamp(88px,16vw,128px)] font-medium leading-none tracking-[-0.04em]">
                 {formatNumber(moisture.calibrated_value, 0)}
               </span>
               <span className="text-3xl text-muted">%</span>
             </p>
-            <div className="mt-4">
+            <div className={`mt-4 ${stale ? 'opacity-40' : ''}`}>
               <Gauge value={moisture.calibrated_value} />
             </div>
             <p className="mt-1 text-muted">Porcentaje según la calibración seco/húmedo del sensor.</p>
+            <Freshness recordedAt={moisture.recorded_at} now={now} />
           </>
         ) : (
           <p className="mt-2 font-mono text-3xl text-muted">Sin dato</p>
@@ -126,10 +132,12 @@ export function SensorCards({ readings }: { readings: SensorReading[] }) {
         source="sensor"
         sourceDetail={SOURCE_DETAIL}
         badge={<QualityNotice reading={temp} />}
+        dim={stale}
+        extra={temp ? <Freshness recordedAt={temp.recorded_at} now={now} /> : undefined}
       />
 
       <div className="border-t border-line pt-4">
-        <Eyebrow>Última lectura</Eyebrow>
+        <Eyebrow>Fecha y hora de la última lectura</Eyebrow>
         {moisture && temp && moisture.recorded_at !== temp.recorded_at ? (
           <div className="mt-1 font-mono text-base text-ink">
             <p>Humedad: {formatDateTime(moisture.recorded_at)}</p>
