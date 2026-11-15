@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlternativeCard } from '../components/rotations/AlternativeCard'
 import { ContextPanel } from '../components/rotations/ContextPanel'
 import { InsufficientPanel } from '../components/rotations/InsufficientPanel'
+import { weightChanges, weightPct } from '../components/rotations/criteria'
 import { assumptionValue, cropName, fieldLabel } from '../components/rotations/labels'
 import { SourcesList } from '../components/rotations/SourcesList'
 import { Alert } from '../components/ui/Alert'
@@ -16,7 +17,7 @@ import { SourceBadge } from '../components/ui/SourceBadge'
 import { usePlot } from '../hooks/usePlot'
 import { useRecommendation } from '../hooks/useRecommendation'
 import { RECOMMENDATIONS_ARE_MOCK } from '../services/api'
-import type { Plot, Priority, RecommendationRequest, SourceRef } from '../types/api'
+import type { Plot, Priority, RecommendationRequest, RecommendationResponse, SourceRef } from '../types/api'
 import { hasPlaceholders, isFormatMockup } from '../utils/placeholders'
 
 const HORIZON_DAYS = 365 // hasta 12 meses, dos campañas
@@ -57,6 +58,23 @@ export function RotationsPage() {
   const plotId = plot?.id
   useEffect(() => setOverride(null), [plotId])
 
+  // Respuesta que se mostraba con la otra prioridad: sirve para resaltar qué pesos cambiaron.
+  type Shown = { priority: Priority; data: RecommendationResponse }
+  const lastShown = useRef<Shown | null>(null)
+  const [previous, setPrevious] = useState<Shown | null>(null)
+  useEffect(() => {
+    lastShown.current = null
+    setPrevious(null)
+  }, [plotId])
+  useEffect(() => {
+    const d = rec.data
+    if (!d) return
+    const last = lastShown.current
+    if (last && last.priority !== priority) setPrevious(last)
+    lastShown.current = { priority, data: d }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rec.data])
+
   useEffect(() => {
     if (!plot || cyclesLoading) return // se espera a conocer la fecha para no calcular dos veces
     void run(buildRequest(plot, priority, startOn))
@@ -93,6 +111,14 @@ export function RotationsPage() {
             campaigns: a.campaigns.map((c) => ({ ...c, crop: cropName(c.crop, crops) })),
           }))
       : []
+  // Criterios de cada alternativa con la prioridad anterior (solo si es otra prioridad que la actual).
+  const previousAlternatives =
+    previous && previous.priority !== priority && previous.data.status === 'ok' ? previous.data.alternatives : []
+  const previousCriteriaOf = (id: string) => previousAlternatives.find((p) => p.id === id)?.criteria
+  const priorityLabel = PRIORITIES.find((p) => p.value === priority)?.label ?? ''
+  const changedWeights = alternatives[0]
+    ? weightChanges(previousCriteriaOf(alternatives[0].id), alternatives[0].criteria)
+    : []
   const demo = data?.mode === 'escenario_demostracion'
   const assumptions = (data?.context?.assumptions ?? []).filter((a) => !hasPlaceholders(a))
   const contextHasPlaceholders = data?.context ? hasPlaceholders(data.context) : false
@@ -212,6 +238,25 @@ export function RotationsPage() {
         </div>
       )}
 
+      {/* Al cambiar la prioridad: qué criterios pasaron a pesar distinto en el total. */}
+      {!rec.loading && changedWeights.length > 0 && (
+        <div className="mb-6 border-l-4 border-lima bg-panel p-4">
+          <p className="text-ink">
+            Con «{priorityLabel}» cambió cuánto pesa cada criterio en el total:{' '}
+            {changedWeights.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && '; '}
+                <span className="font-medium">{c.label}</span>{' '}
+                <span className="font-mono text-base">
+                  {weightPct(c.from)} → {weightPct(c.to)}
+                </span>
+              </span>
+            ))}
+            .
+          </p>
+        </div>
+      )}
+
       {!rec.loading && alternatives.length > 0 && (
         <PanelGrid className="lg:grid-cols-2">
           {alternatives.map((a, i) => (
@@ -221,6 +266,8 @@ export function RotationsPage() {
               letter={LETTERS[i] ?? String(i + 1)}
               selected={a.id === data?.selected_id}
               assumedStart={missingStart}
+              previousCriteria={previousCriteriaOf(a.id)}
+              example={RECOMMENDATIONS_ARE_MOCK}
             />
           ))}
         </PanelGrid>

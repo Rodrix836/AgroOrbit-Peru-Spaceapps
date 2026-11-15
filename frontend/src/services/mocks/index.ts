@@ -175,6 +175,11 @@ export function mockNasa(range?: { from: string; to: string }): NasaObservation[
         unit,
         source: 'NASA POWER',
       })
+    if (MOCK_SCENARIO !== 'sin_extras') {
+      // Humedad del suelo según NASA (modelo): fracción de saturación 0 a 1, unidad "1".
+      add('GWETROOT', r2(0.45 + 0.07 * Math.sin(i / 23)), '1')
+      add('GWETTOP', r2(Math.min(0.95, Math.max(0.05, 0.32 + 0.12 * Math.sin(i / 11) + 0.06 * season(i)))), '1')
+    }
     add('PRECTOTCORR', i % 9 === 0 ? r2(3 + 6 * Math.max(0, season(i))) : 0, 'mm/day')
     add('T2M', r2(25 + 3 * season(i) + 0.8 * Math.sin(i / 5)), 'C')
   }
@@ -341,7 +346,11 @@ export function mockRecommendation(req: RecommendationRequest): RecommendationRe
     return recommendationFormatMockup as RecommendationResponse
   }
   const base = req.priority === 'improve_soil' ? recommendationSoil : recommendationSave
-  const demo = RECOMMENDATION_SCENARIO === 'demo_mode'
+  const demo = RECOMMENDATION_SCENARIO === 'demo_mode' || RECOMMENDATION_SCENARIO === 'sin_extras'
+  // Sin extras: las alternativas llegan sin desglose por criterio, como hoy.
+  const alternatives = (base.alternatives as RecommendationResponse['alternatives']).map((a) =>
+    RECOMMENDATION_SCENARIO === 'sin_extras' ? { ...a, criteria: undefined } : a,
+  )
   return {
     status: 'ok',
     mode: demo ? 'escenario_demostracion' : 'evaluacion',
@@ -351,6 +360,6 @@ export function mockRecommendation(req: RecommendationRequest): RecommendationRe
     context: demo ? CONTEXT_DEMO : CONTEXT_OK,
     missing: [],
     selected_id: base.selected_id,
-    alternatives: base.alternatives as RecommendationResponse['alternatives'],
+    alternatives,
   }
 }

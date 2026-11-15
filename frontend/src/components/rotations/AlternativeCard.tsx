@@ -1,8 +1,9 @@
-import type { Alternative } from '../../types/api'
+import type { Alternative, Criteria } from '../../types/api'
 import { formatDay } from '../../utils/format'
 import { Eyebrow } from '../ui/Eyebrow'
 import { labelClass } from '../ui/styles'
 import { CampaignCalendar } from './CampaignCalendar'
+import { CriteriaBreakdown } from './CriteriaBreakdown'
 import { SourcesList } from './SourcesList'
 
 interface Props {
@@ -13,9 +14,20 @@ interface Props {
   letter: string
   /** true = la fecha de inicio no está guardada: el calendario usa una fecha supuesta y se avisa. */
   assumedStart?: boolean
+  /** Criterios de esta misma alternativa con la otra prioridad (para resaltar qué pesos cambiaron). */
+  previousCriteria?: Criteria
+  /** true = el desglose por criterio es de ejemplo. */
+  example?: boolean
 }
 
-export function AlternativeCard({ alternative: a, selected, letter, assumedStart = false }: Props) {
+export function AlternativeCard({
+  alternative: a,
+  selected,
+  letter,
+  assumedStart = false,
+  previousCriteria,
+  example = false,
+}: Props) {
   const sequence = a.campaigns.map((c) => c.crop).join(' → ')
   const score = Math.max(0, Math.min(100, a.score))
   const firstStart = a.campaigns.map((c) => c.starts_on).sort()[0]
@@ -51,6 +63,9 @@ export function AlternativeCard({ alternative: a, selected, letter, assumedStart
         Es un criterio de comparación del prototipo. No es la probabilidad de éxito ni el rendimiento
         esperado.
       </p>
+
+      {/* Solo si la API trae `criteria`. */}
+      <CriteriaBreakdown criteria={a.criteria} previous={previousCriteria} selected={selected} example={example} />
 
       <Eyebrow className="mb-3 mt-8">Calendario · dos campañas</Eyebrow>
       {assumedStart && firstStart && (

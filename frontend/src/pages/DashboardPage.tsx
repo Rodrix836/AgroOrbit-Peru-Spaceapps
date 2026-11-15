@@ -1,6 +1,7 @@
 import { NasaCards } from '../components/nasa/NasaCards'
 import { NasaChart } from '../components/nasa/NasaChart'
 import { NasaPeriodSelector } from '../components/nasa/NasaPeriodSelector'
+import { NasaSoilMoisture } from '../components/nasa/NasaSoilMoisture'
 import { PlotSummary } from '../components/plot/PlotSummary'
 import { ReadingsChart } from '../components/sensors/ReadingsChart'
 import { SensorCards } from '../components/sensors/SensorCards'
@@ -14,6 +15,7 @@ import { PanelGrid } from '../components/ui/PanelGrid'
 import { SectionCard } from '../components/ui/SectionCard'
 import { useNasa } from '../hooks/useNasa'
 import { usePlot } from '../hooks/usePlot'
+import { USE_MOCKS } from '../services/api'
 import { SENSOR_REFRESH_MS, useReadings } from '../hooks/useReadings'
 
 /** 02 / Diagnóstico: sensor ESP32 (ámbar) y contexto NASA POWER (azul), siempre separados. */
@@ -21,6 +23,9 @@ export function DashboardPage() {
   const { plot, loading: plotLoading, error: plotError, reload } = usePlot()
   const readings = useReadings(plot?.id ?? null)
   const nasa = useNasa(plot?.id ?? null)
+  // La última lectura de humedad del sensor, para avisar si es de un kit de prueba.
+  const lastMoisture = [...(readings.data ?? [])].reverse().find((r) => r.sensor_type === 'soil_moisture')
+  const sensorIsTest = lastMoisture?.quality_flag === 'test'
 
   if (plotLoading) return <Loading label="Cargando tu parcela…" />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
@@ -95,6 +100,13 @@ export function DashboardPage() {
             <>
               <NasaCards observations={nasa.data} view={nasa.view} />
               <NasaChart observations={nasa.data} view={nasa.view} />
+              {/* Solo si la API trae GWETTOP o GWETROOT. Aparte del sensor: su propia escala, unidad y fuente. */}
+              <NasaSoilMoisture
+                observations={nasa.data}
+                view={nasa.view}
+                sensorIsTest={sensorIsTest}
+                example={USE_MOCKS}
+              />
             </>
           )}
         </SectionCard>

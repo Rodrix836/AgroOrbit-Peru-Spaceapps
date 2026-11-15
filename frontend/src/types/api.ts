@@ -151,8 +151,11 @@ export interface SensorReading {
 
 // ---------- NASA POWER ----------
 
-/** Variables que guarda la API hoy. */
-export type NasaVariable = 'T2M' | 'PRECTOTCORR'
+/**
+ * Variables de NASA POWER. T2M y PRECTOTCORR llegan hoy. GWETTOP y GWETROOT (humedad del suelo según un
+ * modelo de NASA, unidad "1", valores de 0 a 1) podrán llegar: son opcionales y, si no vienen, no se muestran.
+ */
+export type NasaVariable = 'T2M' | 'PRECTOTCORR' | 'GWETTOP' | 'GWETROOT'
 
 export interface NasaObservation {
   id: string
@@ -256,11 +259,24 @@ export interface SourceRef {
   url?: string
 }
 
+export type CriterionId = 'clima' | 'agua' | 'suelo' | 'diversificacion'
+
+/** Puntaje (0 a 100) de un criterio y el peso (0 a 1) que tiene en el total. */
+export interface CriterionScore {
+  score: number
+  weight: number
+}
+
+/** Desglose por criterio. Opcional (PENDIENTE BACKEND): si no viene, no se muestra. */
+export type Criteria = Partial<Record<CriterionId, CriterionScore>>
+
 export interface Alternative {
   id: string
   rank: number
   /** Criterio del prototipo (0-100). No es probabilidad de éxito ni rendimiento. */
   score: number
+  /** Opcional: puntaje y peso de cada criterio (clima, agua, suelo, diversificación). */
+  criteria?: Criteria
   campaigns: Campaign[]
   reasons: string[]
   limitations: string[]

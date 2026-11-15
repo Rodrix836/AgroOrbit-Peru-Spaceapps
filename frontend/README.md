@@ -42,7 +42,7 @@ Para el sensor y NASA pon `VITE_USE_MOCKS=true`. En cualquier caso cambia `VITE_
 
 | `VITE_MOCK_SCENARIO` | Qué ver | Dónde |
 |---|---|---|
-| `normal` | Sensor al día (última lectura de hace 2 min), clima NASA con los últimos 4 días «sin dato» y un hueco suelto, recomendación de ejemplo | Diagnóstico y Rotaciones |
+| `normal` | (Los escenarios por defecto incluyen los extras de ejemplo: `GWETTOP`/`GWETROOT` y `criteria`, rotulados «Datos de ejemplo»). Sensor al día (última lectura de hace 2 min), clima NASA con los últimos 4 días «sin dato» y un hueco suelto, recomendación de ejemplo | Diagnóstico y Rotaciones |
 | `sensor_stale` | Aviso **Sensor sin actualización** con la hora de la última lectura (hace 3 h; el umbral es `SENSOR_STALE_MINUTES = 15`) | Diagnóstico → Suelo |
 | `sensor_empty` | Estado vacío **Aún no hay lecturas del sensor** | Diagnóstico → Suelo |
 | `nasa_down` | Aviso **NASA no disponible** (503 `nasa_power_unavailable`) y, debajo, los datos guardados antiguos con su fecha | Diagnóstico → Clima |
@@ -50,6 +50,7 @@ Para el sensor y NASA pon `VITE_USE_MOCKS=true`. En cualquier caso cambia `VITE_
 | `normal` (Rotaciones) | `status: ok` + `mode: evaluacion`: bloque «Con qué datos se calculó» (NASA como histórico, sensor de prueba no usado como evidencia), dos alternativas de ejemplo con nombres de cultivo | Rotaciones |
 | `insufficient_data` | Ejemplo real del PR #7: **Todavía no podemos comparar rotaciones**, sin tarjetas ni puntajes, con lo que falta agrupado en datos de la parcela (con enlace a Parcela), requisitos de cultivos y clima | Rotaciones |
 | `format_mockup` | Ejemplo del PR #7 tal cual, con marcadores `<...>` y puntajes 0: **Maqueta de formato: aún no hay resultado del motor** (plan B), sin puntajes ni calendario | Rotaciones |
+| `sin_extras` | Como hoy, sin los extras opcionales: NASA **sin** `GWETTOP`/`GWETROOT` (no aparece el bloque de humedad del suelo según NASA) y alternativas **sin** `criteria` (no aparece el desglose por criterio). Sirve para comprobar que la pantalla no falla cuando la API no los trae | Diagnóstico y Rotaciones |
 | `sensor_test` | Etiqueta ámbar **DATO DE PRUEBA** junto a las lecturas y en el gráfico (`quality_flag = test`) | Diagnóstico → Suelo |
 | `sensor_dry` | Humedad en 0 % (`clamped_dry`): la barra queda vacía y una marca fina en el 0 muestra que es un valor, no «sin dato» | Diagnóstico → Suelo |
 | `sensor_suspect` | Aviso **Lectura dudosa** en la humedad (`quality_flag = suspect`) | Diagnóstico → Suelo |
@@ -65,6 +66,8 @@ En Rotaciones el bloque «Con qué datos se calculó» aparece en todos los esce
 - NASA POWER: al abrir el panel se hace `POST /api/plots/{id}/nasa/power` (últimos 90 días) y luego `GET .../nasa/observations`. Solo se muestran `T2M` y `PRECTOTCORR`. `value: null` es «sin dato»: queda un hueco en el gráfico, no se convierte en 0 ni se interpola. Los últimos 3 o 4 días suelen faltar porque POWER publica con retraso.
 - Período de NASA POWER en Diagnóstico: `GET .../nasa/observations?from=&to=` con selector «90 días» (por defecto), «1 año» y «2 años». Cada período termina hoy (hora de Perú) y cuenta hoy: 90 días = el mismo rango que `POST /nasa/power` con `{}`. Con 1 y 2 años la lluvia se suma por mes y la temperatura se promedia por mes (detalle con los días con dato de cada mes); un mes sin ningún dato queda vacío, no en 0. «Actualizar clima» hace `POST` y recarga el período elegido; cambiar de período solo vuelve a pedir las observaciones.
 - En Rotaciones, si `context.power.use` es `historico` el texto dice «Histórico de … a …»; la «Lluvia promedio anual» (lluvia total ÷ años del período, solo con períodos de un año o más) es un cálculo del frontend, no un dato de NASA.
+- **Humedad del suelo según NASA (opcional):** si `GET .../nasa/observations` trae `GWETTOP` y/o `GWETROOT` (unidad `"1"`, valores de 0 a 1), Diagnóstico muestra el bloque «Humedad del suelo según NASA (modelo)» en la columna NASA, con el último valor como fracción y como % de saturación y un gráfico por día del período elegido (los días sin dato quedan vacíos). Va siempre aparte de la humedad del sensor ESP32: otra escala, otra unidad y otra fuente, nunca en el mismo gráfico ni en la misma cifra. Si la API no trae esas variables, el bloque no aparece.
+- **Desglose por criterio (opcional):** si una alternativa trae `criteria` (`clima`, `agua`, `suelo`, `diversificacion`, cada uno con `score` 0–100 y `weight` 0–1), la tarjeta muestra cuatro barras con su puntaje y «pesa N %». Al cambiar la prioridad se resaltan los criterios que cambiaron de peso. Son criterios del prototipo, no una probabilidad de éxito. Sin `criteria`, no se muestra el desglose.
 - La API entrega las unidades de POWER como `C` y `mm/day`; solo se convierten a `°C` y `mm/día` para mostrarlas.
 - Horas en hora de Perú (UTC-5). Las fechas de POWER son días en hora solar local (LST); los sensores van en UTC.
 
