@@ -8,7 +8,7 @@ Prototipo de apoyo a decisiones para la rotación de cultivos, hecho para el NAS
 
 | Parte | Publicado en | Sale de |
 |---|---|---|
-| **Aplicación web (incluye el mapa)** | https://agroorbit-three.vercel.app | Carpeta [`frontend/`](frontend/) de la rama **`frontend`** (commit `9415e49`), desplegada en Vercel. La misma versión está integrada en `main`. |
+| **Aplicación web (incluye el mapa)** | https://agroorbit-three.vercel.app | Carpeta [`frontend/`](frontend/) de la rama **`frontend`** (commit `69df065`, comprobado el 15/11/2026), desplegada en Vercel. La misma versión está integrada en `main`. |
 | **API** | https://agroorbit-api.onrender.com (`/health`, `/docs`) | Carpeta [`backend/`](backend/) de la rama **`main`**, desplegada en Render ([`render.yaml`](render.yaml)) |
 | **Base de datos y autenticación** | Supabase | Migraciones en [`supabase/migrations/`](supabase/migrations/) |
 | **Firmware del sensor** | Kit ESP32 | [`firmware/agroorbit_esp32/`](firmware/agroorbit_esp32/) (guía en [`firmware/README.md`](firmware/README.md)) |
