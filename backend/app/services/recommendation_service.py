@@ -47,6 +47,7 @@ def _power_context(session: Session, plot: Plot,
         NasaObservation.plot_id == plot.id,
         NasaObservation.latitude == plot.latitude,
         NasaObservation.longitude == plot.longitude,
+        NasaObservation.variable.in_(("T2M", "PRECTOTCORR")),
     )
     if start_on is not None:
         query = query.where(NasaObservation.observed_on < start_on)

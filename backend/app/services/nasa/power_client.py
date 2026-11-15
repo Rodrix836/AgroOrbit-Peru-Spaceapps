@@ -8,16 +8,16 @@ logger = logging.getLogger("agroorbit.nasa")
 NASA_POWER_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
 
 
-def obtener_datos_nasa(latitud, longitud, fecha_inicio, fecha_fin):
+def obtener_datos_nasa(latitud, longitud, fecha_inicio, fecha_fin, variables=("T2M", "PRECTOTCORR")):
     """
     Consulta datos climáticos diarios de NASA POWER.
 
-    T2M: Temperatura del aire a 2 metros.
-    PRECTOTCORR: Precipitación corregida.
+    Por defecto, T2M (temperatura del aire a 2 m) y PRECTOTCORR (precipitación corregida).
+    La importación a nasa_observation pide las 9 variables de NASA_UNITS.
     """
 
     parametros = {
-        "parameters": "T2M,PRECTOTCORR",
+        "parameters": ",".join(variables),
         "community": "AG",
         "longitude": longitud,
         "latitude": latitud,

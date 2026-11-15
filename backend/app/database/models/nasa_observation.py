@@ -1,6 +1,7 @@
 """Tabla public.nasa_observation: un valor diario de NASA POWER por parcela y variable.
 
-Refleja supabase/migrations/20261114204035_create_nasa_observation.sql (no la reemplaza).
+Refleja supabase/migrations/20261114204035_create_nasa_observation.sql y
+20261115160000_nasa_observation_more_variables.sql (no las reemplaza).
 """
 
 from datetime import date, datetime
@@ -24,19 +25,55 @@ from app.database.models import Base
 
 NASA_SOURCE = "NASA POWER"
 NASA_TIME_STANDARD = "LST"
-NASA_UNITS = {"T2M": "C", "PRECTOTCORR": "mm/day"}
+# Variable de POWER -> unidad que declara POWER (se verifica al importar).
+NASA_UNITS = {
+    "T2M": "C",
+    "PRECTOTCORR": "mm/day",
+    "T2M_MAX": "C",
+    "T2M_MIN": "C",
+    "RH2M": "%",
+    "WS2M": "m/s",
+    "ALLSKY_SFC_SW_DWN": "MJ/m^2/day",
+    "GWETTOP": "1",
+    "GWETROOT": "1",
+}
+# Rango válido por unidad (mismo criterio que el check de la tabla): (mínimo, máximo, inclusivo).
+NASA_UNIT_RANGES = {
+    "C": (-900, 900, False),
+    "mm/day": (0, None, True),
+    "%": (0, 100, True),
+    "m/s": (0, None, True),
+    "MJ/m^2/day": (0, None, True),
+    "1": (0, 1, True),
+}
+
+
+def nasa_value_is_valid(variable: str, value: float) -> bool:
+    low, high, inclusive = NASA_UNIT_RANGES[NASA_UNITS[variable]]
+    if (value < low) if inclusive else (value <= low):
+        return False
+    return high is None or (value <= high if inclusive else value < high)
+
+
+_VARIABLES_SQL = ", ".join(f"'{v}'" for v in NASA_UNITS)
+_VALID_MEASUREMENT_SQL = (
+    "(variable in ('T2M', 'T2M_MAX', 'T2M_MIN') and unit = 'C'"
+    " and (value is null or (value > -900 and value < 900)))"
+    " or (variable = 'PRECTOTCORR' and unit = 'mm/day' and (value is null or value >= 0))"
+    " or (variable = 'RH2M' and unit = '%' and (value is null or (value >= 0 and value <= 100)))"
+    " or (variable = 'WS2M' and unit = 'm/s' and (value is null or value >= 0))"
+    " or (variable = 'ALLSKY_SFC_SW_DWN' and unit = 'MJ/m^2/day' and (value is null or value >= 0))"
+    " or (variable in ('GWETTOP', 'GWETROOT') and unit = '1'"
+    " and (value is null or (value >= 0 and value <= 1)))"
+)
 
 
 class NasaObservation(Base):
     __tablename__ = "nasa_observation"
     __table_args__ = (
         UniqueConstraint("plot_id", "variable", "observed_on", name="nasa_observation_plot_variable_date_key"),
-        CheckConstraint("variable in ('T2M', 'PRECTOTCORR')", name="nasa_observation_variable_check"),
-        CheckConstraint(
-            "(variable = 'T2M' and unit = 'C' and (value is null or (value > -900 and value < 900)))"
-            " or (variable = 'PRECTOTCORR' and unit = 'mm/day' and (value is null or value >= 0))",
-            name="nasa_observation_valid_measurement",
-        ),
+        CheckConstraint(f"variable in ({_VARIABLES_SQL})", name="nasa_observation_variable_check"),
+        CheckConstraint(_VALID_MEASUREMENT_SQL, name="nasa_observation_valid_measurement"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
