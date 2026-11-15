@@ -207,10 +207,10 @@ def recommend_rotations(plot, request, context, *, climate_days: list[dict]):
             [Alternative(**a, criteria=_criteria(evaluations[a["id"]], weights)) for a in alternatives])
 
 
-def _criteria(evaluation: dict, weights: dict) -> list[CriterionScore]:
+def _criteria(evaluation: dict, weights: dict) -> dict[str, CriterionScore]:
     """Desglose por criterio con las mismas puntuaciones y pesos que usó el motor para ordenar."""
-    return [CriterionScore(id=c, score=evaluation[c]["score"], weight=weights[c],
-                           contribution=round(evaluation[c]["score"] * weights[c], 2)) for c in CRITERIOS]
+    return {c: CriterionScore(score=evaluation[c]["score"], weight=weights[c],
+                              contribution=round(evaluation[c]["score"] * weights[c], 2)) for c in CRITERIOS}
 
 
 recommend_rotations.version = f"motor-{engine.motor.version}"

@@ -257,7 +257,7 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 | `selected_id` | texto o `null` | `null` con `insufficient_data` |
 | `alternatives` | lista | **Vacía con `insufficient_data`** (sin `score`) |
 | `alternatives[].id`, `rank`, `score` | texto, entero, 0–100 | `score` según el criterio del motor |
-| `alternatives[].criteria` | `[{ id, score, weight, contribution }]` | Desglose de `score` para mostrar compensaciones. `id`: `clima`, `agua`, `suelo`, `diversificacion` (siempre en ese orden). `score` 0–100 del criterio; `weight` 0–1 según la `priority` pedida (suman 1); `contribution = score × weight` (2 decimales). La suma de `contribution` es `score` salvo redondeo |
+| `alternatives[].criteria` | `{ clima, agua, suelo, diversificacion }`, cada uno `{ score, weight, contribution }` | Desglose de `score` para mostrar compensaciones (coincide con `Criteria` de `frontend/src/types/api.ts`). `score` 0–100 del criterio; `weight` 0–1 según la `priority` pedida (los cuatro suman 1); `contribution = score × weight` (2 decimales), la suma de las cuatro es `score` salvo redondeo. Con el motor vienen siempre los cuatro; `{}` solo si una alternativa no trae desglose |
 | `alternatives[].campaigns` | `[{ crop, starts_on, ends_on }]` | `crop` = id de `GET /api/crops` (`maiz`, `frijol_caupi`, `camote`: fijos para la demo; están en la tabla `crop`) |
 | `alternatives[].reasons`, `limitations` | texto[] | |
 | `alternatives[].sources` | `[{ title, url }]` | Fuente de cada requisito usado |
@@ -335,20 +335,16 @@ Son las rutas que ya llama el frontend (`refreshNasaPower` y `getNasaObservation
 
 ### `POST /api/plots/{plot_id}/nasa/power` → 200
 
-Consulta POWER diario (**9 variables**, `community=AG`, `time-standard=LST`) en las coordenadas guardadas de la parcela y lo guarda en `public.nasa_observation`. Se puede repetir: actualiza sin duplicar.
+Consulta POWER diario (**4 variables**, `community=AG`, `time-standard=LST`) en las coordenadas guardadas de la parcela y lo guarda en `public.nasa_observation`. Se puede repetir: actualiza sin duplicar.
 
 | Variable | Unidad de POWER | Qué es | Rango válido |
 | --- | --- | --- | --- |
 | `T2M` | `C` | Temperatura media del aire a 2 m | -900 < v < 900 |
-| `T2M_MAX`, `T2M_MIN` | `C` | Temperatura máxima / mínima diaria a 2 m | -900 < v < 900 |
-| `PRECTOTCORR` | `mm/day` | Precipitación corregida | ≥ 0 |
-| `RH2M` | `%` | Humedad relativa a 2 m | 0–100 |
-| `WS2M` | `m/s` | Viento a 2 m | ≥ 0 |
-| `ALLSKY_SFC_SW_DWN` | `MJ/m^2/day` | Radiación solar en superficie | ≥ 0 |
+| `PRECTOTCORR` | `mm/day` | Precipitación corregida (la **única** que cuenta como lluvia) | ≥ 0 |
 | `GWETTOP` | `1` | Humedad del suelo superficial (~5 cm), fracción de saturación | 0–1 |
 | `GWETROOT` | `1` | Humedad del suelo en la zona de raíces, fracción de saturación | 0–1 |
 
-Requiere la migración `20261115160000_nasa_observation_more_variables.sql` (Elías). Para el histórico de 10 años: `{ "start": "2016-01-01" }` (≈ 36 000 filas, unos segundos).
+Son las variables que admite la tabla (migración `20261115161101_allow_nasa_soil_wetness.sql`). `T2M_MAX`, `T2M_MIN`, `RH2M`, `WS2M` y `ALLSKY_SFC_SW_DWN` (entradas de ETo FAO-56) quedan pendientes de una migración que las admita. Para el histórico de 10 años: `{ "start": "2016-01-01" }` (≈ 16 000 filas).
 
 Cuerpo opcional (`{}` o sin cuerpo = **últimos 90 días hasta hoy**):
 
@@ -371,11 +367,10 @@ Cuerpo opcional (`{}` o sin cuerpo = **últimos 90 días hasta hoy**):
   "end": "2026-11-14",
   "source": "NASA POWER",
   "time_standard": "LST",
-  "variables": ["T2M", "PRECTOTCORR", "T2M_MAX", "T2M_MIN", "RH2M", "WS2M", "ALLSKY_SFC_SW_DWN", "GWETTOP", "GWETROOT"],
-  "unidades": { "T2M": "C", "PRECTOTCORR": "mm/day", "T2M_MAX": "C", "T2M_MIN": "C", "RH2M": "%", "WS2M": "m/s",
-                "ALLSKY_SFC_SW_DWN": "MJ/m^2/day", "GWETTOP": "1", "GWETROOT": "1" },
+  "variables": ["T2M", "PRECTOTCORR", "GWETTOP", "GWETROOT"],
+  "unidades": { "T2M": "C", "PRECTOTCORR": "mm/day", "GWETTOP": "1", "GWETROOT": "1" },
   "dias": 90,
-  "filas_guardadas": 810,
+  "filas_guardadas": 360,
   "valores_faltantes": 6,
   "fetched_at": "2026-11-14T21:10:00Z"
 }
@@ -387,7 +382,7 @@ Cuerpo opcional (`{}` o sin cuerpo = **últimos 90 días hasta hoy**):
 |---|---|---|
 | `from` | fecha `AAAA-MM-DD` (LST) | sin límite |
 | `to` | fecha `AAAA-MM-DD` (LST) | sin límite |
-| `variable` | una de las 9 variables de la tabla anterior | todas |
+| `variable` | `T2M`, `PRECTOTCORR`, `GWETTOP` o `GWETROOT` | todas |
 
 Devuelve las observaciones guardadas **del punto actual** de la parcela, ordenadas por `observed_on` y `variable`. Coincide con `NasaObservation` de `frontend/src/types/api.ts`:
 
@@ -399,7 +394,7 @@ Devuelve las observaciones guardadas **del punto actual** de la parcela, ordenad
 ]
 ```
 
-> **Para Luis:** las unidades llegan como las da POWER (`C`, `mm/day`), no como en los mocks (`°C`, `mm/día`). Conviértelas solo para mostrarlas. Se guardan las 9 variables (`RH2M` en `%`, `WS2M` en `m/s`, `ALLSKY_SFC_SW_DWN` en `MJ/m^2/day`, `GWETTOP`/`GWETROOT` como fracción `1`, de 0 a 1). Con 10 años, filtra por `variable` y por `from`/`to` para no traer ~36 000 filas. **GWET no es la humedad del sensor**: es una fracción de saturación de una celda de ~50 km; muéstrala separada del % del HW-390, con su unidad y fuente. `from` > `to` → **400** `invalid_date_range`.
+> **Para Luis:** las unidades llegan como las da POWER (`C`, `mm/day`), no como en los mocks (`°C`, `mm/día`). Conviértelas solo para mostrarlas. Se guardan 4 variables (`GWETTOP`/`GWETROOT` como fracción `1`, de 0 a 1). Con 10 años, filtra por `variable` y por `from`/`to` para no traer ~16 000 filas. La lluvia es solo `PRECTOTCORR`. **GWET no es la humedad del sensor**: es una fracción de saturación de una celda de ~50 km; muéstrala separada del % del HW-390, con su unidad y fuente. `from` > `to` → **400** `invalid_date_range`.
 
 ## Dispositivos
 

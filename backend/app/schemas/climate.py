@@ -46,9 +46,7 @@ class PlotClimateRead(BaseModel):
 
 # --- Persistencia en public.nasa_observation --------------------------------------------
 
-NasaVariable = Literal[
-    "T2M", "PRECTOTCORR", "T2M_MAX", "T2M_MIN", "RH2M", "WS2M", "ALLSKY_SFC_SW_DWN", "GWETTOP", "GWETROOT",
-]
+NasaVariable = Literal["T2M", "PRECTOTCORR", "GWETTOP", "GWETROOT"]
 
 
 class NasaImportRequest(BaseModel):
