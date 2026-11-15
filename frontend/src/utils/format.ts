@@ -54,6 +54,11 @@ export function formatNumber(value: number, digits = 1): string {
   })
 }
 
+/** Número con siempre `digits` decimales (26 → «26.0»), para que los rangos se lean parejos. */
+export function formatFixed(value: number, digits = 1): string {
+  return value.toLocaleString('es-PE', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+}
+
 /** Pasado este tiempo sin lecturas nuevas, el sensor se considera "sin actualización". */
 export const SENSOR_STALE_MINUTES = 2 // el kit envía cada 10 s
 export function isStale(iso: string, now = Date.now(), minutes = SENSOR_STALE_MINUTES): boolean {

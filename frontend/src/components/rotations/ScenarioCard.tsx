@@ -1,7 +1,8 @@
 import type { Criteria, Crop } from '../../types/api'
 import type { ScenarioCardModel } from '../../types/scenario'
-import { formatDay, formatNumber } from '../../utils/format'
+import { formatDay, formatFixed, formatNumber } from '../../utils/format'
 import { daysBetween } from '../../utils/period'
+import type { CampaignStats } from '../../utils/windowStats'
 import { Eyebrow } from '../ui/Eyebrow'
 import { CampaignCalendar } from './CampaignCalendar'
 import { CriteriaBreakdown } from './CriteriaBreakdown'
@@ -9,6 +10,33 @@ import { hasCriteria } from './criteria'
 import { cropName } from './labels'
 import { SourcesList } from './SourcesList'
 import { displaySources, isSynthetic, stripSynthetic } from './synthetic'
+
+/** «En estas fechas, en N años: lluvia X–Y mm (mediana Z) · temperatura X–Y °C» (histórico real de NASA POWER). */
+function WindowLine({ stats }: { stats: CampaignStats }) {
+  const { rain, temp } = stats
+  const f0 = (v: number | null) => formatNumber(v ?? 0, 0)
+  const f1 = (v: number | null) => formatFixed(v ?? 0, 1)
+  const NO = 'Histórico insuficiente para estas fechas'
+  let body: string
+  if (!rain.sufficient && !temp.sufficient) {
+    body = NO
+  } else {
+    const sameYears = rain.sufficient && temp.sufficient && rain.n === temp.n
+    const rainTxt = rain.sufficient
+      ? `lluvia ${f0(rain.min)}–${f0(rain.max)} mm (mediana ${f0(rain.median)}${sameYears ? '' : `, ${rain.n} años`})`
+      : `lluvia: ${NO.toLowerCase()}`
+    const tempTxt = temp.sufficient
+      ? `temperatura ${f1(temp.min)}–${f1(temp.max)} °C${sameYears ? '' : ` (${temp.n} años)`}`
+      : `temperatura: ${NO.toLowerCase()}`
+    body = `${sameYears ? `En estas fechas, en ${rain.n} años: ` : 'En estas fechas: '}${rainTxt} · ${tempTxt}`
+  }
+  return (
+    <p className="mt-1 font-mono text-base text-cielo">
+      {body}
+      <span className="text-muted"> · NASA POWER</span>
+    </p>
+  )
+}
 
 /**
  * Una secuencia de dos campañas del escenario de demostración: nombre y descripción de la estrategia, campañas con
@@ -22,6 +50,7 @@ export function ScenarioCard({
   crops,
   syntheticNote,
   previousCriteria,
+  windowStats,
 }: {
   card: ScenarioCardModel
   crops: Crop[]
@@ -29,6 +58,8 @@ export function ScenarioCard({
   syntheticNote?: string
   /** Criterios de esta alternativa con la otra prioridad (para resaltar qué pesos de prueba cambiaron). */
   previousCriteria?: Criteria
+  /** Histórico de NASA POWER en las fechas de cada campaña (mismo orden que las campañas); sin él no se muestra la línea. */
+  windowStats?: CampaignStats[]
 }) {
   const { alt } = card
   const reference = card.role === 'reference'
@@ -71,6 +102,7 @@ export function ScenarioCard({
               {formatDay(c.starts_on)} a {formatDay(c.ends_on)}
             </p>
             <p className="font-mono text-base text-muted">{daysBetween(c.starts_on, c.ends_on)} días</p>
+            {windowStats?.[i] && <WindowLine stats={windowStats[i]} />}
           </li>
         ))}
       </ol>

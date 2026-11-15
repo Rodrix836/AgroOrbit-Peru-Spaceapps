@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { LECTURA_COMPARATIVA, TEXTOS_AGRICULTOR } from '../../data/lectura-milene'
 import { useAsync } from '../../hooks/useAsync'
+import { useClimateHistory } from '../../hooks/useClimateHistory'
 import { usePlot } from '../../hooks/usePlot'
 import { api } from '../../services/api'
 import type { Priority } from '../../types/api'
 import type { ScenarioModel } from '../../types/scenario'
+import { computeTradeoffs } from '../../utils/tradeoffs'
 import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
 import { ErrorBox } from '../ui/ErrorBox'
@@ -18,6 +20,7 @@ import { weightChanges, weightPct } from './criteria'
 import { assumptionValue, fieldLabel } from './labels'
 import { ScenarioCard } from './ScenarioCard'
 import { SourcesList } from './SourcesList'
+import { TradeoffsSection } from './TradeoffsSection'
 
 const PRIORITIES: { value: Priority; label: string }[] = [
   { value: 'save_water', label: 'Ahorrar agua' },
@@ -44,6 +47,13 @@ export function ScenarioView({
   const { crops } = usePlot()
   const q = useAsync(() => api.getDemoScenario(plotId, priority), [plotId, priority])
   const scenario = q.data?.scenario ?? null
+
+  // Histórico real de NASA POWER (10 años): el mismo que usa «Riesgo e incertidumbre»; se descarga una sola vez.
+  const history = useClimateHistory(plotId)
+  const tradeoffs = useMemo(
+    () => (scenario && history.data ? computeTradeoffs(scenario.cards, history.data) : null),
+    [scenario, history.data],
+  )
 
   // El escenario que se veía con la otra prioridad: sirve para mostrar qué pesos de prueba cambiaron.
   type Shown = { priority: Priority; scenario: ScenarioModel }
@@ -186,9 +196,20 @@ export function ScenarioView({
                 crops={crops}
                 syntheticNote={scenario.sintetico.puntuaciones}
                 previousCriteria={previousCriteriaOf(card.id)}
+                windowStats={tradeoffs?.rows.find((r) => r.id === card.id)?.stats.campaigns}
               />
             ))}
           </PanelGrid>
+
+          {/* Compensaciones entre estrategias: cálculo sobre el histórico real de NASA POWER */}
+          <TradeoffsSection
+            cards={scenario.cards}
+            crops={crops}
+            tradeoffs={tradeoffs}
+            loading={history.loading && !history.data}
+            error={history.error}
+            onRetry={history.reload}
+          />
 
           {/* Lectura comparativa sin puntuaciones (Milene) */}
           <section className="mt-6 bg-panel p-6 md:p-8">
