@@ -8,16 +8,21 @@ import type {
   CropCycleUpdate,
   CropCyclesResponse,
   NasaImportResult,
+  NasaVariable,
   NasaObservation,
   Plot,
   PlotInput,
   PlotUpdate,
+  Priority,
   RecommendationRequest,
   RecommendationResponse,
   SensorReading,
   UserProfile,
 } from '../types/api'
+import { DEMO_FILES } from '../data/escenario-valle-chira'
+import type { DemoFile, ScenarioModel } from '../types/scenario'
 import { ApiError } from './apiError'
+import { buildScenario } from './scenarioAdapter'
 import { supabase } from './supabase'
 import {
   MOCK_SCENARIO,
@@ -45,6 +50,15 @@ const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 export const RECOMMENDATIONS_SOURCE = import.meta.env.VITE_RECOMMENDATIONS_SOURCE === 'api' ? 'api' : 'mock'
 /** true = la recomendación que se muestra es de ejemplo (la pantalla lo rotula como DATOS DE EJEMPLO). */
 export const RECOMMENDATIONS_ARE_MOCK = USE_MOCKS || RECOMMENDATIONS_SOURCE !== 'api'
+
+/**
+ * De dónde sale el escenario de demostración de Rotaciones: VITE_SCENARIO_SOURCE=static (por defecto, los dos JSON de
+ * Rodrigo guardados en src/data) | api (lo lee de la API cuando Rodrigo publique la ruta).
+ * Con VITE_USE_MOCKS=true siempre es static.
+ */
+export const SCENARIO_SOURCE = import.meta.env.VITE_SCENARIO_SOURCE === 'api' ? 'api' : 'static'
+/** PENDIENTE BACKEND: ruta SUPUESTA del escenario. Cambiar aquí cuando Rodrigo confirme la real. */
+const DEMO_SCENARIO_PATH = '/api/recommendations/demo'
 
 /** Códigos de error de la API que significan "NASA POWER no está disponible". */
 export const NASA_ERROR_CODES = ['nasa_power_unavailable', 'nasa_power_invalid_response']
@@ -182,12 +196,19 @@ export const api = {
       ? wait(mockReadings())
       : request<SensorReading[]>(`/api/plots/${plotId}/sensors/readings`),
 
-  /** Observaciones guardadas del período (from y to, AAAA-MM-DD, hora solar local de POWER). */
-  getNasaObservations: (plotId: string, range: { from: string; to: string }): Promise<NasaObservation[]> =>
+  /**
+   * Observaciones guardadas de UNA variable en un rango (from y to, AAAA-MM-DD, hora solar local de POWER).
+   * Nunca se piden todas las variables ni sin fechas: con 10 años serían unas 36 000 filas.
+   */
+  getNasaObservations: (
+    plotId: string,
+    range: { from: string; to: string },
+    variable: NasaVariable,
+  ): Promise<NasaObservation[]> =>
     USE_MOCKS
-      ? wait(mockNasa(range))
+      ? wait(mockNasa(range, variable))
       : request<NasaObservation[]>(
-          `/api/plots/${plotId}/nasa/observations?from=${range.from}&to=${range.to}`,
+          `/api/plots/${plotId}/nasa/observations?variable=${variable}&from=${range.from}&to=${range.to}`,
         ),
 
   /** Pide a la API consultar POWER (últimos 90 días) y guardarlo. Luego se leen las observaciones. */
@@ -211,6 +232,35 @@ export const api = {
    * Por defecto usa mocks (DATOS DE EJEMPLO). Cuando exista la ruta: VITE_RECOMMENDATIONS_SOURCE=api
    * y VITE_USE_MOCKS=false, sin tocar código.
    */
+  /**
+   * Escenario de demostración de la prioridad elegida. static: el archivo de esa prioridad (improve_soil = «Mejorar el
+   * suelo», save_water = «Ahorrar agua»). api: lo pide a la API (ruta supuesta, PENDIENTE BACKEND; puede responder
+   * `{ demo, response }` o solo la respuesta normal) y, si falla o no trae alternativas, usa el guardado y lo dice.
+   */
+  getDemoScenario: async (
+    plotId: string,
+    priority: Priority,
+  ): Promise<{ scenario: ScenarioModel; source: 'static' | 'api'; fallback?: string }> => {
+    const fromFile = () => buildScenario(DEMO_FILES[priority], priority)
+    if (USE_MOCKS || SCENARIO_SOURCE !== 'api') {
+      return wait({ scenario: fromFile(), source: 'static' as const })
+    }
+    try {
+      const resp = await request<DemoFile | DemoFile['response']>(DEMO_SCENARIO_PATH, {
+        method: 'POST',
+        body: JSON.stringify({ plot_id: plotId, priority, horizon_days: 365 }),
+      })
+      const file: DemoFile = 'response' in resp ? resp : { response: resp }
+      return { scenario: buildScenario(file, priority), source: 'api' as const }
+    } catch (e) {
+      return {
+        scenario: fromFile(),
+        source: 'static' as const,
+        fallback: e instanceof Error ? e.message : 'No se pudo leer el escenario desde la API.',
+      }
+    }
+  },
+
   createRecommendation: (req: RecommendationRequest): Promise<RecommendationResponse> =>
     RECOMMENDATIONS_ARE_MOCK
       ? wait(mockRecommendation(req))

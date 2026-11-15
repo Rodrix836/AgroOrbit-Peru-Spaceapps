@@ -6,10 +6,18 @@
     {
       "id": "alt-a",
       "rank": 1,
-      "score": 69,
+      "score": 70,
       "campaigns": [
-        { "crop": "frijol_caupi", "starts_on": "2027-01-15", "ends_on": "2027-04-10" },
-        { "crop": "maiz", "starts_on": "2027-05-01", "ends_on": "2027-09-15" }
+        {
+          "crop": "frijol_caupi",
+          "starts_on": "2027-01-15",
+          "ends_on": "2027-04-10"
+        },
+        {
+          "crop": "maiz",
+          "starts_on": "2027-05-01",
+          "ends_on": "2027-09-15"
+        }
       ],
       "reasons": [
         "[Ejemplo] Con la prioridad de mejorar el suelo, una leguminosa antes del maíz puntúa más en la sucesión.",
@@ -19,19 +27,85 @@
         "[Ejemplo] Respuesta de muestra: no proviene del motor de reglas.",
         "[Ejemplo] No se mide la mejora del suelo; es un criterio del prototipo."
       ],
-      "sources": [{ "title": "NASA POWER, API diaria", "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/" }]
+      "sources": [
+        {
+          "title": "NASA POWER, API diaria",
+          "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/"
+        }
+      ],
+      "criteria": {
+        "clima": {
+          "score": 80,
+          "weight": 0.2,
+          "contribution": 16.0
+        },
+        "agua": {
+          "score": 70,
+          "weight": 0.15,
+          "contribution": 10.5
+        },
+        "suelo": {
+          "score": 65,
+          "weight": 0.4,
+          "contribution": 26.0
+        },
+        "diversificacion": {
+          "score": 70,
+          "weight": 0.25,
+          "contribution": 17.5
+        }
+      }
     },
     {
       "id": "alt-b",
       "rank": 2,
-      "score": 51,
+      "score": 59,
       "campaigns": [
-        { "crop": "maiz", "starts_on": "2027-01-15", "ends_on": "2027-06-01" },
-        { "crop": "frijol_caupi", "starts_on": "2027-06-20", "ends_on": "2027-09-15" }
+        {
+          "crop": "maiz",
+          "starts_on": "2027-01-15",
+          "ends_on": "2027-06-01"
+        },
+        {
+          "crop": "frijol_caupi",
+          "starts_on": "2027-06-20",
+          "ends_on": "2027-09-15"
+        }
       ],
-      "reasons": ["[Ejemplo] Alternativa con el orden de cultivos invertido, para comparar."],
-      "limitations": ["[Ejemplo] Respuesta de muestra: no proviene del motor de reglas."],
-      "sources": [{ "title": "NASA POWER, API diaria", "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/" }]
+      "reasons": [
+        "[Ejemplo] Alternativa con el orden de cultivos invertido, para comparar."
+      ],
+      "limitations": [
+        "[Ejemplo] Respuesta de muestra: no proviene del motor de reglas."
+      ],
+      "sources": [
+        {
+          "title": "NASA POWER, API diaria",
+          "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/"
+        }
+      ],
+      "criteria": {
+        "clima": {
+          "score": 60,
+          "weight": 0.2,
+          "contribution": 12.0
+        },
+        "agua": {
+          "score": 55,
+          "weight": 0.15,
+          "contribution": 8.25
+        },
+        "suelo": {
+          "score": 60,
+          "weight": 0.4,
+          "contribution": 24.0
+        },
+        "diversificacion": {
+          "score": 60,
+          "weight": 0.25,
+          "contribution": 15.0
+        }
+      }
     }
   ]
 }

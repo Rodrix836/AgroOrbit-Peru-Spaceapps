@@ -1,6 +1,8 @@
+import { ClimateRisk } from '../components/nasa/ClimateRisk'
 import { NasaCards } from '../components/nasa/NasaCards'
 import { NasaChart } from '../components/nasa/NasaChart'
 import { NasaPeriodSelector } from '../components/nasa/NasaPeriodSelector'
+import { NasaSoilMoisture } from '../components/nasa/NasaSoilMoisture'
 import { PlotSummary } from '../components/plot/PlotSummary'
 import { ReadingsChart } from '../components/sensors/ReadingsChart'
 import { SensorCards } from '../components/sensors/SensorCards'
@@ -12,8 +14,10 @@ import { Loading } from '../components/ui/Loading'
 import { PageHeader } from '../components/ui/PageHeader'
 import { PanelGrid } from '../components/ui/PanelGrid'
 import { SectionCard } from '../components/ui/SectionCard'
+import { useClimateHistory } from '../hooks/useClimateHistory'
 import { useNasa } from '../hooks/useNasa'
 import { usePlot } from '../hooks/usePlot'
+import { USE_MOCKS } from '../services/api'
 import { SENSOR_REFRESH_MS, useReadings } from '../hooks/useReadings'
 
 /** 02 / Diagnóstico: sensor ESP32 (ámbar) y contexto NASA POWER (azul), siempre separados. */
@@ -21,6 +25,11 @@ export function DashboardPage() {
   const { plot, loading: plotLoading, error: plotError, reload } = usePlot()
   const readings = useReadings(plot?.id ?? null)
   const nasa = useNasa(plot?.id ?? null)
+  // Histórico de 10 años (T2M y PRECTOTCORR) para el bloque de riesgo e incertidumbre; aparte del período elegido.
+  const history = useClimateHistory(plot?.id ?? null)
+  // La última lectura de humedad del sensor, para avisar si es de un kit de prueba.
+  const lastMoisture = [...(readings.data ?? [])].reverse().find((r) => r.sensor_type === 'soil_moisture')
+  const sensorIsTest = lastMoisture?.quality_flag === 'test'
 
   if (plotLoading) return <Loading label="Cargando tu parcela…" />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
@@ -91,14 +100,33 @@ export function DashboardPage() {
           )}
           {!nasa.loading && nasa.refreshing && <Loading label="Cargando el período…" />}
           {nasa.error && <ErrorBox message={nasa.error} onRetry={nasa.reload} />}
+          {nasa.failed.length > 0 && (
+            <p className="text-muted">No se pudieron cargar estas variables de NASA: {nasa.failed.join(', ')}.</p>
+          )}
           {nasa.data && nasa.view && (
             <>
               <NasaCards observations={nasa.data} view={nasa.view} />
               <NasaChart observations={nasa.data} view={nasa.view} />
+              {/* Solo si la API trae GWETTOP o GWETROOT. Aparte del sensor: su propia escala, unidad y fuente. */}
+              <NasaSoilMoisture
+                observations={nasa.data}
+                view={nasa.view}
+                sensorIsTest={sensorIsTest}
+                example={USE_MOCKS}
+              />
             </>
           )}
         </SectionCard>
       </PanelGrid>
+
+      {/* Histórico de NASA POWER a todo el ancho: cuánto varía el clima de un año a otro (cálculo del frontend). */}
+      <div className="mt-px">
+        <SectionCard title="Riesgo e incertidumbre: cómo varía el clima aquí" tone="nasa">
+          {history.loading && <Loading label="Cargando el histórico de 10 años de NASA POWER…" />}
+          {history.error && <ErrorBox message={history.error} onRetry={history.reload} />}
+          {history.data && <ClimateRisk history={history.data} example={USE_MOCKS} />}
+        </SectionCard>
+      </div>
 
       {/* Franja final a todo el ancho */}
       <section className="mt-px flex flex-wrap items-center justify-between gap-6 bg-lima p-6 text-bg md:p-8">

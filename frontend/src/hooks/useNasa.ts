@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, ApiError, NASA_ERROR_CODES } from '../services/api'
 import type { NasaObservation } from '../types/api'
+import { NASA_VARIABLES } from '../utils/nasaVariables'
 import { PERIODS, periodRange, type Period } from '../utils/period'
 import { errorMessage } from './useAsync'
 
@@ -21,7 +22,8 @@ export interface NasaView {
 /**
  * NASA POWER para la parcela. Al abrir (y con «Actualizar clima»):
  *  1. POST /nasa/power con {} (últimos 90 días) para consultar y guardar.
- *  2. GET /nasa/observations?from&to del período elegido (por defecto, 90 días).
+ *  2. GET /nasa/observations del período elegido (por defecto, 90 días): una petición por variable
+ *     (las 9), cada una con su `variable` y su rango from/to; nunca todas juntas ni sin fechas.
  * Al cambiar de período solo se repite el paso 2.
  * Si el paso 1 falla (p. ej. NASA no disponible), igual se leen y muestran las observaciones guardadas.
  */
@@ -33,6 +35,8 @@ export function useNasa(plotId: string | null) {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [problem, setProblem] = useState<NasaProblem | null>(null)
+  /** Variables cuya petición falló (las demás se muestran igual). */
+  const [failed, setFailed] = useState<string[]>([])
   const runId = useRef(0)
   const periodRef = useRef<Period>(PERIODS[0])
 
@@ -41,19 +45,24 @@ export function useNasa(plotId: string | null) {
     async (id: number, p: Period) => {
       if (!plotId) return
       const range = periodRange(p)
-      try {
-        const obs = await api.getNasaObservations(plotId, range)
-        if (id === runId.current) {
-          setData(obs)
-          setView({ period: p, ...range })
-        }
-      } catch (e) {
-        if (id === runId.current) {
-          setData(null)
-          setView(null)
-          setError(errorMessage(e))
-        }
+      const results = await Promise.allSettled(
+        NASA_VARIABLES.map((v) => api.getNasaObservations(plotId, range, v)),
+      )
+      if (id !== runId.current) return
+      const ok = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
+      if (ok.length === 0) {
+        const first = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+        setData(null)
+        setView(null)
+        setFailed([])
+        setError(errorMessage(first?.reason))
+        return
       }
+      setFailed(NASA_VARIABLES.filter((_, i) => results[i].status === 'rejected'))
+      setData(
+        ok.flat().sort((a, b) => a.observed_on.localeCompare(b.observed_on) || a.variable.localeCompare(b.variable)),
+      )
+      setView({ period: p, ...range })
     },
     [plotId],
   )
@@ -117,5 +126,5 @@ export function useNasa(plotId: string | null) {
 
   const refresh = useCallback(() => sync(false), [sync])
   const reload = useCallback(() => void sync(true), [sync])
-  return { data, view, period, setPeriod, loading, refreshing, error, problem, refresh, reload }
+  return { data, view, period, setPeriod, loading, refreshing, error, problem, failed, refresh, reload }
 }

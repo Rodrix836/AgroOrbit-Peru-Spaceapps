@@ -14,6 +14,7 @@ import type {
   PlotUpdate,
   RecommendationContext,
   NasaObservation,
+  NasaVariable,
   Plot,
   PlotInput,
   QualityFlag,
@@ -105,8 +106,8 @@ const DEVICE_ID = 'dca83203-c87b-41d5-bfb3-1c5cc7ee5c0b'
 export function mockReadings(): SensorReading[] {
   if (MOCK_SCENARIO === 'sensor_empty') return []
 
-  // Última lectura: hace 2 min (al día) o hace 3 h (sin actualización).
-  const lastAt = Date.now() - (MOCK_SCENARIO === 'sensor_stale' ? 3 * HOUR : 2 * MINUTE)
+  // Última lectura: hace unos segundos (al día; el kit envía cada 10 s) o hace 3 h (sin actualización).
+  const lastAt = Date.now() - (MOCK_SCENARIO === 'sensor_stale' ? 3 * HOUR : 4_000)
   const STEP = 15 * MINUTE
   const out: SensorReading[] = []
 
@@ -150,33 +151,63 @@ export function mockReadings(): SensorReading[] {
 /** Día de hoy AAAA-MM-DD en hora de Perú (UTC-5), que se parece a la LST de POWER. */
 const todayLima = () => new Date(Date.now() - 5 * HOUR)
 
+const NASA_UNITS: Record<NasaVariable, string> = {
+  T2M: 'C',
+  PRECTOTCORR: 'mm/day',
+  GWETTOP: '1',
+  GWETROOT: '1',
+}
+
+/** Número entre 0 y 1 que depende solo del año: da a cada año un clima distinto (para las bandas de riesgo). */
+const yearFactor = (year: number) => {
+  const x = Math.sin(year * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function nasaExampleValue(variable: NasaVariable, i: number, day: string): number {
+  const year = Number(day.slice(0, 4))
+  const doy = Math.floor((Date.UTC(year, Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10))) - Date.UTC(year, 0, 0)) / DAY)
+  const season = Math.sin((2 * Math.PI * (doy - 30)) / 365) // época de lluvias: verano
+  const yf = 0.6 + 0.8 * yearFactor(year)
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  switch (variable) {
+    case 'T2M':
+      return r2(25 + 3 * season + 0.8 * Math.sin(i / 5) + (yf - 1))
+    case 'PRECTOTCORR':
+      return (doy + year) % 6 === 0 ? r2((2 + 10 * Math.max(0, season)) * yf) : 0
+    case 'GWETTOP':
+      return r2(Math.min(0.95, Math.max(0.05, 0.32 + 0.12 * Math.sin(i / 11) + 0.06 * season)))
+    case 'GWETROOT':
+      return r2(0.45 + 0.07 * Math.sin(i / 23))
+  }
+}
+
 /**
- * Observaciones guardadas: 2 años (730 días), T2M ("C") y PRECTOTCORR ("mm/day"), ordenadas por día y variable.
- * Como la API, solo devuelve los días entre `from` y `to`. Los últimos 4 días vienen null (POWER publica con
- * retraso), hay un hueco suelto y septiembre de 2025 sin ningún dato. En `nasa_down` lo guardado es de una importación
- * antigua (hace 12 días).
+ * Observaciones guardadas de UNA variable (como `GET .../nasa/observations?variable=&from=&to=`):
+ * hasta 11 años (4018 días) con unidades tal como las da POWER (solo las 4 variables que admite la API), ordenadas por día. Los últimos 4 días vienen null
+ * (POWER publica con retraso), hay un hueco suelto, un tramo de ~45 días sin datos y marzo de 2019 sin datos.
+ * En `nasa_down` lo guardado es de una importación antigua (hace 12 días). Con `sin_extras` solo existen
+ * T2M y PRECTOTCORR, como antes de las 9 variables.
  */
-export function mockNasa(range?: { from: string; to: string }): NasaObservation[] {
+export function mockNasa(range: { from: string; to: string }, variable: NasaVariable): NasaObservation[] {
   const out: NasaObservation[] = []
+  if (MOCK_SCENARIO === 'sin_extras' && variable !== 'T2M' && variable !== 'PRECTOTCORR') return out
   const lag = MOCK_SCENARIO === 'nasa_down' ? 12 : 0
   const end = todayLima().getTime() - lag * DAY
-  const r2 = (n: number) => Math.round(n * 100) / 100
-  const season = (i: number) => Math.sin((2 * Math.PI * i) / 365)
-  for (let i = 729; i >= 0; i--) {
+  // historico_corto: solo hay ~2 años guardados, sin importar el rango pedido.
+  const oldest = MOCK_SCENARIO === 'historico_corto' ? 800 : 4017
+  for (let i = oldest; i >= 0; i--) {
     const day = new Date(end - i * DAY).toISOString().slice(0, 10)
-    if (range && (day < range.from || day > range.to)) continue
-    const missing = i <= 3 || i === 47 || (i >= 395 && i <= 440)
-    const add = (variable: string, value: number, unit: string) =>
-      out.push({
-        id: `${variable}-${day}`,
-        variable,
-        observed_on: day,
-        value: missing ? null : value,
-        unit,
-        source: 'NASA POWER',
-      })
-    add('PRECTOTCORR', i % 9 === 0 ? r2(3 + 6 * Math.max(0, season(i))) : 0, 'mm/day')
-    add('T2M', r2(25 + 3 * season(i) + 0.8 * Math.sin(i / 5)), 'C')
+    if (day < range.from || day > range.to) continue
+    const missing = i <= 3 || i === 47 || (i >= 395 && i <= 440) || day.startsWith('2019-03')
+    out.push({
+      id: `${variable}-${day}`,
+      variable,
+      observed_on: day,
+      value: missing ? null : nasaExampleValue(variable, i, day),
+      unit: NASA_UNITS[variable],
+      source: 'NASA POWER',
+    })
   }
   return out
 }
@@ -341,7 +372,11 @@ export function mockRecommendation(req: RecommendationRequest): RecommendationRe
     return recommendationFormatMockup as RecommendationResponse
   }
   const base = req.priority === 'improve_soil' ? recommendationSoil : recommendationSave
-  const demo = RECOMMENDATION_SCENARIO === 'demo_mode'
+  const demo = RECOMMENDATION_SCENARIO === 'demo_mode' || RECOMMENDATION_SCENARIO === 'sin_extras'
+  // Sin extras: las alternativas llegan sin desglose por criterio (`criteria: {}`).
+  const alternatives = (base.alternatives as RecommendationResponse['alternatives']).map((a) =>
+    RECOMMENDATION_SCENARIO === 'sin_extras' ? { ...a, criteria: {} } : a,
+  )
   return {
     status: 'ok',
     mode: demo ? 'escenario_demostracion' : 'evaluacion',
@@ -351,6 +386,6 @@ export function mockRecommendation(req: RecommendationRequest): RecommendationRe
     context: demo ? CONTEXT_DEMO : CONTEXT_OK,
     missing: [],
     selected_id: base.selected_id,
-    alternatives: base.alternatives as RecommendationResponse['alternatives'],
+    alternatives,
   }
 }
