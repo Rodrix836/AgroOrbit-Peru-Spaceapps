@@ -14,15 +14,14 @@ FILL = -999.0
 
 
 # Valor por defecto de cada variable en la respuesta simulada (unidades reales de POWER en NASA_UNITS).
-DEFAULTS = {"T2M": 26.0, "PRECTOTCORR": 1.5, "T2M_MAX": 31.0, "T2M_MIN": 21.0, "RH2M": 75.0, "WS2M": 3.2,
-            "ALLSKY_SFC_SW_DWN": 18.4, "GWETTOP": 0.36, "GWETROOT": 0.33}
-ALL_UNITS = {"T2M": "C", "PRECTOTCORR": "mm/day", "T2M_MAX": "C", "T2M_MIN": "C", "RH2M": "%", "WS2M": "m/s",
-             "ALLSKY_SFC_SW_DWN": "MJ/m^2/day", "GWETTOP": "1", "GWETROOT": "1"}
+DEFAULTS = {"T2M": 26.0, "PRECTOTCORR": 1.5, "GWETTOP": 0.36, "GWETROOT": 0.33}
+# Las variables que admite la tabla (migración 20261115161101_allow_nasa_soil_wetness.sql).
+ALL_UNITS = {"T2M": "C", "PRECTOTCORR": "mm/day", "GWETTOP": "1", "GWETROOT": "1"}
 N_VARS = len(ALL_UNITS)
 
 
 def power_payload(start: str, end: str, t2m=None, prec=None, fill=FILL, values=None):
-    """Respuesta de POWER diario con las 9 variables.
+    """Respuesta de POWER diario con las variables de ALL_UNITS.
 
     t2m/prec: dict AAAAMMDD -> valor (por defecto 26.0 / 1.5); values: {variable: {AAAAMMDD: valor}}.
     """
@@ -184,7 +183,8 @@ def test_observation_filters(client, owner_headers, test_plot, monkeypatch):
         ("2026-11-03", "PRECTOTCORR"), ("2026-11-04", "PRECTOTCORR")]
     assert_error(client.get(url, params={"from": "2026-11-05", "to": "2026-11-01"}, headers=owner_headers),
                  400, "invalid_date_range")
-    assert_error(client.get(url, params={"variable": "QV2M"}, headers=owner_headers), 422, "validation_error")
+    for unknown in ("QV2M", "RH2M", "T2M_MAX"):
+        assert_error(client.get(url, params={"variable": unknown}, headers=owner_headers), 422, "validation_error")
     soil = client.get(url, params={"from": "2026-11-03", "to": "2026-11-03", "variable": "GWETTOP"},
                       headers=owner_headers).json()
     assert [(r["variable"], r["value"], r["unit"]) for r in soil] == [("GWETTOP", 0.36, "1")]
@@ -253,8 +253,7 @@ def test_import_ten_years_in_one_request(client, db, owner_headers, test_plot, m
 
 def test_new_variables_are_validated(client, db, owner_headers, test_plot, monkeypatch):
     span = {"start": "2026-11-01", "end": "2026-11-02"}
-    for bad in ({"GWETTOP": {"20261102": 1.2}}, {"GWETROOT": {"20261101": -0.1}}, {"RH2M": {"20261101": 101.0}},
-                {"WS2M": {"20261101": -1.0}}, {"ALLSKY_SFC_SW_DWN": {"20261101": -0.5}}):
+    for bad in ({"GWETTOP": {"20261102": 1.2}}, {"GWETROOT": {"20261101": -0.1}}):
         fake_power(monkeypatch, values=bad)
         assert_error(client.post(power_url(test_plot["id"]), json=span, headers=owner_headers),
                      502, "nasa_power_invalid_response")
@@ -268,10 +267,9 @@ def test_new_variables_are_validated(client, db, owner_headers, test_plot, monke
                  502, "nasa_power_invalid_response")
     assert stored(db, test_plot["id"]) == 0
 
-    # Límites válidos: 0 y 1 en GWET, 0 y 100 en RH2M, faltante (-999) como null.
+    # Límites válidos: 0 y 1 en GWET; faltante (-999) como null.
     fake_power(monkeypatch, values={"GWETTOP": {"20261101": 0.0, "20261102": 1.0},
-                                    "RH2M": {"20261101": 0.0, "20261102": 100.0},
-                                    "WS2M": {"20261102": FILL}})
+                                    "GWETROOT": {"20261102": FILL}})
     body = client.post(power_url(test_plot["id"]), json=span, headers=owner_headers).json()
     assert (body["filas_guardadas"], body["valores_faltantes"]) == (2 * N_VARS, 1)
 
@@ -286,3 +284,25 @@ def test_recommendation_climate_ignores_new_variables(client, owner_headers, tes
     assert power["indicators"]["temperatura_promedio_c"] == 26.0
     assert power["indicators"]["precipitacion_total_mm"] == 15.0
     assert power["indicators"]["dias_analizados"] == 10
+
+
+def test_four_variables_same_day_and_rain_only_from_prectotcorr(client, owner_headers, test_plot, monkeypatch):
+    """Un mismo día con las 4 variables: 4 filas con su unidad; la lluvia del resumen es solo PRECTOTCORR."""
+    fake_power(monkeypatch, values={"T2M": {"20261105": 27.4}, "PRECTOTCORR": {"20261105": 2.5},
+                                    "GWETTOP": {"20261105": 0.81}, "GWETROOT": {"20261105": 0.71}})
+    body = client.post(power_url(test_plot["id"]), json={"start": "2026-11-05", "end": "2026-11-05"},
+                       headers=owner_headers).json()
+    assert (body["dias"], body["filas_guardadas"], body["valores_faltantes"]) == (1, 4, 0)
+    assert body["variables"] == ["T2M", "PRECTOTCORR", "GWETTOP", "GWETROOT"]
+
+    rows = client.get(obs_url(test_plot["id"]), headers=owner_headers).json()
+    assert sorted((r["observed_on"], r["variable"], r["value"], r["unit"]) for r in rows) == [
+        ("2026-11-05", "GWETROOT", 0.71, "1"), ("2026-11-05", "GWETTOP", 0.81, "1"),
+        ("2026-11-05", "PRECTOTCORR", 2.5, "mm/day"), ("2026-11-05", "T2M", 27.4, "C")]
+
+    power = client.post("/api/recommendations", json={"plot_id": test_plot["id"], "priority": "save_water"},
+                        headers=owner_headers).json()["context"]["power"]
+    # Si GWET se sumara como lluvia, saldría 2.5 + 0.81 + 0.71 = 4.02.
+    assert power["indicators"]["precipitacion_total_mm"] == 2.5
+    assert power["indicators"]["temperatura_promedio_c"] == 27.4
+    assert (power["start"], power["end"], power["indicators"]["dias_analizados"]) == ("2026-11-05", "2026-11-05", 1)

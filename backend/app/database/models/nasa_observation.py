@@ -1,7 +1,9 @@
 """Tabla public.nasa_observation: un valor diario de NASA POWER por parcela y variable.
 
 Refleja supabase/migrations/20261114204035_create_nasa_observation.sql y
-20261115160000_nasa_observation_more_variables.sql (no las reemplaza).
+20261115161101_allow_nasa_soil_wetness.sql (no las reemplaza). Para añadir una variable hace falta
+primero una migración que la admita: si la API guarda una variable que la tabla no acepta, la
+importación entera falla.
 """
 
 from datetime import date, datetime
@@ -29,11 +31,6 @@ NASA_TIME_STANDARD = "LST"
 NASA_UNITS = {
     "T2M": "C",
     "PRECTOTCORR": "mm/day",
-    "T2M_MAX": "C",
-    "T2M_MIN": "C",
-    "RH2M": "%",
-    "WS2M": "m/s",
-    "ALLSKY_SFC_SW_DWN": "MJ/m^2/day",
     "GWETTOP": "1",
     "GWETROOT": "1",
 }
@@ -41,9 +38,6 @@ NASA_UNITS = {
 NASA_UNIT_RANGES = {
     "C": (-900, 900, False),
     "mm/day": (0, None, True),
-    "%": (0, 100, True),
-    "m/s": (0, None, True),
-    "MJ/m^2/day": (0, None, True),
     "1": (0, 1, True),
 }
 
@@ -57,12 +51,8 @@ def nasa_value_is_valid(variable: str, value: float) -> bool:
 
 _VARIABLES_SQL = ", ".join(f"'{v}'" for v in NASA_UNITS)
 _VALID_MEASUREMENT_SQL = (
-    "(variable in ('T2M', 'T2M_MAX', 'T2M_MIN') and unit = 'C'"
-    " and (value is null or (value > -900 and value < 900)))"
+    "(variable = 'T2M' and unit = 'C' and (value is null or (value > -900 and value < 900)))"
     " or (variable = 'PRECTOTCORR' and unit = 'mm/day' and (value is null or value >= 0))"
-    " or (variable = 'RH2M' and unit = '%' and (value is null or (value >= 0 and value <= 100)))"
-    " or (variable = 'WS2M' and unit = 'm/s' and (value is null or value >= 0))"
-    " or (variable = 'ALLSKY_SFC_SW_DWN' and unit = 'MJ/m^2/day' and (value is null or value >= 0))"
     " or (variable in ('GWETTOP', 'GWETROOT') and unit = '1'"
     " and (value is null or (value >= 0 and value <= 1)))"
 )

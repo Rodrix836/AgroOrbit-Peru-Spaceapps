@@ -13,7 +13,7 @@ def obtener_datos_nasa(latitud, longitud, fecha_inicio, fecha_fin, variables=("T
     Consulta datos climáticos diarios de NASA POWER.
 
     Por defecto, T2M (temperatura del aire a 2 m) y PRECTOTCORR (precipitación corregida).
-    La importación a nasa_observation pide las 9 variables de NASA_UNITS.
+    La importación a nasa_observation pide las variables de NASA_UNITS.
     """
 
     parametros = {
