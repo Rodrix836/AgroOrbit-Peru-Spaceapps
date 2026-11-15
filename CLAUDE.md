@@ -6,7 +6,7 @@ Hackatón NASA Space Apps, 48 horas. Prototipo de apoyo a decisiones para rotaci
 
 - Solo se trabaja en `frontend/` y `firmware/agroorbit_esp32/`.
 - **No tocar `backend/` ni `supabase/`.** Si hace falta un cambio ahí, anotarlo y pedírselo al responsable (Rodrigo para la API, Elias para Supabase).
-- Los contratos compartidos (JSON, nombres de campos, unidades, estados) se acuerdan con el equipo antes de cambiarlos. Partir de `backend/docs/recommendations-contract.md` (solo lectura).
+- Los contratos compartidos (JSON, nombres de campos, unidades, estados) se acuerdan con el equipo antes de cambiarlos. Partir de `backend/docs/api-contract.md` (solo lectura).
 
 ## Stack
 
