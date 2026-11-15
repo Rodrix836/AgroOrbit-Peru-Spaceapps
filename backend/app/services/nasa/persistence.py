@@ -2,8 +2,8 @@
 
 Reglas (backend/docs/nasa-persistence.md):
 - Una fila por parcela, variable y día LST; upsert por (plot_id, variable, observed_on).
-- Variables: las 9 de NASA_UNITS (T2M, PRECTOTCORR, entradas de ETo FAO-56 y humedad del suelo
-  GWETTOP/GWETROOT). Si POWER declara otra unidad, no se guarda nada (502).
+- Variables: las de NASA_UNITS (T2M, PRECTOTCORR, GWETTOP, GWETROOT), las mismas que admite la tabla.
+  Si POWER declara otra unidad o un valor fuera de rango, no se guarda nada (502).
 - header.fill_value se guarda como null; 0 mm de lluvia es un día válido.
 - Un null nuevo no reemplaza un valor válido ya guardado para el mismo punto.
 - El historial solo devuelve filas del punto actual de la parcela.
@@ -30,7 +30,7 @@ from app.services.nasa.normalization import _faltante_a_none, obtener_fill_value
 from app.services.nasa.power_client import obtener_datos_nasa
 
 DEFAULT_DAYS = 90
-MAX_DAYS = 4018  # 11 años por petición (POWER responde 9 variables x 11 años en ~2 s)
+MAX_DAYS = 4018  # 11 años por petición (POWER responde 4 variables x 10 años en < 1 s)
 CHUNK = 500
 VARIABLES = tuple(NASA_UNITS)
 
