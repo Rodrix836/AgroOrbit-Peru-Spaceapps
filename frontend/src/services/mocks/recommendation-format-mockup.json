@@ -1,0 +1,106 @@
+{
+  "status": "ok",
+  "mode": "escenario_demostracion",
+  "engine_version": "<versión del motor>",
+  "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
+  "created_at": "2026-11-14T22:50:00Z",
+  "context": {
+    "notice": "Escenario de demostración: los datos marcados en assumptions son supuestos, no declarados por un agricultor. Parcela representativa, no una chacra real.",
+    "start_on": "2026-12-01",
+    "power": {
+      "source": "NASA POWER",
+      "time_standard": "LST",
+      "start": "2026-11-01",
+      "end": "2026-11-14",
+      "use": "contexto_del_periodo",
+      "indicators": {
+        "temperatura_promedio_c": 27.15,
+        "precipitacion_total_mm": 107.57,
+        "dias_analizados": 14,
+        "dias_temperatura_validos": 11,
+        "dias_precipitacion_validos": 11
+      }
+    },
+    "sensor": {
+      "quality_flag": "test",
+      "used_as_evidence": false,
+      "reason": "Lecturas del ESP32 tomadas fuera del campo."
+    },
+    "assumptions": [
+      {
+        "field": "plot.previous_crop",
+        "value": "maiz",
+        "reason": "Supuesto del escenario de demostración."
+      },
+      {
+        "field": "plot.water_availability",
+        "value": "low",
+        "reason": "Supuesto del escenario de demostración."
+      }
+    ]
+  },
+  "missing": [],
+  "selected_id": "rot-a",
+  "alternatives": [
+    {
+      "id": "rot-a",
+      "rank": 1,
+      "score": 0,
+      "campaigns": [
+        {
+          "crop": "frijol_caupi",
+          "starts_on": "2026-12-01",
+          "ends_on": "<AAAA-MM-DD según ciclo con fuente>"
+        },
+        {
+          "crop": "camote",
+          "starts_on": "<AAAA-MM-DD>",
+          "ends_on": "<AAAA-MM-DD>"
+        }
+      ],
+      "reasons": [
+        "<razón respaldada por una fuente>"
+      ],
+      "limitations": [
+        "Escenario de demostración con supuestos.",
+        "<limitación>"
+      ],
+      "sources": [
+        {
+          "title": "<título de la fuente>",
+          "url": "<https://...>"
+        }
+      ]
+    },
+    {
+      "id": "rot-b",
+      "rank": 2,
+      "score": 0,
+      "campaigns": [
+        {
+          "crop": "camote",
+          "starts_on": "2026-12-01",
+          "ends_on": "<AAAA-MM-DD>"
+        },
+        {
+          "crop": "maiz",
+          "starts_on": "<AAAA-MM-DD>",
+          "ends_on": "<AAAA-MM-DD>"
+        }
+      ],
+      "reasons": [
+        "<razón respaldada por una fuente>"
+      ],
+      "limitations": [
+        "Escenario de demostración con supuestos.",
+        "<limitación>"
+      ],
+      "sources": [
+        {
+          "title": "<título de la fuente>",
+          "url": "<https://...>"
+        }
+      ]
+    }
+  ]
+}

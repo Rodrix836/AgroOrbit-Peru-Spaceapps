@@ -1,0 +1,82 @@
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "tailwindcss";
+
+/*
+ * AgroOrbit: panel oscuro tipo control de misión.
+ *  lima  = acciones, elemento activo y seleccionado
+ *  ámbar = todo lo que viene del sensor ESP32, y los avisos
+ *  cielo = todo lo que viene de NASA POWER, y los enlaces
+ * Sin esquinas redondeadas ni sombras: bordes rectos y líneas de 1 px.
+ */
+@theme {
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --color-bg: #0b110e;
+  --color-panel: #0e1511;
+  --color-line: #25332b;
+  --color-edge: #3a4b41;
+  --color-track: #1c2921;
+  --color-dots: #18231c;
+
+  --color-ink: #e8efe9;
+  --color-muted: #9baaa0;
+
+  --color-lima: #c8f169;
+  --color-ambar: #f2b35e;
+  --color-ambar-bg: #1f1a0e;
+  --color-cielo: #7fbbff;
+  --color-error: #ff9a8a;
+  --color-error-bg: #231413;
+
+  /* Texto de lectura nunca por debajo de 16 px. */
+  --text-xs: 1rem;
+  --text-xs--line-height: 1.5rem;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.5rem;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.6rem;
+}
+
+/* En @layer base para que las clases de Tailwind (utilities) las puedan sobrescribir. */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-bg);
+    background-image: radial-gradient(var(--color-dots) 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+    border-radius: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cielo);
+    outline-offset: 2px;
+  }
+
+  a {
+    color: var(--color-cielo);
+  }
+}

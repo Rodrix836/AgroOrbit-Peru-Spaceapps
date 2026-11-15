@@ -1,0 +1,43 @@
+{
+  "status": "ok",
+  "engine_version": "ejemplo-0.0",
+  "selected_id": "alt-a",
+  "alternatives": [
+    {
+      "id": "alt-a",
+      "rank": 1,
+      "score": 72,
+      "campaigns": [
+        { "crop": "frijol_caupi", "starts_on": "2027-01-15", "ends_on": "2027-04-10" },
+        { "crop": "maiz", "starts_on": "2027-05-01", "ends_on": "2027-09-15" }
+      ],
+      "reasons": [
+        "[Ejemplo] Primera campaña con un cultivo de ciclo corto, para priorizar menor uso de agua.",
+        "[Ejemplo] La lluvia acumulada del período NASA POWER se compara con los mismos meses de años anteriores."
+      ],
+      "limitations": [
+        "[Ejemplo] Respuesta de muestra: no proviene del motor de reglas.",
+        "[Ejemplo] No se usó información de pH, NPK ni salinidad."
+      ],
+      "sources": [
+        {
+          "title": "INIA: material de caupí INIA 432 (Tumbes y Piura)",
+          "url": "https://repositorio.inia.gob.pe/server/api/core/bitstreams/8ca06907-9eae-42a0-b6ce-2ecd0dcd4799/content"
+        },
+        { "title": "NASA POWER, API diaria", "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/" }
+      ]
+    },
+    {
+      "id": "alt-b",
+      "rank": 2,
+      "score": 58,
+      "campaigns": [
+        { "crop": "maiz", "starts_on": "2027-01-15", "ends_on": "2027-06-01" },
+        { "crop": "frijol_caupi", "starts_on": "2027-06-20", "ends_on": "2027-09-15" }
+      ],
+      "reasons": ["[Ejemplo] Alternativa con el orden de cultivos invertido, para comparar."],
+      "limitations": ["[Ejemplo] Respuesta de muestra: no proviene del motor de reglas."],
+      "sources": [{ "title": "NASA POWER, API diaria", "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/" }]
+    }
+  ]
+}
