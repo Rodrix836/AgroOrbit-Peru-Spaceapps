@@ -257,7 +257,7 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 | `selected_id` | texto o `null` | `null` con `insufficient_data` |
 | `alternatives` | lista | **Vacía con `insufficient_data`** (sin `score`) |
 | `alternatives[].id`, `rank`, `score` | texto, entero, 0–100 | `score` según el criterio del motor |
-| `alternatives[].criteria` | `[{ id, score, weight, contribution }]` | Desglose de `score` para mostrar compensaciones. `id`: `clima`, `agua`, `suelo`, `diversificacion` (siempre en ese orden). `score` 0–100 del criterio; `weight` 0–1 según la `priority` pedida (suman 1); `contribution = score × weight` (2 decimales). La suma de `contribution` es `score` salvo redondeo |
+| `alternatives[].criteria` | `{ clima, agua, suelo, diversificacion }`, cada uno `{ score, weight, contribution }` | Desglose de `score` para mostrar compensaciones (coincide con `Criteria` de `frontend/src/types/api.ts`). `score` 0–100 del criterio; `weight` 0–1 según la `priority` pedida (los cuatro suman 1); `contribution = score × weight` (2 decimales), la suma de las cuatro es `score` salvo redondeo. Con el motor vienen siempre los cuatro; `{}` solo si una alternativa no trae desglose |
 | `alternatives[].campaigns` | `[{ crop, starts_on, ends_on }]` | `crop` = id de `GET /api/crops` (`maiz`, `frijol_caupi`, `camote`: fijos para la demo; están en la tabla `crop`) |
 | `alternatives[].reasons`, `limitations` | texto[] | |
 | `alternatives[].sources` | `[{ title, url }]` | Fuente de cada requisito usado |

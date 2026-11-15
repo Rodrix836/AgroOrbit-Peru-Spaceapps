@@ -2,8 +2,8 @@
   "status": "ok",
   "mode": "evaluacion",
   "engine_version": "motor-1.0",
-  "plot_id": "e9ba0065-4266-4ed0-bfc7-214396556e13",
-  "created_at": "2026-11-15T16:13:21.725465Z",
+  "plot_id": "c96a1958-6829-46ac-870e-539b038e0aee",
+  "created_at": "2026-11-15T16:28:54.744681Z",
   "context": {
     "notice": "Estas alternativas se calcularon con los datos de tu parcela y fuentes citadas.",
     "start_on": "2026-12-01",
@@ -39,32 +39,28 @@
       "id": "frijol_caupi__camote",
       "rank": 1,
       "score": 69.0,
-      "criteria": [
-        {
-          "id": "clima",
+      "criteria": {
+        "clima": {
           "score": 50.0,
           "weight": 0.1,
           "contribution": 5.0
         },
-        {
-          "id": "agua",
+        "agua": {
           "score": 75.0,
           "weight": 0.7,
           "contribution": 52.5
         },
-        {
-          "id": "suelo",
+        "suelo": {
           "score": 65.0,
           "weight": 0.1,
           "contribution": 6.5
         },
-        {
-          "id": "diversificacion",
+        "diversificacion": {
           "score": 50.0,
           "weight": 0.1,
           "contribution": 5.0
         }
-      ],
+      },
       "campaigns": [
         {
           "crop": "frijol_caupi",
@@ -103,32 +99,28 @@
       "id": "camote__frijol_caupi",
       "rank": 2,
       "score": 69.0,
-      "criteria": [
-        {
-          "id": "clima",
+      "criteria": {
+        "clima": {
           "score": 50.0,
           "weight": 0.1,
           "contribution": 5.0
         },
-        {
-          "id": "agua",
+        "agua": {
           "score": 75.0,
           "weight": 0.7,
           "contribution": 52.5
         },
-        {
-          "id": "suelo",
+        "suelo": {
           "score": 65.0,
           "weight": 0.1,
           "contribution": 6.5
         },
-        {
-          "id": "diversificacion",
+        "diversificacion": {
           "score": 50.0,
           "weight": 0.1,
           "contribution": 5.0
         }
-      ],
+      },
       "campaigns": [
         {
           "crop": "camote",
@@ -167,32 +159,28 @@
       "id": "maiz__camote",
       "rank": 3,
       "score": 51.5,
-      "criteria": [
-        {
-          "id": "clima",
+      "criteria": {
+        "clima": {
           "score": 50.0,
           "weight": 0.1,
           "contribution": 5.0
         },
-        {
-          "id": "agua",
+        "agua": {
           "score": 55.0,
           "weight": 0.7,
           "contribution": 38.5
         },
-        {
-          "id": "suelo",
+        "suelo": {
           "score": 30.0,
           "weight": 0.1,
           "contribution": 3.0
         },
-        {
-          "id": "diversificacion",
+        "diversificacion": {
           "score": 50.0,
           "weight": 0.1,
           "contribution": 5.0
         }
-      ],
+      },
       "campaigns": [
         {
           "crop": "maiz",
