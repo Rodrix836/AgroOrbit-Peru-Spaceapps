@@ -9,6 +9,7 @@ export const SCENARIOS = [
   'insufficient_data', // la recomendación responde insufficient_data (missing con motivos, sin alternativas)
   'demo_mode', // la recomendación llega con mode = escenario_demostracion (por defecto en las recomendaciones)
   'format_mockup', // la recomendación llega con marcadores <...> y puntajes 0 (maqueta de formato)
+  'historico_corto', // NASA solo guarda ~2 años: el bloque de riesgo muestra «Histórico insuficiente»
   'sin_extras', // como hoy: NASA sin GWETTOP/GWETROOT y alternativas sin desglose por criterio
   'sensor_test', // lecturas con quality_flag = test (kit de prueba)
   'sensor_suspect', // última humedad con quality_flag = suspect

@@ -7,6 +7,7 @@ const GROUPS: { id: MissingGroup; title: string }[] = [
   { id: 'plot', title: 'Datos de tu parcela' },
   { id: 'crops', title: 'Requisitos de cultivos sin fuente verificada' },
   { id: 'climate', title: 'Clima' },
+  { id: 'system', title: 'Sistema' },
   { id: 'other', title: 'Otros datos' },
 ]
 

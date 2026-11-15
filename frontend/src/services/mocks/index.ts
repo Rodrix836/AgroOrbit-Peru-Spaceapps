@@ -14,6 +14,7 @@ import type {
   PlotUpdate,
   RecommendationContext,
   NasaObservation,
+  NasaVariable,
   Plot,
   PlotInput,
   QualityFlag,
@@ -150,38 +151,79 @@ export function mockReadings(): SensorReading[] {
 /** Día de hoy AAAA-MM-DD en hora de Perú (UTC-5), que se parece a la LST de POWER. */
 const todayLima = () => new Date(Date.now() - 5 * HOUR)
 
+const NASA_UNITS: Record<NasaVariable, string> = {
+  T2M: 'C',
+  T2M_MAX: 'C',
+  T2M_MIN: 'C',
+  PRECTOTCORR: 'mm/day',
+  RH2M: '%',
+  WS2M: 'm/s',
+  ALLSKY_SFC_SW_DWN: 'MJ/m^2/day',
+  GWETTOP: '1',
+  GWETROOT: '1',
+}
+
+/** Número entre 0 y 1 que depende solo del año: da a cada año un clima distinto (para las bandas de riesgo). */
+const yearFactor = (year: number) => {
+  const x = Math.sin(year * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function nasaExampleValue(variable: NasaVariable, i: number, day: string): number {
+  const year = Number(day.slice(0, 4))
+  const doy = Math.floor((Date.UTC(year, Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10))) - Date.UTC(year, 0, 0)) / DAY)
+  const season = Math.sin((2 * Math.PI * (doy - 30)) / 365) // época de lluvias: verano
+  const yf = 0.6 + 0.8 * yearFactor(year)
+  const t2m = 25 + 3 * season + 0.8 * Math.sin(i / 5) + (yf - 1)
+  const r2 = (n: number) => Math.round(n * 100) / 100
+  switch (variable) {
+    case 'T2M':
+      return r2(t2m)
+    case 'T2M_MAX':
+      return r2(t2m + 4 + 0.5 * Math.sin(i / 3))
+    case 'T2M_MIN':
+      return r2(t2m - 4 - 0.5 * Math.cos(i / 4))
+    case 'PRECTOTCORR':
+      return (doy + year) % 6 === 0 ? r2((2 + 10 * Math.max(0, season)) * yf) : 0
+    case 'RH2M':
+      return r2(Math.min(95, 70 + 8 * Math.cos(i / 6)))
+    case 'WS2M':
+      return r2(2.5 + 0.6 * Math.sin(i / 9))
+    case 'ALLSKY_SFC_SW_DWN':
+      return r2(18 + 3 * Math.sin(i / 7))
+    case 'GWETTOP':
+      return r2(Math.min(0.95, Math.max(0.05, 0.32 + 0.12 * Math.sin(i / 11) + 0.06 * season)))
+    case 'GWETROOT':
+      return r2(0.45 + 0.07 * Math.sin(i / 23))
+  }
+}
+
 /**
- * Observaciones guardadas: 2 años (730 días), T2M ("C") y PRECTOTCORR ("mm/day"), ordenadas por día y variable.
- * Como la API, solo devuelve los días entre `from` y `to`. Los últimos 4 días vienen null (POWER publica con
- * retraso), hay un hueco suelto y septiembre de 2025 sin ningún dato. En `nasa_down` lo guardado es de una importación
- * antigua (hace 12 días).
+ * Observaciones guardadas de UNA variable (como `GET .../nasa/observations?variable=&from=&to=`):
+ * hasta 11 años (4018 días) con unidades tal como las da POWER, ordenadas por día. Los últimos 4 días vienen null
+ * (POWER publica con retraso), hay un hueco suelto, un tramo de ~45 días sin datos y marzo de 2019 sin datos.
+ * En `nasa_down` lo guardado es de una importación antigua (hace 12 días). Con `sin_extras` solo existen
+ * T2M y PRECTOTCORR, como antes de las 9 variables.
  */
-export function mockNasa(range?: { from: string; to: string }): NasaObservation[] {
+export function mockNasa(range: { from: string; to: string }, variable: NasaVariable): NasaObservation[] {
   const out: NasaObservation[] = []
+  if (MOCK_SCENARIO === 'sin_extras' && variable !== 'T2M' && variable !== 'PRECTOTCORR') return out
   const lag = MOCK_SCENARIO === 'nasa_down' ? 12 : 0
   const end = todayLima().getTime() - lag * DAY
-  const r2 = (n: number) => Math.round(n * 100) / 100
-  const season = (i: number) => Math.sin((2 * Math.PI * i) / 365)
-  for (let i = 729; i >= 0; i--) {
+  // historico_corto: solo hay ~2 años guardados, sin importar el rango pedido.
+  const oldest = MOCK_SCENARIO === 'historico_corto' ? 800 : 4017
+  for (let i = oldest; i >= 0; i--) {
     const day = new Date(end - i * DAY).toISOString().slice(0, 10)
-    if (range && (day < range.from || day > range.to)) continue
-    const missing = i <= 3 || i === 47 || (i >= 395 && i <= 440)
-    const add = (variable: string, value: number, unit: string) =>
-      out.push({
-        id: `${variable}-${day}`,
-        variable,
-        observed_on: day,
-        value: missing ? null : value,
-        unit,
-        source: 'NASA POWER',
-      })
-    if (MOCK_SCENARIO !== 'sin_extras') {
-      // Humedad del suelo según NASA (modelo): fracción de saturación 0 a 1, unidad "1".
-      add('GWETROOT', r2(0.45 + 0.07 * Math.sin(i / 23)), '1')
-      add('GWETTOP', r2(Math.min(0.95, Math.max(0.05, 0.32 + 0.12 * Math.sin(i / 11) + 0.06 * season(i)))), '1')
-    }
-    add('PRECTOTCORR', i % 9 === 0 ? r2(3 + 6 * Math.max(0, season(i))) : 0, 'mm/day')
-    add('T2M', r2(25 + 3 * season(i) + 0.8 * Math.sin(i / 5)), 'C')
+    if (day < range.from || day > range.to) continue
+    const missing = i <= 3 || i === 47 || (i >= 395 && i <= 440) || day.startsWith('2019-03')
+    out.push({
+      id: `${variable}-${day}`,
+      variable,
+      observed_on: day,
+      value: missing ? null : nasaExampleValue(variable, i, day),
+      unit: NASA_UNITS[variable],
+      source: 'NASA POWER',
+    })
   }
   return out
 }

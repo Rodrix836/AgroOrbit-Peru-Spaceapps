@@ -8,6 +8,7 @@ import type {
   CropCycleUpdate,
   CropCyclesResponse,
   NasaImportResult,
+  NasaVariable,
   NasaObservation,
   Plot,
   PlotInput,
@@ -182,12 +183,19 @@ export const api = {
       ? wait(mockReadings())
       : request<SensorReading[]>(`/api/plots/${plotId}/sensors/readings`),
 
-  /** Observaciones guardadas del período (from y to, AAAA-MM-DD, hora solar local de POWER). */
-  getNasaObservations: (plotId: string, range: { from: string; to: string }): Promise<NasaObservation[]> =>
+  /**
+   * Observaciones guardadas de UNA variable en un rango (from y to, AAAA-MM-DD, hora solar local de POWER).
+   * Nunca se piden todas las variables ni sin fechas: con 10 años serían unas 36 000 filas.
+   */
+  getNasaObservations: (
+    plotId: string,
+    range: { from: string; to: string },
+    variable: NasaVariable,
+  ): Promise<NasaObservation[]> =>
     USE_MOCKS
-      ? wait(mockNasa(range))
+      ? wait(mockNasa(range, variable))
       : request<NasaObservation[]>(
-          `/api/plots/${plotId}/nasa/observations?from=${range.from}&to=${range.to}`,
+          `/api/plots/${plotId}/nasa/observations?variable=${variable}&from=${range.from}&to=${range.to}`,
         ),
 
   /** Pide a la API consultar POWER (últimos 90 días) y guardarlo. Luego se leen las observaciones. */

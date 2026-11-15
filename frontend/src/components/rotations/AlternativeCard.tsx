@@ -65,7 +65,13 @@ export function AlternativeCard({
       </p>
 
       {/* Solo si la API trae `criteria`. */}
-      <CriteriaBreakdown criteria={a.criteria} previous={previousCriteria} selected={selected} example={example} />
+      <CriteriaBreakdown
+        criteria={a.criteria}
+        total={a.score}
+        previous={previousCriteria}
+        selected={selected}
+        example={example}
+      />
 
       <Eyebrow className="mb-3 mt-8">Calendario · dos campañas</Eyebrow>
       {assumedStart && firstStart && (

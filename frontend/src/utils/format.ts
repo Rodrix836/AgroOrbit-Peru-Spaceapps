@@ -77,6 +77,7 @@ export function formatAgo(iso: string, now = Date.now()): string {
 const UNIT_LABELS: Record<string, string> = {
   C: '°C',
   'mm/day': 'mm/día',
+  'MJ/m^2/day': 'MJ/m²/día',
 }
 export function displayUnit(unit: string): string {
   return UNIT_LABELS[unit] ?? unit

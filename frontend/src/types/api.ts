@@ -152,10 +152,20 @@ export interface SensorReading {
 // ---------- NASA POWER ----------
 
 /**
- * Variables de NASA POWER. T2M y PRECTOTCORR llegan hoy. GWETTOP y GWETROOT (humedad del suelo según un
- * modelo de NASA, unidad "1", valores de 0 a 1) podrán llegar: son opcionales y, si no vienen, no se muestran.
+ * Las 9 variables de NASA POWER que guarda la API, con la unidad tal como la da POWER:
+ * T2M, T2M_MAX, T2M_MIN (C), PRECTOTCORR (mm/day), RH2M (%), WS2M (m/s),
+ * ALLSKY_SFC_SW_DWN (MJ/m^2/day), GWETTOP y GWETROOT ("1": fracción de saturación, 0 a 1).
  */
-export type NasaVariable = 'T2M' | 'PRECTOTCORR' | 'GWETTOP' | 'GWETROOT'
+export type NasaVariable =
+  | 'T2M'
+  | 'PRECTOTCORR'
+  | 'T2M_MAX'
+  | 'T2M_MIN'
+  | 'RH2M'
+  | 'WS2M'
+  | 'ALLSKY_SFC_SW_DWN'
+  | 'GWETTOP'
+  | 'GWETROOT'
 
 export interface NasaObservation {
   id: string
@@ -261,21 +271,27 @@ export interface SourceRef {
 
 export type CriterionId = 'clima' | 'agua' | 'suelo' | 'diversificacion'
 
-/** Puntaje (0 a 100) de un criterio y el peso (0 a 1) que tiene en el total. */
+/**
+ * Un criterio de la alternativa: `score` 0 a 100, `weight` 0 a 1 (según la prioridad pedida; suman 1)
+ * y `contribution` = score × weight (2 decimales). La suma de los aportes es el `score` total, salvo redondeo.
+ */
 export interface CriterionScore {
+  /** clima, agua, suelo, diversificacion (siempre en ese orden). Un id desconocido se muestra tal cual. */
+  id: CriterionId | string
   score: number
   weight: number
+  contribution: number
 }
 
-/** Desglose por criterio. Opcional (PENDIENTE BACKEND): si no viene, no se muestra. */
-export type Criteria = Partial<Record<CriterionId, CriterionScore>>
+/** Desglose por criterio de una alternativa (lista). Opcional: si no viene, no se muestra. */
+export type Criteria = CriterionScore[]
 
 export interface Alternative {
   id: string
   rank: number
   /** Criterio del prototipo (0-100). No es probabilidad de éxito ni rendimiento. */
   score: number
-  /** Opcional: puntaje y peso de cada criterio (clima, agua, suelo, diversificación). */
+  /** Opcional: desglose por criterio, en el orden clima, agua, suelo, diversificación. */
   criteria?: Criteria
   campaigns: Campaign[]
   reasons: string[]

@@ -42,3 +42,9 @@ export function daysBetween(from: string, to: string): number {
   }
   return Math.round((t(to) - t(from)) / 86_400_000) + 1
 }
+
+/** Suma `n` años a un día AAAA-MM-DD (mismo día y mes; el 29 de febrero pasa al 1 de marzo si el año no es bisiesto). */
+export function addYears(day: string, n: number): string {
+  const [y, m, d] = day.split('-').map(Number)
+  return new Date(Date.UTC(y + n, m - 1, d)).toISOString().slice(0, 10)
+}
