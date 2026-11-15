@@ -41,3 +41,6 @@ supabase/.branches/
 
 # Datos privados del kit ESP32 (WiFi, URL de la API y clave del dispositivo)
 firmware/**/secrets.h
+
+# Resultados locales de scripts/probar_recomendaciones.py (respuestas de la API, sin token)
+backend/scripts/resultado-*.json

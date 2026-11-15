@@ -224,7 +224,17 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 - `context.power` sale de `nasa_observation`: los días guardados del punto actual **anteriores a `start_on`** (todos, si no hay fecha). `use` es `historico` con ≥ 365 días y `contexto_del_periodo` si hay menos. Es `null` si no hay datos.
 - La disponibilidad de agua **no va en la petición**: se lee de la parcela guardada (`PATCH /api/plots/{id}`). En un escenario de demostración, si el motor la supone, la declara en `assumptions`.
 - `context.sensor` resume las lecturas del kit. Las `quality_flag: "test"` nunca se usan como evidencia.
-- **Motor (Milene):** `ROTATION_ENGINE = rotation_engine.recommend_rotations`, firma `motor(plot, request, context, *, climate_days) -> (mode, assumptions, alternatives)` o lanza `EngineBlocked(missing)`. Candidatos: pares ordenados de cultivos completos, con su duración mínima, campañas seguidas desde `start_on` y, para cada campaña, los indicadores NASA POWER de esas mismas fechas en años anteriores (hasta 5). El motor ordena por la suma ponderada y devuelve como máximo 3; `selected_id` es la de `rank` 1. `engine_version` = `motor-<versión>`.
+- **Motor (Milene):** `ROTATION_ENGINE = rotation_engine.recommend_rotations`, firma `motor(plot, request, context, *, climate_days, history) -> (mode, assumptions, alternatives)` o lanza `EngineBlocked(missing)`. Candidatos: pares ordenados de cultivos completos, con su duración mínima, campañas seguidas desde `start_on` y, para cada campaña, los indicadores NASA POWER de esas mismas fechas en años anteriores (hasta 5). El motor ordena por la suma ponderada y devuelve como máximo 3; `selected_id` es la de `rank` 1. `engine_version` = `motor-<versión>`.
+- **Origen de cada dato que reciben las reglas** (`EVALUATION_PROVIDER`, una entrada por candidato; interno, no va en la respuesta):
+
+  | Dato | Sale de |
+  |---|---|
+  | `start_on` | la petición o, si no viene, `sowing_date` del ciclo `planned` |
+  | `previous_crop`, `current_crop` | `crop_cycle`: último `finished` y el `active` |
+  | `water_availability`, `soil_texture` | la parcela (`PATCH /api/plots/{id}`), nunca la petición |
+  | prioridad | la petición (`priority`): elige los pesos de `criteria` |
+  | `climate_indicators[i]` | `nasa_observation` (`T2M`, `PRECTOTCORR`) de las **mismas fechas de la campaña i** en los 5 años anteriores a `start_on`. `temperatura_promedio_c` es la media de esos días; para la lluvia usa `precipitacion_campana_mm.promedio` (media por año; `min_anual`/`max_anual` dan la variación entre años). `precipitacion_total_mm` es la suma de los 5 años |
+
 - **Para pasar a `ok` con datos reales** hacen falta: (1) los requisitos con fuente que faltan en `app/data/crops.py`; (2) un `EVALUATION_PROVIDER(plot, request, candidates)` que devuelva `mode`, `assumptions`, `priority_weights` y `evaluations[candidate_id][criterio] = {score, reasons, limitations, sources}`. Cada candidato trae `water_availability` de la parcela.
 - `ok` siempre trae al menos una alternativa; `assumptions` solo con `escenario_demostracion`, y ese modo exige al menos un supuesto.
 
@@ -265,7 +275,16 @@ Requiere el token del propietario. Parcela ajena o inexistente → **404** `plot
 **Ejemplos.** Respuestas reales generadas por el motor:
 
 - [recommendations-post-valle-chira-real.json](examples/recommendations-post-valle-chira-real.json): parcela demostrativa con sus datos reales en Supabase (15/11/2026), sin `start_on`.
-- [recommendations-post-ok-controlado-sintetico.json](examples/recommendations-post-ok-controlado-sintetico.json): `ok` del caso controlado de `tests/test_rotation_engine_api.py`. **Catálogo, puntuaciones, pesos y fuentes (`example.invalid`) son sintéticos** (textos `SYNTHETIC …`): solo muestran la forma real de un `ok`.
+- [recommendations-post-ok-controlado-sintetico.json](examples/recommendations-post-ok-controlado-sintetico.json): `ok` + **`escenario_demostracion`** de `scripts/escenario_demostracion.py`. Textura, requisitos de cultivo, puntuaciones, pesos, fuentes (`example.invalid`) y clima son **sintéticos** y van declarados en `context.assumptions` (textos `SYNTHETIC …`): solo muestran la forma real de un `ok`.
+
+**Probar sin frontend** (desde `backend/`; imprime solicitud, HTTP y respuesta, y guarda el JSON sin token):
+
+```powershell
+# Caso real, Valle del Chira con la cuenta demo (pide la contraseña sin mostrarla). --api local = http://localhost:8000
+.venv\Scripts\python.exe scripts\probar_recomendaciones.py real [--priority improve_soil] [--start-on 2026-12-01] [--api local]
+# Escenario de demostración, en memoria (sin credenciales); --clima nasa usa NASA POWER real
+.venv\Scripts\python.exe scripts\probar_recomendaciones.py demo [--priority improve_soil] [--clima nasa]
+```
 
 Ejemplos de forma (sus textos `<...>` y puntuaciones no son recomendaciones):
 

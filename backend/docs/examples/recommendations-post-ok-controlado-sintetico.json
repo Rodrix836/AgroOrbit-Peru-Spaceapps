@@ -1,217 +1,306 @@
 {
   "status": "ok",
-  "mode": "evaluacion",
+  "mode": "escenario_demostracion",
   "engine_version": "motor-1.0",
-  "plot_id": "c96a1958-6829-46ac-870e-539b038e0aee",
-  "created_at": "2026-11-15T16:28:54.744681Z",
+  "plot_id": "46874210-913b-401e-92cb-a93dd6242859",
+  "created_at": "2026-11-15T17:27:39.514175Z",
   "context": {
-    "notice": "Estas alternativas se calcularon con los datos de tu parcela y fuentes citadas.",
+    "notice": "Escenario de demostración: parte de los datos son supuestos, no medidos.",
     "start_on": "2026-12-01",
     "power": {
       "source": "NASA POWER",
       "time_standard": "LST",
-      "start": "2024-11-14",
+      "start": "2016-01-01",
       "end": "2026-11-15",
       "use": "historico",
       "indicators": {
-        "temperatura_promedio_c": 26.5,
-        "temperatura_maxima_diaria_c": 26.5,
-        "temperatura_minima_diaria_c": 26.5,
-        "precipitacion_total_mm": 366.0,
-        "dias_analizados": 732,
-        "dias_temperatura_validos": 732,
-        "dias_precipitacion_validos": 732,
+        "temperatura_promedio_c": 25.6,
+        "temperatura_maxima_diaria_c": 27.8,
+        "temperatura_minima_diaria_c": 23.4,
+        "precipitacion_total_mm": 2627.46,
+        "dias_analizados": 3972,
+        "dias_temperatura_validos": 3972,
+        "dias_precipitacion_validos": 3972,
         "cobertura_temperatura_pct": 100.0,
         "cobertura_precipitacion_pct": 100.0
       }
     },
     "sensor": {
-      "quality_flag": "test",
+      "quality_flag": null,
       "used_as_evidence": false,
-      "reason": "Las lecturas del sensor son de prueba, tomadas fuera del campo, y no se usan para el cálculo."
+      "reason": "Esta parcela todavía no tiene lecturas del sensor."
     },
-    "assumptions": []
+    "assumptions": [
+      {
+        "field": "plot.soil_texture",
+        "value": "franco",
+        "reason": "Textura supuesta para la demostración: la parcela aún no la tiene registrada."
+      },
+      {
+        "field": "crops.requirements",
+        "value": "sintético",
+        "reason": "Los requisitos de pH, salinidad, suelos y agua de los cultivos son de prueba, sin fuente real."
+      },
+      {
+        "field": "engine.criteria",
+        "value": "sintético",
+        "reason": "Las puntuaciones por criterio y los pesos por prioridad son de prueba, no agronómicos."
+      },
+      {
+        "field": "climate.history",
+        "value": "sintético",
+        "reason": "El clima diario 2016-2026 es de prueba (estacional), no de NASA POWER."
+      }
+    ]
   },
   "missing": [],
-  "selected_id": "frijol_caupi__camote",
+  "selected_id": "camote__frijol_caupi",
   "alternatives": [
     {
-      "id": "frijol_caupi__camote",
-      "rank": 1,
-      "score": 69.0,
-      "criteria": {
-        "clima": {
-          "score": 50.0,
-          "weight": 0.1,
-          "contribution": 5.0
-        },
-        "agua": {
-          "score": 75.0,
-          "weight": 0.7,
-          "contribution": 52.5
-        },
-        "suelo": {
-          "score": 65.0,
-          "weight": 0.1,
-          "contribution": 6.5
-        },
-        "diversificacion": {
-          "score": 50.0,
-          "weight": 0.1,
-          "contribution": 5.0
-        }
-      },
-      "campaigns": [
-        {
-          "crop": "frijol_caupi",
-          "starts_on": "2026-12-01",
-          "ends_on": "2027-03-10"
-        },
-        {
-          "crop": "camote",
-          "starts_on": "2027-03-11",
-          "ends_on": "2027-06-18"
-        }
-      ],
-      "reasons": [
-        "Frijol caupí: la temperatura promedio está dentro del rango de referencia.",
-        "Camote: la temperatura promedio está dentro del rango de referencia.",
-        "SYNTHETIC clima: puntuación de prueba con agua «low».",
-        "SYNTHETIC agua: puntuación de prueba con agua «low».",
-        "SYNTHETIC suelo: puntuación de prueba con agua «low».",
-        "SYNTHETIC diversificacion: puntuación de prueba con agua «low»."
-      ],
-      "limitations": [
-        "SYNTHETIC clima: no es una evaluación agronómica.",
-        "SYNTHETIC agua: no es una evaluación agronómica.",
-        "SYNTHETIC suelo: no es una evaluación agronómica.",
-        "SYNTHETIC diversificacion: no es una evaluación agronómica.",
-        "Las fechas usan la duración más corta citada para cada cultivo; varía según la variedad."
-      ],
-      "sources": [
-        {
-          "title": "SYNTHETIC fuente de prueba (no agronómica)",
-          "url": "https://example.invalid/fuente"
-        }
-      ]
-    },
-    {
       "id": "camote__frijol_caupi",
-      "rank": 2,
-      "score": 69.0,
+      "rank": 1,
+      "score": 85.5,
       "criteria": {
         "clima": {
-          "score": 50.0,
-          "weight": 0.1,
-          "contribution": 5.0
+          "score": 100.0,
+          "weight": 0.2,
+          "contribution": 20.0
         },
         "agua": {
-          "score": 75.0,
-          "weight": 0.7,
-          "contribution": 52.5
+          "score": 87.5,
+          "weight": 0.5,
+          "contribution": 43.75
         },
         "suelo": {
           "score": 65.0,
-          "weight": 0.1,
-          "contribution": 6.5
+          "weight": 0.15,
+          "contribution": 9.75
         },
         "diversificacion": {
-          "score": 50.0,
-          "weight": 0.1,
-          "contribution": 5.0
+          "score": 80.0,
+          "weight": 0.15,
+          "contribution": 12.0
         }
       },
       "campaigns": [
         {
           "crop": "camote",
           "starts_on": "2026-12-01",
-          "ends_on": "2027-03-10"
+          "ends_on": "2027-02-18"
         },
         {
           "crop": "frijol_caupi",
-          "starts_on": "2027-03-11",
-          "ends_on": "2027-06-18"
+          "starts_on": "2027-02-19",
+          "ends_on": "2027-04-19"
         }
       ],
       "reasons": [
         "Camote: la temperatura promedio está dentro del rango de referencia.",
         "Frijol caupí: la temperatura promedio está dentro del rango de referencia.",
-        "SYNTHETIC clima: puntuación de prueba con agua «low».",
-        "SYNTHETIC agua: puntuación de prueba con agua «low».",
-        "SYNTHETIC suelo: puntuación de prueba con agua «low».",
-        "SYNTHETIC diversificacion: puntuación de prueba con agua «low»."
+        "SYNTHETIC clima: temperatura media de las fechas de cada campaña en años anteriores (Camote 2026-12-01–2027-02-18: 26.63 °C; Frijol caupí 2027-02-19–2027-04-19: 27.67 °C).",
+        "SYNTHETIC agua: necesidad de prueba frente al agua declarada en la parcela «medium».",
+        "SYNTHETIC suelo: aporte de prueba con textura «franco».",
+        "SYNTHETIC diversificación: la primera campaña no repite el cultivo actual (frijol_caupi)."
       ],
       "limitations": [
-        "SYNTHETIC clima: no es una evaluación agronómica.",
-        "SYNTHETIC agua: no es una evaluación agronómica.",
-        "SYNTHETIC suelo: no es una evaluación agronómica.",
-        "SYNTHETIC diversificacion: no es una evaluación agronómica.",
+        "SYNTHETIC clima: puntuación de demostración, no agronómica.",
+        "SYNTHETIC agua: puntuación de demostración, no agronómica.",
+        "SYNTHETIC suelo: puntuación de demostración, no agronómica.",
+        "SYNTHETIC diversificacion: puntuación de demostración, no agronómica.",
         "Las fechas usan la duración más corta citada para cada cultivo; varía según la variedad."
       ],
       "sources": [
         {
-          "title": "SYNTHETIC fuente de prueba (no agronómica)",
-          "url": "https://example.invalid/fuente"
+          "title": "FAO EcoCrop data sheet: Ipomoea batatas",
+          "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=1265"
+        },
+        {
+          "title": "Cultivation harvesting and storage of sweet potato products",
+          "url": "https://www.fao.org/4/t0554e/T0554E14.htm"
+        },
+        {
+          "title": "How Sweetpotato Grows",
+          "url": "https://cipotato.org/sweetpotato/how-sweetpotato-grows/"
+        },
+        {
+          "title": "Effects of Water Availability and Vine Harvesting Frequency on the Productivity of Sweet Potato in Southern Mozambique. II. Crop Water Use",
+          "url": "https://www.cambridge.org/core/journals/experimental-agriculture/article/abs/effects-of-water-availability-and-vine-harvesting-frequency-on-the-productivity-of-sweet-potato-in-southern-mozambique-ii-crop-water-use/CEF3B2363F673AA412F92E54A9039027"
+        },
+        {
+          "title": "SYNTHETIC fuente de demostración (no agronómica)",
+          "url": "https://example.invalid/fuente-demostracion"
+        },
+        {
+          "title": "FAO EcoCrop data sheet: Vigna unguiculata ssp. unguiculata",
+          "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=10835"
+        },
+        {
+          "title": "Cowpea evapotranspiration and crop coefficient in the Gurgueia Valley, Piaui State, Brazil",
+          "url": "https://doi.org/10.15809/irriga.2008v13n2p182-190"
         }
       ]
     },
     {
-      "id": "maiz__camote",
-      "rank": 3,
-      "score": 51.5,
+      "id": "frijol_caupi__camote",
+      "rank": 2,
+      "score": 79.5,
       "criteria": {
         "clima": {
-          "score": 50.0,
-          "weight": 0.1,
-          "contribution": 5.0
+          "score": 100.0,
+          "weight": 0.2,
+          "contribution": 20.0
         },
         "agua": {
-          "score": 55.0,
-          "weight": 0.7,
-          "contribution": 38.5
+          "score": 87.5,
+          "weight": 0.5,
+          "contribution": 43.75
         },
         "suelo": {
-          "score": 30.0,
-          "weight": 0.1,
-          "contribution": 3.0
+          "score": 65.0,
+          "weight": 0.15,
+          "contribution": 9.75
         },
         "diversificacion": {
-          "score": 50.0,
-          "weight": 0.1,
-          "contribution": 5.0
+          "score": 40.0,
+          "weight": 0.15,
+          "contribution": 6.0
+        }
+      },
+      "campaigns": [
+        {
+          "crop": "frijol_caupi",
+          "starts_on": "2026-12-01",
+          "ends_on": "2027-01-29"
+        },
+        {
+          "crop": "camote",
+          "starts_on": "2027-01-30",
+          "ends_on": "2027-04-19"
+        }
+      ],
+      "reasons": [
+        "Frijol caupí: la temperatura promedio está dentro del rango de referencia.",
+        "Camote: la temperatura promedio está dentro del rango de referencia.",
+        "SYNTHETIC clima: temperatura media de las fechas de cada campaña en años anteriores (Frijol caupí 2026-12-01–2027-01-29: 26.34 °C; Camote 2027-01-30–2027-04-19: 27.63 °C).",
+        "SYNTHETIC agua: necesidad de prueba frente al agua declarada en la parcela «medium».",
+        "SYNTHETIC suelo: aporte de prueba con textura «franco».",
+        "SYNTHETIC diversificación: la primera campaña repite el cultivo actual (frijol_caupi)."
+      ],
+      "limitations": [
+        "SYNTHETIC clima: puntuación de demostración, no agronómica.",
+        "SYNTHETIC agua: puntuación de demostración, no agronómica.",
+        "SYNTHETIC suelo: puntuación de demostración, no agronómica.",
+        "SYNTHETIC diversificacion: puntuación de demostración, no agronómica.",
+        "Las fechas usan la duración más corta citada para cada cultivo; varía según la variedad."
+      ],
+      "sources": [
+        {
+          "title": "FAO EcoCrop data sheet: Vigna unguiculata ssp. unguiculata",
+          "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=10835"
+        },
+        {
+          "title": "Cowpea evapotranspiration and crop coefficient in the Gurgueia Valley, Piaui State, Brazil",
+          "url": "https://doi.org/10.15809/irriga.2008v13n2p182-190"
+        },
+        {
+          "title": "SYNTHETIC fuente de demostración (no agronómica)",
+          "url": "https://example.invalid/fuente-demostracion"
+        },
+        {
+          "title": "FAO EcoCrop data sheet: Ipomoea batatas",
+          "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=1265"
+        },
+        {
+          "title": "Cultivation harvesting and storage of sweet potato products",
+          "url": "https://www.fao.org/4/t0554e/T0554E14.htm"
+        },
+        {
+          "title": "How Sweetpotato Grows",
+          "url": "https://cipotato.org/sweetpotato/how-sweetpotato-grows/"
+        },
+        {
+          "title": "Effects of Water Availability and Vine Harvesting Frequency on the Productivity of Sweet Potato in Southern Mozambique. II. Crop Water Use",
+          "url": "https://www.cambridge.org/core/journals/experimental-agriculture/article/abs/effects-of-water-availability-and-vine-harvesting-frequency-on-the-productivity-of-sweet-potato-in-southern-mozambique-ii-crop-water-use/CEF3B2363F673AA412F92E54A9039027"
+        }
+      ]
+    },
+    {
+      "id": "maiz__frijol_caupi",
+      "rank": 3,
+      "score": 76.12,
+      "criteria": {
+        "clima": {
+          "score": 100.0,
+          "weight": 0.2,
+          "contribution": 20.0
+        },
+        "agua": {
+          "score": 72.5,
+          "weight": 0.5,
+          "contribution": 36.25
+        },
+        "suelo": {
+          "score": 52.5,
+          "weight": 0.15,
+          "contribution": 7.88
+        },
+        "diversificacion": {
+          "score": 80.0,
+          "weight": 0.15,
+          "contribution": 12.0
         }
       },
       "campaigns": [
         {
           "crop": "maiz",
           "starts_on": "2026-12-01",
-          "ends_on": "2027-03-10"
+          "ends_on": "2027-04-04"
         },
         {
-          "crop": "camote",
-          "starts_on": "2027-03-11",
-          "ends_on": "2027-06-18"
+          "crop": "frijol_caupi",
+          "starts_on": "2027-04-05",
+          "ends_on": "2027-06-03"
         }
       ],
       "reasons": [
         "Maíz: la temperatura promedio está dentro del rango de referencia.",
-        "Camote: la temperatura promedio está dentro del rango de referencia.",
-        "SYNTHETIC clima: puntuación de prueba con agua «low».",
-        "SYNTHETIC agua: puntuación de prueba con agua «low».",
-        "SYNTHETIC suelo: puntuación de prueba con agua «low».",
-        "SYNTHETIC diversificacion: puntuación de prueba con agua «low»."
+        "Frijol caupí: la temperatura promedio está dentro del rango de referencia.",
+        "SYNTHETIC clima: temperatura media de las fechas de cada campaña en años anteriores (Maíz 2026-12-01–2027-04-04: 27.03 °C; Frijol caupí 2027-04-05–2027-06-03: 26.84 °C).",
+        "SYNTHETIC agua: necesidad de prueba frente al agua declarada en la parcela «medium».",
+        "SYNTHETIC suelo: aporte de prueba con textura «franco».",
+        "SYNTHETIC diversificación: la primera campaña no repite el cultivo actual (frijol_caupi)."
       ],
       "limitations": [
-        "SYNTHETIC clima: no es una evaluación agronómica.",
-        "SYNTHETIC agua: no es una evaluación agronómica.",
-        "SYNTHETIC suelo: no es una evaluación agronómica.",
-        "SYNTHETIC diversificacion: no es una evaluación agronómica.",
+        "SYNTHETIC clima: puntuación de demostración, no agronómica.",
+        "SYNTHETIC agua: puntuación de demostración, no agronómica.",
+        "SYNTHETIC suelo: puntuación de demostración, no agronómica.",
+        "SYNTHETIC diversificacion: puntuación de demostración, no agronómica.",
         "Las fechas usan la duración más corta citada para cada cultivo; varía según la variedad."
       ],
       "sources": [
         {
-          "title": "SYNTHETIC fuente de prueba (no agronómica)",
-          "url": "https://example.invalid/fuente"
+          "title": "The Global Agro-Ecological Zoning version 4: Crop profile: Maize",
+          "url": "https://s3.eu-west-1.amazonaws.com/data.gaezdev.aws.fao.org/crop_profiles/GAEZ_Crop_profile_maize.pdf"
+        },
+        {
+          "title": "Irrigation Water Management: Irrigation Water Needs",
+          "url": "https://www.fao.org/4/s2022e/s2022e02.htm"
+        },
+        {
+          "title": "Irrigation Water Management: Irrigation Water Needs",
+          "url": "https://www.fao.org/4/s2022e/s2022e07.htm"
+        },
+        {
+          "title": "SYNTHETIC fuente de demostración (no agronómica)",
+          "url": "https://example.invalid/fuente-demostracion"
+        },
+        {
+          "title": "FAO EcoCrop data sheet: Vigna unguiculata ssp. unguiculata",
+          "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=10835"
+        },
+        {
+          "title": "Cowpea evapotranspiration and crop coefficient in the Gurgueia Valley, Piaui State, Brazil",
+          "url": "https://doi.org/10.15809/irriga.2008v13n2p182-190"
         }
       ]
     }

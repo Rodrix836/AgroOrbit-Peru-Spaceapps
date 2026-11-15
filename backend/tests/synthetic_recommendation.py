@@ -7,6 +7,7 @@ from uuid import UUID
 
 from app.data import crops as crops_module
 from app.database.models import NasaObservation
+from app.schemas.recommendation import Assumption
 from app.services import rotation_engine
 
 SYNTHETIC_SOURCE = {"title": "SYNTHETIC fuente de prueba (no agronómica)", "url": "https://example.invalid/fuente"}
@@ -31,10 +32,23 @@ def synthetic_catalog(monkeypatch, complete=("maiz", "frijol_caupi", "camote")):
     monkeypatch.setattr(crops_module, "CULTIVOS", catalog)
 
 
-def synthetic_evaluator(calls, mode="evaluacion", assumptions=()):
+SYNTHETIC_ASSUMPTIONS = [
+    Assumption(
+        field="engine.criteria",
+        value="sint?tico",
+        reason="SYNTHETIC: puntuaciones, pesos y requisitos de prueba."
+    )
+]
+
+
+def synthetic_evaluator(
+    calls,
+    mode="escenario_demostracion",
+    assumptions=tuple(SYNTHETIC_ASSUMPTIONS),
+):
     """Evaluador ficticio para verificar contrato, ranking y prioridades."""
     def evaluate(plot, request, candidates):
-        calls.append({"water": [c["water_availability"] for c in candidates], "ids": [c["id"] for c in candidates]})
+        calls.append({"water": [c["water_availability"] for c in candidates], "ids": [c["id"] for c in candidates], "candidates": candidates})
         evaluations = {}
         for c in candidates:
             a, b = c["crops"]
