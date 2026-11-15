@@ -1,0 +1,196 @@
+{
+  "status": "ok",
+  "mode": "escenario_demostracion",
+  "engine_version": "motor-1.0",
+  "plot_id": "11111111-1111-4111-8111-111111111111",
+  "created_at": "2026-11-15T17:10:30.413768Z",
+  "context": {
+    "notice": "Escenario de demostración: parte de los datos son supuestos, no medidos.",
+    "start_on": "2026-12-01",
+    "power": {
+      "source": "NASA POWER",
+      "time_standard": "LST",
+      "start": "2024-11-14",
+      "end": "2026-11-15",
+      "use": "historico",
+      "indicators": {
+        "temperatura_promedio_c": 26.5,
+        "temperatura_maxima_diaria_c": 26.5,
+        "temperatura_minima_diaria_c": 26.5,
+        "precipitacion_total_mm": 366.0,
+        "dias_analizados": 732,
+        "dias_temperatura_validos": 732,
+        "dias_precipitacion_validos": 732,
+        "cobertura_temperatura_pct": 100.0,
+        "cobertura_precipitacion_pct": 100.0
+      }
+    },
+    "sensor": {
+      "quality_flag": "test",
+      "used_as_evidence": false,
+      "reason": "Las lecturas del sensor son de prueba, tomadas fuera del campo, y no se usan para el cálculo."
+    },
+    "assumptions": [
+      {
+        "field": "plot.previous_crop",
+        "value": "maiz",
+        "reason": "Cultivo anterior fijado en el fixture; no fue declarado por un agricultor."
+      },
+      {
+        "field": "plot.next_sowing_date",
+        "value": "2026-12-01",
+        "reason": "Fecha planificada fijada en el fixture; no es una campaña real."
+      },
+      {
+        "field": "plot.water_availability",
+        "value": "low",
+        "reason": "Disponibilidad de agua fijada en el fixture; no fue medida."
+      },
+      {
+        "field": "plot.soil_texture",
+        "value": "franco",
+        "reason": "Textura fijada en el fixture; no procede de análisis de suelo."
+      },
+      {
+        "field": "crops.requirements",
+        "value": "SYNTHETIC fixture",
+        "reason": "Los requisitos y sus fuentes example.invalid son datos de prueba, no evidencia agronómica."
+      },
+      {
+        "field": "climate.history",
+        "value": "SYNTHETIC 26.5 C y 0.5 mm/day",
+        "reason": "La serie diaria constante se generó para reproducir el ejemplo; no son observaciones NASA."
+      }
+    ]
+  },
+  "missing": [],
+  "selected_id": "frijol_caupi__camote",
+  "alternatives": [
+    {
+      "id": "frijol_caupi__camote",
+      "rank": 1,
+      "score": 69.0,
+      "campaigns": [
+        {
+          "crop": "frijol_caupi",
+          "starts_on": "2026-12-01",
+          "ends_on": "2027-03-10"
+        },
+        {
+          "crop": "camote",
+          "starts_on": "2027-03-11",
+          "ends_on": "2027-06-18"
+        }
+      ],
+      "reasons": [
+        "Frijol caupí: la temperatura promedio está dentro del rango de referencia.",
+        "Camote: la temperatura promedio está dentro del rango de referencia.",
+        "SYNTHETIC clima: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: clima=50/100; peso de prueba=0.1.",
+        "SYNTHETIC agua: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: agua=75.0/100; peso de prueba=0.7.",
+        "SYNTHETIC suelo: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: suelo=65.0/100; peso de prueba=0.1.",
+        "SYNTHETIC diversificacion: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: diversificacion=50/100; peso de prueba=0.1."
+      ],
+      "limitations": [
+        "SYNTHETIC clima: no es una evaluación agronómica.",
+        "SYNTHETIC agua: no es una evaluación agronómica.",
+        "SYNTHETIC suelo: no es una evaluación agronómica.",
+        "SYNTHETIC diversificacion: no es una evaluación agronómica.",
+        "Las fechas usan la duración más corta citada para cada cultivo; varía según la variedad."
+      ],
+      "sources": [
+        {
+          "title": "SYNTHETIC fuente de prueba (no agronómica)",
+          "url": "https://example.invalid/fuente"
+        }
+      ]
+    },
+    {
+      "id": "camote__frijol_caupi",
+      "rank": 2,
+      "score": 69.0,
+      "campaigns": [
+        {
+          "crop": "camote",
+          "starts_on": "2026-12-01",
+          "ends_on": "2027-03-10"
+        },
+        {
+          "crop": "frijol_caupi",
+          "starts_on": "2027-03-11",
+          "ends_on": "2027-06-18"
+        }
+      ],
+      "reasons": [
+        "Camote: la temperatura promedio está dentro del rango de referencia.",
+        "Frijol caupí: la temperatura promedio está dentro del rango de referencia.",
+        "SYNTHETIC clima: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: clima=50/100; peso de prueba=0.1.",
+        "SYNTHETIC agua: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: agua=75.0/100; peso de prueba=0.7.",
+        "SYNTHETIC suelo: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: suelo=65.0/100; peso de prueba=0.1.",
+        "SYNTHETIC diversificacion: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: diversificacion=50/100; peso de prueba=0.1."
+      ],
+      "limitations": [
+        "SYNTHETIC clima: no es una evaluación agronómica.",
+        "SYNTHETIC agua: no es una evaluación agronómica.",
+        "SYNTHETIC suelo: no es una evaluación agronómica.",
+        "SYNTHETIC diversificacion: no es una evaluación agronómica.",
+        "Las fechas usan la duración más corta citada para cada cultivo; varía según la variedad."
+      ],
+      "sources": [
+        {
+          "title": "SYNTHETIC fuente de prueba (no agronómica)",
+          "url": "https://example.invalid/fuente"
+        }
+      ]
+    },
+    {
+      "id": "maiz__camote",
+      "rank": 3,
+      "score": 51.5,
+      "campaigns": [
+        {
+          "crop": "maiz",
+          "starts_on": "2026-12-01",
+          "ends_on": "2027-03-10"
+        },
+        {
+          "crop": "camote",
+          "starts_on": "2027-03-11",
+          "ends_on": "2027-06-18"
+        }
+      ],
+      "reasons": [
+        "Maíz: la temperatura promedio está dentro del rango de referencia.",
+        "Camote: la temperatura promedio está dentro del rango de referencia.",
+        "SYNTHETIC clima: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: clima=50/100; peso de prueba=0.1.",
+        "SYNTHETIC agua: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: agua=55.0/100; peso de prueba=0.7.",
+        "SYNTHETIC suelo: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: suelo=30.0/100; peso de prueba=0.1.",
+        "SYNTHETIC diversificacion: puntuación de prueba con agua «low».",
+        "SYNTHETIC desglose: diversificacion=50/100; peso de prueba=0.1."
+      ],
+      "limitations": [
+        "SYNTHETIC clima: no es una evaluación agronómica.",
+        "SYNTHETIC agua: no es una evaluación agronómica.",
+        "SYNTHETIC suelo: no es una evaluación agronómica.",
+        "SYNTHETIC diversificacion: no es una evaluación agronómica.",
+        "Las fechas usan la duración más corta citada para cada cultivo; varía según la variedad."
+      ],
+      "sources": [
+        {
+          "title": "SYNTHETIC fuente de prueba (no agronómica)",
+          "url": "https://example.invalid/fuente"
+        }
+      ]
+    }
+  ]
+}
