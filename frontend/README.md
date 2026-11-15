@@ -67,3 +67,37 @@ En Rotaciones el bloque «Con qué datos se calculó» aparece en todos los esce
 - En Rotaciones, si `context.power.use` es `historico` el texto dice «Histórico de … a …»; la «Lluvia promedio anual» (lluvia total ÷ años del período, solo con períodos de un año o más) es un cálculo del frontend, no un dato de NASA.
 - La API entrega las unidades de POWER como `C` y `mm/day`; solo se convierten a `°C` y `mm/día` para mostrarlas.
 - Horas en hora de Perú (UTC-5). Las fechas de POWER son días en hora solar local (LST); los sensores van en UTC.
+
+## Despliegue en Vercel
+
+El frontend es una app estática (Vite). `vercel.json` envía todas las rutas a `/index.html`, así que recargar `/parcela`, `/panel` o `/rotaciones` no da 404 (React Router resuelve la ruta en el navegador). Los archivos reales de `dist/` (scripts, fuentes, imágenes) se siguen sirviendo tal cual.
+
+| Ajuste en Vercel | Valor |
+|---|---|
+| Root Directory | `frontend` |
+| Framework Preset | Vite |
+| Install Command | `npm install` (por defecto) |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+
+### Variables de entorno (Settings → Environment Variables)
+
+Vercel no usa tu `.env` ni tu `.env.local` (están en el `.gitignore`): hay que crearlas allí.
+
+| Variable | Valor | Obligatoria |
+|---|---|---|
+| `VITE_API_URL` | URL **https** de la API en Render, sin `/` al final (`https://<tu-api>.onrender.com`). Nunca una IP local (`192.168.x.x`) ni `http://`: la página en Vercel es https y el navegador bloquea llamadas http | Sí |
+| `VITE_SUPABASE_URL` | URL del proyecto de Supabase | Sí |
+| `VITE_SUPABASE_ANON_KEY` | Clave **pública** (anon / publishable) de Supabase. Nunca la `service_role` ni credenciales de PostgreSQL | Sí |
+| `VITE_USE_MOCKS` | `false`. Con `true` la app muestra datos de ejemplo y no usa la API | Sí (poner `false`) |
+| `VITE_RECOMMENDATIONS_SOURCE` | `api` para pedir las recomendaciones a la API (la ruta ya responde). Por defecto es `mock` | No |
+| `VITE_MOCK_SCENARIO` | No definirla en producción: solo sirve para probar estados con datos de ejemplo | No |
+
+- Las variables `VITE_*` se **incrustan en el build**: si cambias una, hay que volver a desplegar (Redeploy).
+- Todo lo que lleva `VITE_` queda visible en el navegador de quien abra la página: por eso solo van valores públicos.
+- Antes de publicar, `npm run build` se probó sin errores y sin ninguna IP local dentro de `dist/`.
+
+### Lo que hay que pedir fuera del frontend
+
+- **Rodrigo (API):** que el CORS de la API permita el dominio de Vercel (`https://<tu-proyecto>.vercel.app` y el dominio propio, si lo hay).
+- **Elias (Supabase):** si hace falta, agregar ese dominio a las URLs permitidas de Supabase Auth (*Site URL* / *Redirect URLs*).
