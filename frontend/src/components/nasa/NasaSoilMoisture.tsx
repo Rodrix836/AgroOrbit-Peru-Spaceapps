@@ -1,4 +1,4 @@
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { NasaView } from '../../hooks/useNasa'
 import type { NasaObservation } from '../../types/api'
 import { formatDay, formatDayShort, formatNumber } from '../../utils/format'
@@ -7,17 +7,28 @@ import { SourceBadge } from '../ui/SourceBadge'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
 import { nasaSeries } from './NasaCards'
 
+/** Dos tonos de azul y dos trazos distintos: la capa superficial en azul claro y continua, la zona de raíces en azul más oscuro y punteada. */
 const VARIABLES = [
-  { key: 'GWETTOP', label: 'Capa superficial (~5 cm)', stroke: '#7fbbff', dash: undefined },
-  { key: 'GWETROOT', label: 'Zona de raíces', stroke: '#7fbbff', dash: '5 4' },
+  { key: 'GWETTOP', label: 'Capa superficial (~5 cm)', stroke: '#a9d6ff', dash: undefined },
+  { key: 'GWETROOT', label: 'Zona de raíces', stroke: '#4a86e0', dash: '6 4' },
 ] as const
+
+/** Muestra del trazo de una serie (color y continuo/punteado), para la leyenda y las tarjetas. */
+function LineSample({ stroke, dash }: { stroke: string; dash?: string }) {
+  return (
+    <svg aria-hidden width="32" height="10" viewBox="0 0 32 10" className="shrink-0">
+      <line x1="1" y1="5" x2="31" y2="5" stroke={stroke} strokeWidth="2.5" strokeDasharray={dash} />
+    </svg>
+  )
+}
 
 /** true si la API trajo alguna de estas variables (aunque sea con días sin dato). Si no, el bloque no se muestra. */
 export function hasSoilModel(observations: NasaObservation[]): boolean {
   return observations.some((o) => o.variable === 'GWETTOP' || o.variable === 'GWETROOT')
 }
 
-const fraction = (v: number) => formatNumber(v, 2)
+/** Fracción siempre con 2 decimales (0.30, no 0.3). */
+const fraction = (v: number) => v.toFixed(2)
 const percent = (v: number) => `${formatNumber(v * 100, 0)} %`
 
 const MARGIN = { top: 5, right: 32, left: 8, bottom: 5 }
@@ -71,22 +82,20 @@ export function NasaSoilMoisture({
               const last = latest(v.key)
               return (
                 <div key={v.key} className="border-t border-line py-3">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <dt className="text-ink">{v.label}</dt>
-                    <dd className="text-right font-mono text-lg text-cielo">
-                      {last ? (
-                        <>
-                          {fraction(last.value as number)}
-                          <span className="ml-1.5 text-base text-muted">fracción</span>
-                          <span className="mx-2 text-muted">·</span>
-                          {percent(last.value as number)}
-                          <span className="ml-1.5 text-base text-muted">de saturación</span>
-                        </>
-                      ) : (
-                        <span className="text-muted">Sin dato</span>
-                      )}
-                    </dd>
-                  </div>
+                  <dt className="flex items-center gap-3 whitespace-nowrap text-ink">
+                    <LineSample stroke={v.stroke} dash={v.dash} />
+                    {v.label}
+                  </dt>
+                  <dd className="mt-1 whitespace-nowrap font-mono text-lg" style={{ color: v.stroke }}>
+                    {last ? (
+                      <>
+                        {fraction(last.value as number)} <span className="text-muted">·</span> {percent(last.value as number)}{' '}
+                        <span className="text-base text-muted">de saturación</span>
+                      </>
+                    ) : (
+                      <span className="text-muted">Sin dato</span>
+                    )}
+                  </dd>
                   {last && (
                     <p className="mt-1 font-mono text-base text-muted">Último dato: {formatDay(last.observed_on)}</p>
                   )}
@@ -118,7 +127,6 @@ export function NasaSoilMoisture({
                       String(name),
                     ]}
                   />
-                  <Legend wrapperStyle={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13 }} />
                   {VARIABLES.map((v) => (
                     <Line
                       key={v.key}
@@ -135,6 +143,14 @@ export function NasaSoilMoisture({
                 </LineChart>
               </ResponsiveContainer>
             </div>
+            <ul className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-base text-ink">
+              {VARIABLES.map((v) => (
+                <li key={v.key} className="flex items-center gap-2">
+                  <LineSample stroke={v.stroke} dash={v.dash} />
+                  {v.label}
+                </li>
+              ))}
+            </ul>
           </div>
         </>
       ) : (
