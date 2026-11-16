@@ -28,6 +28,7 @@ import recommendationFormatMockup from './recommendation-format-mockup.json'
 import recommendationInsufficient from './recommendation-insufficient-data.json'
 import recommendationSave from './recommendation-save-water.json'
 import { MOCK_SCENARIO, RECOMMENDATION_SCENARIO } from './scenario'
+import { tr } from '../../i18n/active'
 
 export { MOCK_SCENARIO, SCENARIOS, type MockScenario } from './scenario'
 
@@ -85,14 +86,14 @@ export function mockCreatePlot(input: PlotInput): Plot {
 
 export function mockGetPlot(plotId: string): Plot {
   const plot = mockPlots.find((p) => p.id === plotId)
-  if (!plot) throw new ApiError(404, 'Parcela no encontrada.', 'plot_not_found')
+  if (!plot) throw new ApiError(404, tr('mock.plotNotFound'), 'plot_not_found')
   return plot
 }
 
 /** Respuesta de PATCH /api/plots/{id}: aplica solo los campos enviados y devuelve la parcela completa. */
 export function mockUpdatePlot(plotId: string, patch: PlotUpdate): Plot {
   const i = mockPlots.findIndex((p) => p.id === plotId)
-  if (i < 0) throw new Error('Parcela de ejemplo no encontrada.')
+  if (i < 0) throw new Error(tr('mock.examplePlotNotFound'))
   const next = { ...mockPlots[i], ...patch } as Plot
   mockPlots[i] = next
   return next
@@ -246,16 +247,16 @@ export function mockCropCycles(plotId: string): CropCyclesResponse {
 
 function checkCycle(c: Pick<CropCycle, 'status' | 'crop_code' | 'sowing_date' | 'harvest_date'>) {
   if (c.crop_code !== null && !(crops as Crop[]).some((x) => x.id === c.crop_code)) {
-    throw validationError('crop_code', 'Cultivo desconocido.')
+    throw validationError('crop_code', tr('mock.unknownCrop'))
   }
   if ((c.status === 'active' || c.status === 'finished') && !c.crop_code) {
-    throw validationError('crop_code', 'Falta el cultivo.')
+    throw validationError('crop_code', tr('mock.missingCrop'))
   }
   if (c.status === 'planned' && !c.sowing_date) {
-    throw validationError('sowing_date', 'Falta la fecha de inicio.')
+    throw validationError('sowing_date', tr('mock.missingStart'))
   }
   if (c.sowing_date && c.harvest_date && c.harvest_date < c.sowing_date) {
-    throw validationError('harvest_date', 'La cosecha no puede ser antes de la siembra.')
+    throw validationError('harvest_date', tr('mock.harvestBeforeSow'))
   }
 }
 
@@ -277,7 +278,7 @@ export function mockCreateCropCycle(plotId: string, body: CropCycleCreate): Crop
     const code = body.status === 'active' ? 'active_cycle_exists' : 'planned_cycle_exists'
     throw new ApiError(
       409,
-      body.status === 'active' ? 'La parcela ya tiene un cultivo actual.' : 'La parcela ya tiene una próxima campaña.',
+      body.status === 'active' ? tr('err.active_cycle_exists') : tr('err.planned_cycle_exists'),
       code,
       { cycle_id: same.id },
     )
@@ -289,7 +290,7 @@ export function mockCreateCropCycle(plotId: string, body: CropCycleCreate): Crop
 export function mockUpdateCropCycle(plotId: string, cycleId: string, body: CropCycleUpdate): CropCycle {
   const all = mockCycles[plotId] ?? []
   const i = all.findIndex((c) => c.id === cycleId)
-  if (i < 0) throw new ApiError(404, 'Ciclo de cultivo no encontrado.', 'cycle_not_found')
+  if (i < 0) throw new ApiError(404, tr('mock.cycleNotFound'), 'cycle_not_found')
   const next: CropCycle = { ...all[i], ...body } as CropCycle
   checkCycle(next)
   all[i] = next
@@ -299,7 +300,7 @@ export function mockUpdateCropCycle(plotId: string, cycleId: string, body: CropC
 export function mockDeleteCropCycle(plotId: string, cycleId: string): void {
   const all = mockCycles[plotId] ?? []
   const i = all.findIndex((c) => c.id === cycleId)
-  if (i < 0) throw new ApiError(404, 'Ciclo de cultivo no encontrado.', 'cycle_not_found')
+  if (i < 0) throw new ApiError(404, tr('mock.cycleNotFound'), 'cycle_not_found')
   all.splice(i, 1)
 }
 

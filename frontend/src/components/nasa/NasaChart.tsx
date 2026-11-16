@@ -16,6 +16,8 @@ import { displayUnit, formatDay, formatDayShort, formatNumber } from '../../util
 import { addDays } from '../../utils/period'
 import { Eyebrow } from '../ui/Eyebrow'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { localeOf } from '../../i18n/active'
 
 interface DayRow {
   day: string
@@ -91,7 +93,7 @@ function monthlyRows(observations: NasaObservation[], from: string, to: string):
 }
 
 const monthLabel = (key: string) =>
-  new Date(Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1)).toLocaleDateString('es-PE', {
+  new Date(Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1)).toLocaleDateString(localeOf(), {
     timeZone: 'UTC',
     month: 'short',
     year: '2-digit',
@@ -110,6 +112,7 @@ const valuesOf = (values: (number | null)[]) => values.flatMap((v) => (v === nul
  * promedio mensual y lluvia sumada por mes, para que se lea. Los días o meses sin dato quedan en blanco.
  */
 export function NasaChart({ observations, view }: { observations: NasaObservation[]; view: NasaView }) {
+  const { t } = useLanguage()
   const monthly = view.period.days > 90
   const tUnit = unitOf(observations, 'T2M', 'C')
   const rUnit = unitOf(observations, 'PRECTOTCORR', 'mm/day')
@@ -138,8 +141,10 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
       {hasTemp && (
         <div>
           <Eyebrow tone="cielo">
-            {monthly ? 'Temperatura del aire, promedio mensual' : 'Temperatura del aire por día'} ({tUnit}) · NASA
-            POWER
+            {t('nasa.chart.titleTemp', {
+              title: monthly ? t('nasa.chart.tempMonthly') : t('nasa.chart.tempDaily'),
+              unit: tUnit,
+            })}
           </Eyebrow>
           <div className="mt-3 h-56 w-full">
             <ResponsiveContainer>
@@ -152,17 +157,17 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
                   labelFormatter={labelFormatter}
                   formatter={(v, _n, item) => {
                     const row = item.payload as MonthRow
-                    const extra = monthly ? ` · ${row.tempDays} de ${row.monthDays} días con dato` : ''
+                    const extra = monthly ? ` ${t('nasa.chart.daysWithData', { n: row.tempDays, total: row.monthDays })}` : ''
                     return [
-                      v == null ? 'sin dato' : `${v} ${tUnit}${extra}`,
-                      monthly ? 'Promedio del mes' : 'Temperatura del aire',
+                      v == null ? t('nasa.chart.noData') : `${v} ${tUnit}${extra}`,
+                      monthly ? t('nasa.chart.monthAvg') : t('nasa.chart.airTemp'),
                     ]
                   }}
                 />
                 <Line
                   type="monotone"
                   dataKey="T2M"
-                  name={`Temperatura del aire (${tUnit})`}
+                  name={t('nasa.chart.airTempUnit', { unit: tUnit })}
                   stroke="#7fbbff"
                   strokeWidth={2}
                   dot={monthly ? { r: 3, fill: '#7fbbff' } : false}
@@ -177,7 +182,7 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
       {hasRain && (
         <div>
           <Eyebrow tone="cielo">
-            {monthly ? 'Lluvia sumada por mes (mm)' : `Lluvia por día (${rUnit})`} · NASA POWER
+            {monthly ? t('nasa.chart.rainMonthlyTitle') : t('nasa.chart.rainDailyTitle', { unit: rUnit })}
           </Eyebrow>
           <div className="mt-3 h-56 w-full">
             <ResponsiveContainer>
@@ -192,13 +197,16 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
                   formatter={(v, _n, item) => {
                     const row = item.payload as MonthRow
                     const unit = monthly ? 'mm' : rUnit
-                    const extra = monthly ? ` · ${row.rainDays} de ${row.monthDays} días con dato` : ''
-                    return [v == null ? 'sin dato' : `${v} ${unit}${extra}`, monthly ? 'Lluvia del mes' : 'Lluvia']
+                    const extra = monthly ? ` ${t('nasa.chart.daysWithData', { n: row.rainDays, total: row.monthDays })}` : ''
+                    return [
+                      v == null ? t('nasa.chart.noData') : `${v} ${unit}${extra}`,
+                      monthly ? t('nasa.chart.monthRain') : t('nasa.chart.rain'),
+                    ]
                   }}
                 />
                 <Bar
                   dataKey="PRECTOTCORR"
-                  name={monthly ? 'Lluvia del mes (mm)' : `Lluvia (${rUnit})`}
+                  name={monthly ? t('nasa.chart.monthRainMm') : t('nasa.chart.rainUnit', { unit: rUnit })}
                   fill="#7fbbff"
                 />
               </BarChart>
@@ -209,13 +217,13 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
 
       {monthly && (
         <details className="border border-line p-3">
-          <summary className="cursor-pointer font-medium text-ink">Ver detalle por mes (días con dato)</summary>
+          <summary className="cursor-pointer font-medium text-ink">{t('nasa.chart.detail')}</summary>
           <table className="mt-3 w-full font-mono text-base">
             <thead className="text-left text-muted">
               <tr>
-                <th className="py-1 pr-2 font-normal">Mes</th>
-                <th className="py-1 pr-2 font-normal">Lluvia (mm)</th>
-                <th className="py-1 font-normal">Temp. ({tUnit})</th>
+                <th className="py-1 pr-2 font-normal">{t('nasa.chart.colMonth')}</th>
+                <th className="py-1 pr-2 font-normal">{t('nasa.chart.colRain')}</th>
+                <th className="py-1 font-normal">{t('nasa.chart.colTemp', { unit: tUnit })}</th>
               </tr>
             </thead>
             <tbody>
@@ -224,7 +232,7 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
                   <td className="py-1 pr-2 text-ink">{monthLabel(m.key)}</td>
                   <td className="py-1 pr-2 text-cielo">
                     {m.PRECTOTCORR === null ? (
-                      <span className="text-muted">sin dato</span>
+                      <span className="text-muted">{t('nasa.chart.noData')}</span>
                     ) : (
                       <>
                         {formatNumber(m.PRECTOTCORR, 1)}{' '}
@@ -236,7 +244,7 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
                   </td>
                   <td className="py-1 text-cielo">
                     {m.T2M === null ? (
-                      <span className="text-muted">sin dato</span>
+                      <span className="text-muted">{t('nasa.chart.noData')}</span>
                     ) : (
                       <>
                         {formatNumber(m.T2M, 1)}{' '}
@@ -250,15 +258,12 @@ export function NasaChart({ observations, view }: { observations: NasaObservatio
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-muted">Entre paréntesis: días con dato / días del mes dentro del período.</p>
+          <p className="mt-2 text-muted">{t('nasa.chart.parens')}</p>
         </details>
       )}
 
       <p className="text-muted">
-        {monthly
-          ? 'La lluvia es la suma de los días con dato de cada mes y la temperatura, su promedio. Los meses sin ningún dato quedan en blanco (no en 0), y los meses de los extremos pueden estar incompletos. '
-          : 'Los días sin dato quedan en blanco: no se rellenan ni se cuentan como 0. '}
-        Fuente: NASA POWER (contexto regional, no una medición sobre la parcela).
+        {monthly ? t('nasa.chart.noteMonthly') : t('nasa.chart.noteDaily')} {t('nasa.chart.source')}
       </p>
     </div>
   )

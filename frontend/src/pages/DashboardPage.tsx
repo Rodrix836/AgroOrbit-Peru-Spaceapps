@@ -18,6 +18,7 @@ import { SectionCard } from '../components/ui/SectionCard'
 import { useMemo } from 'react'
 import { useClimateHistory } from '../hooks/useClimateHistory'
 import { useNasa } from '../hooks/useNasa'
+import { useLanguage } from '../i18n/LanguageContext'
 import { usePlot } from '../hooks/usePlot'
 import { USE_MOCKS } from '../services/api'
 import { SENSOR_REFRESH_MS, useReadings } from '../hooks/useReadings'
@@ -25,6 +26,7 @@ import { SENSOR_REFRESH_MS, useReadings } from '../hooks/useReadings'
 /** 02 / Diagnóstico: sensor ESP32 (ámbar) y contexto NASA POWER (azul), siempre separados. */
 export function DashboardPage() {
   const { plot, loading: plotLoading, error: plotError, reload } = usePlot()
+  const { t } = useLanguage()
   const readings = useReadings(plot?.id ?? null)
   const nasa = useNasa(plot?.id ?? null)
   // Histórico de 10 años (T2M y PRECTOTCORR) para el bloque de riesgo e incertidumbre; aparte del período elegido.
@@ -55,15 +57,15 @@ export function DashboardPage() {
   const lastMoisture = [...(readings.data ?? [])].reverse().find((r) => r.sensor_type === 'soil_moisture')
   const sensorIsTest = lastMoisture?.quality_flag === 'test'
 
-  if (plotLoading) return <Loading label="Cargando tu parcela…" />
+  if (plotLoading) return <Loading label={t('rot.loadingPlot')} />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
   if (!plot) {
     return (
       <>
-        <PageHeader index="02" label="Diagnóstico" title="Tu parcela, hoy" />
+        <PageHeader index="02" label={t('nav.diagnostics')} title={t('dash.title')} />
         <EmptyState
-          title="Primero registra tu parcela"
-          action={<ButtonLink to="/parcela">Ir a Parcela →</ButtonLink>}
+          title={t('dash.registerFirst')}
+          action={<ButtonLink to="/parcela">{t('dash.goPlot')}</ButtonLink>}
         />
       </>
     )
@@ -71,50 +73,50 @@ export function DashboardPage() {
 
   return (
     <div>
-      <PageHeader index="02" label="Diagnóstico" title="Tu parcela, hoy" aside={<PlotSummary />} />
+      <PageHeader index="02" label={t('nav.diagnostics')} title={t('dash.title')} aside={<PlotSummary />} />
 
       <PanelGrid>
         {/* MEDICIÓN PUNTUAL: sensor ESP32. Nunca se mezcla con el contexto NASA. */}
         <SectionCard
-          title="Suelo · Sensor ESP32"
-          description="Lo que mide el sensor enterrado en tu parcela, en un punto."
+          title={t('dash.soilCardTitle')}
+          description={t('dash.soilCardDesc')}
           tone="sensor"
         >
-          {readings.loading && <Loading label="Leyendo el sensor…" />}
+          {readings.loading && <Loading label={t('dash.readingSensor')} />}
           {readings.error && <ErrorBox message={readings.error} onRetry={readings.reload} />}
           {readings.data && (
             <>
               <SensorCards readings={readings.data} />
               <ReadingsChart readings={readings.data} />
-              <p className="text-muted">Se actualiza solo cada {SENSOR_REFRESH_MS / 1000} segundos.</p>
+              <p className="text-muted">{t('dash.autoRefresh', { s: SENSOR_REFRESH_MS / 1000 })}</p>
             </>
           )}
         </SectionCard>
 
         {/* CONTEXTO REGIONAL: NASA POWER. No es una medición sobre la parcela. */}
         <SectionCard
-          title="Clima de la zona · NASA POWER"
-          description="Contexto regional de modelos de NASA para tu zona. No es una medición sobre tu parcela."
+          title={t('dash.nasaTitle')}
+          description={t('dash.nasaDesc')}
           tone="nasa"
           actions={
             <Button variant="cielo" onClick={() => void nasa.refresh()} disabled={nasa.refreshing || nasa.loading}>
-              {nasa.refreshing ? 'Consultando NASA…' : 'Actualizar clima'}
+              {nasa.refreshing ? t('dash.querying') : t('dash.updateWeather')}
             </Button>
           }
         >
           {nasa.problem && (
             <Alert
               tone="warn"
-              title={nasa.problem.nasaDown ? 'NASA no disponible' : 'No se pudo actualizar el clima'}
+              title={nasa.problem.nasaDown ? t('dash.nasaDown') : t('dash.updateFailed')}
               role="alert"
             >
               {nasa.problem.message}{' '}
               {nasa.data && nasa.data.length > 0
-                ? 'Se muestran los últimos datos guardados, con su fecha.'
-                : 'Todavía no hay datos guardados para mostrar.'}
+                ? t('dash.showingSaved')
+                : t('dash.noSaved')}
             </Alert>
           )}
-          {nasa.loading && <Loading label="Consultando NASA POWER…" />}
+          {nasa.loading && <Loading label={t('dash.queryingPower')} />}
           {!nasa.loading && (
             <NasaPeriodSelector
               value={nasa.period}
@@ -122,10 +124,10 @@ export function DashboardPage() {
               disabled={nasa.refreshing}
             />
           )}
-          {!nasa.loading && nasa.refreshing && <Loading label="Cargando el período…" />}
+          {!nasa.loading && nasa.refreshing && <Loading label={t('dash.loadingPeriod')} />}
           {nasa.error && <ErrorBox message={nasa.error} onRetry={nasa.reload} />}
           {nasa.failed.length > 0 && (
-            <p className="text-muted">No se pudieron cargar estas variables de NASA: {nasa.failed.join(', ')}.</p>
+            <p className="text-muted">{t('dash.failedVars', { vars: nasa.failed.join(', ') })}</p>
           )}
           {nasa.data && nasa.view && (
             <>
@@ -145,8 +147,8 @@ export function DashboardPage() {
 
       {/* Histórico de NASA POWER a todo el ancho: cuánto varía el clima de un año a otro (cálculo del frontend). */}
       <div className="mt-px">
-        <SectionCard title="Riesgo e incertidumbre: cómo varía el clima aquí" tone="nasa">
-          {history.loading && <Loading label="Cargando el histórico de 10 años de NASA POWER…" />}
+        <SectionCard title={t('dash.riskTitle')} tone="nasa">
+          {history.loading && <Loading label={t('dash.loadingHistory')} />}
           {history.error && <ErrorBox message={history.error} onRetry={history.reload} />}
           {history.data && <ClimateRisk history={history.data} example={USE_MOCKS} />}
         </SectionCard>
@@ -155,10 +157,10 @@ export function DashboardPage() {
       {/* Franja final a todo el ancho */}
       <section className="mt-px flex flex-wrap items-center justify-between gap-6 bg-lima p-6 text-bg md:p-8">
         <h2 className="max-w-xl font-display text-[clamp(26px,4vw,40px)] font-extrabold leading-none tracking-[-0.03em]">
-          ¿Qué sembrar en las próximas dos campañas?
+          {t('dash.cta')}
         </h2>
         <ButtonLink to="/rotaciones" variant="dark" size="lg">
-          Comparar rotaciones →
+          {t('dash.compare')}
         </ButtonLink>
       </section>
     </div>

@@ -18,6 +18,9 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { PanelGrid } from '../components/ui/PanelGrid'
 import { SourceBadge } from '../components/ui/SourceBadge'
 import { usePlot } from '../hooks/usePlot'
+import { td } from '../i18n/dataText'
+import { useLanguage } from '../i18n/LanguageContext'
+import type { TKey } from '../i18n/translations'
 import { useRecommendation } from '../hooks/useRecommendation'
 import { RECOMMENDATIONS_ARE_MOCK } from '../services/api'
 import type { Plot, Priority, RecommendationRequest, RecommendationResponse, SourceRef } from '../types/api'
@@ -26,10 +29,10 @@ import { hasPlaceholders, isFormatMockup } from '../utils/placeholders'
 const HORIZON_DAYS = 365 // hasta 12 meses, dos campañas
 const LETTERS = ['A', 'B', 'C', 'D']
 
-const PRIORITIES: { value: Priority; label: string }[] = [
-  { value: 'save_water', label: 'Ahorrar agua' },
-  { value: 'improve_soil', label: 'Mejorar el suelo' },
-]
+const PRIORITIES = [
+  { value: 'save_water', labelKey: 'priority.save_water.label' },
+  { value: 'improve_soil', labelKey: 'priority.improve_soil.label' },
+] as const satisfies readonly { value: Priority; labelKey: TKey }[]
 
 /** Prioridad guardada en la parcela, si es una de las dos que ofrece la interfaz. */
 function plotPriority(plot: Plot | null): Priority {
@@ -52,6 +55,7 @@ function buildRequest(plot: Plot, priority: Priority): RecommendationRequest {
 export function RotationsPage() {
   const { plot, crops, loading: plotLoading, error: plotError, reload, cycles } = usePlot()
   const rec = useRecommendation()
+  const { t } = useLanguage()
   const { run } = rec
   // Vista del escenario de demostración: ?escenario=demo (se abre con el botón y se cierra con «Volver…»).
   const [params, setParams] = useSearchParams()
@@ -96,15 +100,15 @@ export function RotationsPage() {
     useMemo(() => ({ data: rec.data, loading: rec.loading, error: rec.error }), [rec.data, rec.loading, rec.error]),
   )
 
-  if (plotLoading) return <Loading label="Cargando tu parcela…" />
+  if (plotLoading) return <Loading label={t('rot.loadingPlot')} />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />
   if (!plot) {
     return (
       <>
-        <PageHeader index="03" label="Rotaciones" title="Dos campañas, dos caminos" />
+        <PageHeader index="03" label={t('nav.rotations')} title={t('rot.title')} />
         <EmptyState
-          title="Primero registra tu parcela"
-          action={<ButtonLink to="/parcela">Ir a Parcela →</ButtonLink>}
+          title={t('dash.registerFirst')}
+          action={<ButtonLink to="/parcela">{t('dash.goPlot')}</ButtonLink>}
         />
       </>
     )
@@ -142,7 +146,8 @@ export function RotationsPage() {
   const previousAlternatives =
     previous && previous.priority !== priority && previous.data.status === 'ok' ? previous.data.alternatives : []
   const previousCriteriaOf = (id: string) => previousAlternatives.find((p) => p.id === id)?.criteria
-  const priorityLabel = PRIORITIES.find((p) => p.value === priority)?.label ?? ''
+  const priorityLabelKey = PRIORITIES.find((p) => p.value === priority)?.labelKey
+  const priorityLabel = priorityLabelKey ? t(priorityLabelKey) : ''
   const changedWeights = alternatives[0]
     ? weightChanges(previousCriteriaOf(alternatives[0].id), alternatives[0].criteria)
     : []
@@ -163,13 +168,13 @@ export function RotationsPage() {
       {/* Escenario de demostración: aviso ámbar arriba de todo, con los supuestos siempre visibles. */}
       {!rec.loading && demo && (
         <div className="mb-8">
-          <Alert tone="warn" title="Escenario de demostración">
+          <Alert tone="warn" title={t('rot.demoAlertTitle')}>
             <p className="text-lg font-semibold">
-              Escenario de demostración: no es una recomendación para una parcela real.
+              {t('rot.demoAlertText')}
             </p>
             {assumptions.length > 0 && (
               <>
-                <p className="mt-3">Se usaron estos supuestos, que no declaró ningún agricultor:</p>
+                <p className="mt-3">{t('rot.demoAssumptions')}</p>
                 <ul className="mt-2 space-y-2">
                   {assumptions.map((a, i) => (
                     <li key={`${a.field}-${i}`} className="flex gap-3">
@@ -178,8 +183,8 @@ export function RotationsPage() {
                       </span>
                       <span>
                         <span className="font-medium">{fieldLabel(a.field, crops)}:</span>{' '}
-                        {assumptionValue(a.field, a.value, crops)}.{' '}
-                        <span className="text-muted">{a.reason}</span>
+                        {td(assumptionValue(a.field, a.value, crops))}.{' '}
+                        <span className="text-muted">{td(a.reason)}</span>
                       </span>
                     </li>
                   ))}
@@ -190,24 +195,22 @@ export function RotationsPage() {
         </div>
       )}
 
-      <PageHeader index="03" label="Rotaciones" title="Dos campañas, dos caminos" />
-      <p className="-mt-4 mb-4 max-w-prose text-muted">
-        Dos campañas seguidas dentro de los próximos 12 meses. Elige qué te importa más y compara.
-      </p>
+      <PageHeader index="03" label={t('nav.rotations')} title={t('rot.title')} />
+      <p className="-mt-4 mb-4 max-w-prose text-muted">{t('rot.intro')}</p>
 
       {/* PENDIENTE BACKEND: sin ruta POST /api/recommendations (VITE_RECOMMENDATIONS_SOURCE=mock) salen respuestas de ejemplo. */}
       {RECOMMENDATIONS_ARE_MOCK && (
         <div className="mb-8 flex flex-wrap items-center gap-3">
-          <SourceBadge kind="prototype" label="Datos de ejemplo" />
+          <SourceBadge kind="prototype" label={t('common.exampleData')} />
           <span className="text-muted">
-            El motor de recomendaciones todavía no está conectado a la API: lo que ves aquí es de muestra.
+            {t('rot.engineNotConnected')}
           </span>
         </div>
       )}
 
       {/* Fila de prioridad entre dos líneas */}
-      <div className="mb-8 flex flex-wrap items-center gap-3 border-y border-line py-4" role="group" aria-label="Prioridad">
-        <Eyebrow className="mr-2">Prioridad</Eyebrow>
+      <div className="mb-8 flex flex-wrap items-center gap-3 border-y border-line py-4" role="group" aria-label={t('rot.priority')}>
+        <Eyebrow className="mr-2">{t('rot.priority')}</Eyebrow>
         {PRIORITIES.map((p) => (
           <Button
             key={p.value}
@@ -215,12 +218,12 @@ export function RotationsPage() {
             aria-pressed={priority === p.value}
             onClick={() => setOverride(p.value)}
           >
-            {p.label}
+            {t(p.labelKey)}
           </Button>
         ))}
       </div>
 
-      {rec.loading && <Loading label="Calculando alternativas…" />}
+      {rec.loading && <Loading label={t('rot.calculating')} />}
       {rec.error && <ErrorBox message={rec.error} onRetry={() => void run(buildRequest(plot, priority))} />}
 
       {/* Siempre visible, encima del resultado */}
@@ -232,14 +235,13 @@ export function RotationsPage() {
       {!rec.loading && mockup && (
         <section className="mb-8 border-l-4 border-ambar bg-ambar-bg p-6 md:p-8">
           <Eyebrow tone="ambar" className="mb-3">
-            Sin resultado
+            {t('rot.noResult')}
           </Eyebrow>
           <h2 className="font-display text-[clamp(28px,4vw,40px)] font-extrabold leading-none tracking-[-0.03em] text-ink">
-            Maqueta de formato: aún no hay resultado del motor
+            {t('rot.mockupTitle')}
           </h2>
           <p className="mt-3 max-w-prose text-ink">
-            La respuesta solo trae el formato con textos de relleno. No mostramos alternativas, puntajes ni
-            calendario porque no son una recomendación.
+            {t('rot.mockupBody')}
           </p>
         </section>
       )}
@@ -250,29 +252,27 @@ export function RotationsPage() {
       {!rec.loading && insufficient && (
         <div className="mb-8 mt-6 border border-line bg-panel p-6 md:p-8">
           <p className="max-w-prose text-ink">
-            Mientras faltan datos, puedes ver un ejemplo de cómo se comparan tres secuencias de cultivos. Es una
-            demostración, no una recomendación para tu parcela.
+            {t('rot.whileMissing')}
           </p>
           <Button size="lg" className="mt-4" onClick={() => setParams({ escenario: 'demo' })}>
-            Ver escenario de demostración
+            {t('rot.seeDemo')}
           </Button>
         </div>
       )}
 
       {!rec.loading && data?.status === 'ok' && !mockup && alternatives.length === 0 && (
-        <EmptyState title="No hay alternativas para mostrar" />
+        <EmptyState title={t('rot.noAlternatives')} />
       )}
 
       {/* Sin fecha de inicio guardada, el calendario usa una fecha supuesta: se avisa antes de las alternativas. */}
       {!rec.loading && data?.status === 'ok' && !mockup && missingStart && (
         <div className="mb-8">
-          <Alert tone="warn" title="Falta un dato">
+          <Alert tone="warn" title={t('rot.missingTitle')}>
             <p>
-              Falta la fecha de inicio de la siguiente campaña, así que los calendarios usan una fecha supuesta
-              (está marcada en cada alternativa). Se verán más precisos cuando la agregues.
+              {t('rot.missingStart')}
             </p>
             <ButtonLink to="/parcela" variant="amber" size="lg" className="mt-4">
-              Completar datos →
+              {t('rot.completeData')}
             </ButtonLink>
           </Alert>
         </div>
@@ -282,7 +282,7 @@ export function RotationsPage() {
       {!rec.loading && changedWeights.length > 0 && (
         <div className="mb-6 border-l-4 border-lima bg-panel p-4">
           <p className="text-ink">
-            Con «{priorityLabel}» cambió cuánto pesa cada criterio en el total:{' '}
+            {t('rot.weightsChanged', { priority: priorityLabel })}{' '}
             {changedWeights.map((c, i) => (
               <span key={c.id}>
                 {i > 0 && '; '}
@@ -319,13 +319,11 @@ export function RotationsPage() {
           <PanelGrid className="lg:grid-cols-1">
             <section className="bg-panel p-6 md:p-8">
               <Eyebrow tone="cielo" className="mb-4">
-                Fuentes y método
+                {t('rot.sourcesMethod')}
               </Eyebrow>
               <SourcesList sources={sources} />
               <p className="mt-5 text-muted">
-                Reglas del prototipo (versión {data.engine_version}). Los puntajes son criterios de comparación
-                del prototipo, no probabilidades de éxito ni rendimientos. Cambiar la prioridad cambia la
-                ponderación; el ganador no siempre cambia.
+                {t('rot.methodNote', { version: data.engine_version })}
               </p>
             </section>
           </PanelGrid>

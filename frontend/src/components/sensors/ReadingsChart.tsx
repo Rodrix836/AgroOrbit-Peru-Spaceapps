@@ -14,11 +14,13 @@ import { formatHour24, formatShortTime } from '../../utils/format'
 import { Eyebrow } from '../ui/Eyebrow'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
 import { TestBadge } from './QualityNotice'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 const DAY = 24 * 3600_000
 
 /** Gráfico de línea ámbar de las últimas 24 h de lecturas del sensor. */
 export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
+  const { t } = useLanguage()
   const valid = readings.filter((r) => r.calibrated_value !== null)
   if (valid.length === 0) return null
   const newest = Math.max(...valid.map((r) => new Date(r.recorded_at).getTime()))
@@ -42,7 +44,7 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
   return (
     <div className="border-t border-line pt-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <Eyebrow tone="ambar">Últimas 24 h · sensor ESP32</Eyebrow>
+        <Eyebrow tone="ambar">{t('chart.last24')}</Eyebrow>
         {hasTest && <TestBadge />}
       </div>
       <div className="mt-3 h-64 w-full">
@@ -76,7 +78,7 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
               yAxisId="h"
               type="monotone"
               dataKey="humedad"
-              name="Humedad (%)"
+              name={t('chart.moisture')}
               stroke="#f2b35e"
               strokeWidth={2.5}
               dot={false}
@@ -85,7 +87,7 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
               yAxisId="t"
               type="monotone"
               dataKey="temperatura"
-              name="Temp. suelo (°C)"
+              name={t('chart.soilTemp')}
               stroke="#f2b35e"
               strokeWidth={1.5}
               strokeDasharray="5 4"
@@ -95,8 +97,8 @@ export function ReadingsChart({ readings }: { readings: SensorReading[] }) {
         </ResponsiveContainer>
       </div>
       <p className="mt-2 text-muted">
-        Fuente: sensor ESP32 en tu parcela. Horas en hora de Perú.
-        {hasTest && ' Incluye lecturas de un kit de prueba: no son datos de campo.'}
+        {t('chart.source')}
+        {hasTest && ` ${t('chart.includesTest')}`}
       </p>
     </div>
   )

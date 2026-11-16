@@ -1,3 +1,4 @@
+import { useLanguage } from '../../i18n/LanguageContext'
 import { PERIODS, type Period } from '../../utils/period'
 import { Button } from '../ui/Button'
 import { Eyebrow } from '../ui/Eyebrow'
@@ -12,10 +13,11 @@ export function NasaPeriodSelector({
   onChange: (p: Period) => void
   disabled?: boolean
 }) {
+  const { t } = useLanguage()
   return (
-    <div role="group" aria-label="Período de NASA POWER" className="flex flex-wrap items-center gap-2">
+    <div role="group" aria-label={t('period.groupLabel')} className="flex flex-wrap items-center gap-2">
       <Eyebrow tone="cielo" className="mr-1">
-        Mostrar
+        {t('period.show')}
       </Eyebrow>
       {PERIODS.map((p) => (
         <Button

@@ -2,6 +2,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, Rectangle, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { formatDay } from '../../utils/format'
 import { formatDegrees, parseCoord, powerCell, utcDaysAgo } from '../../utils/powerGrid'
 import { Button } from '../ui/Button'
@@ -143,7 +144,8 @@ export default function PlotMap({
   const active = !lock || unlocked
   const onPickRef = useCallback((a: number, b: number) => onPick?.(a, b), [onPick])
 
-  const label = pos ? `Mapa con la parcela en ${pos[0]}°, ${pos[1]}°` : 'Mapa para ubicar la parcela'
+  const { t } = useLanguage()
+  const label = pos ? t('map.ariaWith', { lat: pos[0], lng: pos[1] }) : t('map.ariaWithout')
 
   return (
     <figure className="m-0 min-w-0">
@@ -164,9 +166,9 @@ export default function PlotMap({
           >
             <span className={`h-3.5 w-3.5 ${sat === 'on' || sat === 'loading' ? 'bg-cielo' : 'bg-muted'}`} />
           </span>
-          <span className="font-medium">Imagen satelital NASA</span>
+          <span className="font-medium">{t('map.satellite')}</span>
           <span className="font-mono text-[13px] uppercase tracking-[0.12em] text-muted">
-            {sat === 'on' || sat === 'loading' ? 'Activada' : 'Desactivada'}
+            {sat === 'on' || sat === 'loading' ? t('map.on') : t('map.off')}
           </span>
         </button>
         {lock && (
@@ -176,20 +178,20 @@ export default function PlotMap({
             aria-pressed={unlocked}
             onClick={() => setUnlocked((u) => !u)}
           >
-            {unlocked ? 'Soltar el mapa' : 'Activar mapa'}
+            {unlocked ? t('map.release') : t('map.activate')}
           </Button>
         )}
       </div>
 
       {sat === 'error' && (
         <p role="status" className="mb-2 font-medium text-ambar">
-          Imagen no disponible
-          <span className="font-normal text-muted"> · el mapa base sigue funcionando.</span>
+          {t('map.satUnavailable')}
+          <span className="font-normal text-muted"> {t('map.baseStillWorks')}</span>
         </p>
       )}
       {sat === 'loading' && (
         <p role="status" className="mb-2 text-muted">
-          Cargando imagen satelital…
+          {t('map.satLoading')}
         </p>
       )}
 
@@ -226,7 +228,7 @@ export default function PlotMap({
               pathOptions={{ color: '#7fbbff', weight: 2, fillColor: '#7fbbff', fillOpacity: 0.12, lineJoin: 'miter' }}
             />
           )}
-          {pos && <Marker position={pos} icon={PIN} alt="Punto de la parcela" keyboard={false} interactive={false} />}
+          {pos && <Marker position={pos} icon={PIN} alt={t('map.markerAlt')} keyboard={false} interactive={false} />}
           <FollowPoint pos={pos} bounds={cell ? cell.bounds : null} />
           <Interaction active={active} />
           {onPick && <ClickToPlace onPick={onPickRef} />}
@@ -234,44 +236,48 @@ export default function PlotMap({
       </div>
 
       {lock && !unlocked && (
-        <p className="mt-2 text-muted">Un dedo desplaza la página. Para mover o acercar el mapa, toca «Activar mapa».</p>
+        <p className="mt-2 text-muted">{t('map.lockedHint')}</p>
       )}
-      {onPick && <p className="mt-2 text-ink">{pos ? 'Toca otro punto del mapa para cambiar la ubicación.' : 'Toca el mapa para colocar la parcela.'}</p>}
+      {onPick && <p className="mt-2 text-ink">{pos ? t('map.pickChange') : t('map.pickFirst')}</p>}
 
       {/* Satélite: fecha de la imagen y fuente (siempre visibles) */}
       <p className="mt-2 font-mono text-base text-muted">
-        Imagen satelital: MODIS Terra, color real, del {formatDay(gibsDate)}. Fuente: NASA GIBS / EOSDIS.
+        {t('map.satLine', { date: formatDay(gibsDate) })}
       </p>
 
       {/* Leyenda */}
       <figcaption className="mt-4 border-t border-line pt-3">
-        <Eyebrow className="mb-2">Qué muestra el mapa</Eyebrow>
+        <Eyebrow className="mb-2">{t('map.legendTitle')}</Eyebrow>
         <ul className="space-y-2">
           <li className="flex items-center gap-3 text-ink">
             <span aria-hidden className="agro-swatch-pin" />
             <span>
-              Punto de la parcela{pos ? (
+              {t('map.legendPoint')}
+              {pos ? (
                 <span className="font-mono text-base text-muted">
                   {' '}
                   · {pos[0].toFixed(4)}°, {pos[1].toFixed(4)}°
                 </span>
               ) : (
-                <span className="text-muted"> · todavía sin ubicación</span>
+                <span className="text-muted"> {t('map.legendNoLocation')}</span>
               )}
             </span>
           </li>
           <li className="flex items-start gap-3 text-ink">
             <span aria-hidden className="agro-swatch-cell mt-1.5" />
             <span>
-              Zona que cubre el dato de NASA POWER (~50 km). El sensor mide un solo punto dentro de ella.
+              {t('map.legendCell')}
             </span>
           </li>
         </ul>
         {cell && (
           <p className="mt-2 font-mono text-base text-muted">
-            Celda de NASA POWER (rejilla meteorológica de ½° × ⅝°): {formatDegrees(cell.bounds[0][0], 'lat')} a{' '}
-            {formatDegrees(cell.bounds[1][0], 'lat')}, {formatDegrees(cell.bounds[0][1], 'lng')} a{' '}
-            {formatDegrees(cell.bounds[1][1], 'lng')}.
+            {t('map.cellDetail', {
+              south: formatDegrees(cell.bounds[0][0], 'lat'),
+              north: formatDegrees(cell.bounds[1][0], 'lat'),
+              west: formatDegrees(cell.bounds[0][1], 'lng'),
+              east: formatDegrees(cell.bounds[1][1], 'lng'),
+            })}
           </p>
         )}
       </figcaption>

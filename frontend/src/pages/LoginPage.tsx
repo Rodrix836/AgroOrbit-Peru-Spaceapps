@@ -5,9 +5,11 @@ import { Button } from '../components/ui/Button'
 import { Eyebrow } from '../components/ui/Eyebrow'
 import { inputClass } from '../components/ui/styles'
 import { useAuth } from '../hooks/useAuth'
+import { useLanguage } from '../i18n/LanguageContext'
 
 export function LoginPage() {
   const { user, signIn } = useAuth()
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -26,14 +28,14 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <form onSubmit={onSubmit} className="w-full max-w-md space-y-5 border border-line bg-panel p-6 md:p-8">
         <div>
-          <Eyebrow tone="lima">Acceso</Eyebrow>
+          <Eyebrow tone="lima">{t('login.access')}</Eyebrow>
           <h1 className="mt-3 font-display text-[clamp(38px,9vw,60px)] font-extrabold leading-none tracking-[-0.03em]">
             AgroOrbit
           </h1>
         </div>
-        <p className="text-muted">Entra para ver tu parcela y comparar rotaciones de cultivos.</p>
+        <p className="text-muted">{t('login.intro')}</p>
         <label className="block">
-          <span className="font-medium">Correo</span>
+          <span className="font-medium">{t('login.email')}</span>
           <input
             type="email"
             required
@@ -44,7 +46,7 @@ export function LoginPage() {
           />
         </label>
         <label className="block">
-          <span className="font-medium">Contraseña</span>
+          <span className="font-medium">{t('login.password')}</span>
           <input
             type="password"
             required
@@ -55,12 +57,12 @@ export function LoginPage() {
           />
         </label>
         {error && (
-          <Alert tone="danger" title="Error" role="alert">
+          <Alert tone="danger" title={t('common.error')} role="alert">
             {error}
           </Alert>
         )}
         <Button size="lg" disabled={busy} className="w-full">
-          {busy ? 'Entrando…' : 'Entrar →'}
+          {busy ? t('login.submitBusy') : t('login.submit')}
         </Button>
       </form>
     </div>

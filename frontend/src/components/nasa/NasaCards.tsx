@@ -4,10 +4,11 @@ import { displayUnit, formatDay, formatNumber } from '../../utils/format'
 import { EmptyState } from '../ui/EmptyState'
 import { Eyebrow } from '../ui/Eyebrow'
 import { SourceBadge } from '../ui/SourceBadge'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { tr } from '../../i18n/active'
 
 /** Texto fijo bajo los datos: POWER publica con retraso. */
-export const NASA_DELAY_NOTE =
-  'Los últimos 3 o 4 días pueden faltar porque NASA POWER publica con retraso.'
+export const nasaDelayNote = (): string => tr('nasa.delayNote')
 
 /** Observaciones de una variable que sí tienen valor (value null = sin dato, no se usa). */
 export function nasaSeries(obs: NasaObservation[], variable: string): NasaObservation[] {
@@ -30,13 +31,14 @@ function Row({
   unit?: string
   detail?: string
 }) {
+  const { t } = useLanguage()
   return (
     <div className="border-t border-line py-3">
       <div className="flex items-baseline justify-between gap-4">
         <dt className="text-ink">{label}</dt>
         <dd className="text-right font-mono text-lg text-cielo">
           {value === null ? (
-            <span className="text-muted">Sin dato</span>
+            <span className="text-muted">{t('common.noData')}</span>
           ) : (
             <>
               {value}
@@ -52,6 +54,7 @@ function Row({
 
 /** Temperatura media (T2M) y lluvia acumulada (PRECTOTCORR) del período, con sus días con dato. */
 export function NasaCards({ observations, view }: { observations: NasaObservation[]; view: NasaView }) {
+  const { t } = useLanguage()
   const temp = nasaSeries(observations, 'T2M')
   const rain = nasaSeries(observations, 'PRECTOTCORR')
 
@@ -59,14 +62,14 @@ export function NasaCards({ observations, view }: { observations: NasaObservatio
     return (
       <EmptyState
         tone="insufficient"
-        title={`No hay clima NASA POWER guardado para ${view.period.label.toLowerCase()}`}
-        message="Usa «Actualizar clima» para consultarlo. Si NASA no responde, no mostramos valores de relleno."
+        title={t('nasa.cards.emptyTitle', { period: view.period.label.toLowerCase() })}
+        message={t('nasa.cards.emptyMessage')}
       />
     )
   }
 
   const total = view.period.days
-  const coverage = (valid: number) => `${valid} de ${total} días con dato`
+  const coverage = (valid: number) => t('nasa.cards.coverage', { valid, total })
   const lastValid = [...temp, ...rain]
     .map((o) => o.observed_on)
     .sort()
@@ -76,34 +79,31 @@ export function NasaCards({ observations, view }: { observations: NasaObservatio
     <div>
       <dl>
         <Row
-          label="Temperatura media del aire"
+          label={t('nasa.cards.meanTemp')}
           value={temp.length ? formatNumber(mean(temp), 1) : null}
           unit={displayUnit(temp[0]?.unit ?? 'C')}
           detail={coverage(temp.length)}
         />
         <Row
-          label="Lluvia acumulada"
+          label={t('nasa.cards.rainTotal')}
           value={rain.length ? formatNumber(sum(rain), 1) : null}
           unit="mm"
-          detail={`${coverage(rain.length)} · suma de ${displayUnit(rain[0]?.unit ?? 'mm/day')}`}
+          detail={t('nasa.cards.rainSum', { coverage: coverage(rain.length), unit: displayUnit(rain[0]?.unit ?? 'mm/day') })}
         />
       </dl>
       <div className="border-t border-line pt-4">
-        <Eyebrow>Período</Eyebrow>
+        <Eyebrow>{t('nasa.cards.period')}</Eyebrow>
         <p className="mt-1 font-mono text-base text-ink">
-          {view.period.label}: {formatDay(view.from)} a {formatDay(view.to)}
+          {t('nasa.cards.range', { label: view.period.label, from: formatDay(view.from), to: formatDay(view.to) })}
         </p>
         <p className="mt-1 font-mono text-base text-muted">
-          Último día con dato: {lastValid ? formatDay(lastValid) : 'Sin fecha'}
+          {t('nasa.cards.lastDay', { day: lastValid ? formatDay(lastValid) : t('common.noDate') })}
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <SourceBadge kind="nasa" />
-          <span className="text-muted">
-            Modelo de escala regional · temperatura del aire a 2 m, no del suelo · días en hora solar local
-            de POWER
-          </span>
+          <span className="text-muted">{t('nasa.cards.modelNote')}</span>
         </div>
-        <p className="mt-3 text-muted">{NASA_DELAY_NOTE}</p>
+        <p className="mt-3 text-muted">{nasaDelayNote()}</p>
       </div>
     </div>
   )

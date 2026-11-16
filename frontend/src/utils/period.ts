@@ -1,3 +1,5 @@
+import { tr } from '../i18n/active'
+
 /** Períodos de NASA POWER que se pueden pedir a GET /nasa/observations (from y to, AAAA-MM-DD). */
 export type PeriodId = '90d' | '1y' | '2y'
 
@@ -12,9 +14,36 @@ export interface Period {
 }
 
 export const PERIODS: Period[] = [
-  { id: '90d', short: '90 días', label: 'Últimos 90 días', days: 90 },
-  { id: '1y', short: '1 año', label: 'Último año', days: 365 },
-  { id: '2y', short: '2 años', label: 'Últimos 2 años', days: 730 },
+  {
+    id: '90d',
+    get short() {
+      return tr('period.90d.short')
+    },
+    get label() {
+      return tr('period.90d.label')
+    },
+    days: 90,
+  },
+  {
+    id: '1y',
+    get short() {
+      return tr('period.1y.short')
+    },
+    get label() {
+      return tr('period.1y.label')
+    },
+    days: 365,
+  },
+  {
+    id: '2y',
+    get short() {
+      return tr('period.2y.short')
+    },
+    get label() {
+      return tr('period.2y.label')
+    },
+    days: 730,
+  },
 ]
 
 /** Hoy (AAAA-MM-DD) en hora de Perú (UTC-5), que coincide con la hora solar local de POWER. */

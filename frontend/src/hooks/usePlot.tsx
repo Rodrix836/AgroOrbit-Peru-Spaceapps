@@ -11,6 +11,7 @@ import { api } from '../services/api'
 import type { Crop, CropCyclesResponse, Plot, PlotInput, PlotUpdate } from '../types/api'
 import { errorMessage, useAsync } from './useAsync'
 import { useAuth } from './useAuth'
+import { tr } from '../i18n/active'
 
 const SEL_KEY = 'agroorbit.plotId'
 /** Prefijo de lo que antes se guardaba en el navegador (cultivos y fecha). Ya no se usa: se borra. */
@@ -19,7 +20,7 @@ const OLD_PREFS_PREFIX = 'agroorbit.prefs.'
 /** Nombre para el perfil: la parte del correo antes de la @. */
 function displayNameFromEmail(email: string | undefined): string {
   const name = (email ?? '').split('@')[0].trim()
-  return name || 'Agricultor'
+  return name || tr('auth.defaultName')
 }
 
 function readLS(key: string): string | null {
@@ -114,7 +115,7 @@ export function PlotProvider({ children }: { children: ReactNode }) {
 
   const updatePlot = useCallback(
     async (patch: PlotUpdate) => {
-      if (!plotId) throw new Error('No hay parcela seleccionada.')
+      if (!plotId) throw new Error(tr('plot.noneSelected'))
       const saved = await api.updatePlot(plotId, patch)
       setUpdated((u) => ({ ...u, [saved.id]: saved }))
       return saved

@@ -1,51 +1,59 @@
 import type { Crop } from '../../types/api'
+import { tr } from '../../i18n/active'
 import { formatDay } from '../../utils/format'
 import { WATER_LABELS } from '../plot/water'
 import type { WaterAvailability } from '../../types/api'
 
 /** Nombres de respaldo por si el catálogo (GET /api/crops) aún no cargó. */
-const FALLBACK_CROPS: Record<string, string> = {
-  maiz: 'Maíz',
-  frijol_caupi: 'Frijol caupí',
-  camote: 'Camote',
-}
+const FALLBACK_CROP_KEYS = {
+  maiz: 'crop.maiz',
+  frijol_caupi: 'crop.frijol_caupi',
+  camote: 'crop.camote',
+} as const
 
-/** Nombre del cultivo a partir de su id. Si no se conoce, se muestra el id tal cual. */
+/**
+ * Nombre del cultivo a partir de su id, en el idioma activo. Los tres cultivos del piloto se traducen por id (el
+ * catálogo de la API trae el nombre en español); un cultivo desconocido usa el nombre del catálogo o el id.
+ */
 export function cropName(id: string, crops: Crop[]): string {
-  return crops.find((c) => c.id === id)?.name ?? FALLBACK_CROPS[id] ?? id
+  if (id in FALLBACK_CROP_KEYS) return tr(FALLBACK_CROP_KEYS[id as keyof typeof FALLBACK_CROP_KEYS])
+  return crops.find((c) => c.id === id)?.name ?? id
 }
 
-const FIELD_LABELS: Record<string, string> = {
-  'plot.previous_crop': 'Cultivo anterior',
-  'plot.current_crop': 'Cultivo actual',
-  'plot.water_availability': 'Disponibilidad de agua',
-  'plot.soil_texture': 'Textura del suelo',
-  'plot.soil_ph': 'pH del suelo',
-  'plot.soil_salinity_ds_m': 'Salinidad del suelo',
-  'plot.area_ha': 'Superficie de la parcela',
-  'plot.current_crop_end': 'Fin del cultivo actual',
-  'campaigns.dates': 'Fechas de campaña',
-  'crops.requirements': 'Requisitos de los cultivos',
-  'plot.start_on': 'Inicio de la siguiente campaña',
-  'plot.next_sowing_date': 'Fecha de inicio de la siguiente campaña',
-  'climate.history': 'Histórico de clima',
-  'engine.criteria': 'Puntuaciones por criterio con fuente',
-  'engine': 'Motor de rotaciones',
-  'request.horizon_days': 'Horizonte de tiempo de la consulta',
-}
+const FIELD_KEYS = {
+  'plot.previous_crop': 'field.plot.previous_crop',
+  'plot.current_crop': 'field.plot.current_crop',
+  'plot.water_availability': 'field.plot.water_availability',
+  'plot.soil_texture': 'field.plot.soil_texture',
+  'plot.soil_ph': 'field.plot.soil_ph',
+  'plot.soil_salinity_ds_m': 'field.plot.soil_salinity_ds_m',
+  'plot.area_ha': 'field.plot.area_ha',
+  'plot.current_crop_end': 'field.plot.current_crop_end',
+  'campaigns.dates': 'field.campaigns.dates',
+  'crops.requirements': 'field.crops.requirements',
+  'plot.start_on': 'field.plot.start_on',
+  'plot.next_sowing_date': 'field.plot.next_sowing_date',
+  'climate.history': 'field.climate.history',
+  'engine.criteria': 'field.engine.criteria',
+  engine: 'field.engine',
+  'request.horizon_days': 'field.request.horizon_days',
+} as const
 
-const PRIORITY_LABELS: Record<string, string> = {
-  save_water: 'ahorrar agua',
-  improve_soil: 'mejorar el suelo',
-}
+const PRIORITY_KEYS = {
+  save_water: 'priority.save_water',
+  improve_soil: 'priority.improve_soil',
+} as const
 
 /** Etiqueta legible de un `field` del contrato. Un campo desconocido se muestra tal cual. */
 export function fieldLabel(field: string, crops: Crop[]): string {
-  if (FIELD_LABELS[field]) return FIELD_LABELS[field]
+  if (field in FIELD_KEYS) return tr(FIELD_KEYS[field as keyof typeof FIELD_KEYS])
   const m = /^crops\.([^.]+)\.requirements$/.exec(field)
   if (m) return cropName(m[1], crops)
   const w = /^engine\.priority_weights\.([^.]+)$/.exec(field)
-  if (w) return `Pesos por criterio con fuente (${PRIORITY_LABELS[w[1]] ?? w[1]})`
+  if (w) {
+    const p = w[1] in PRIORITY_KEYS ? tr(PRIORITY_KEYS[w[1] as keyof typeof PRIORITY_KEYS]) : w[1]
+    return tr('field.weights', { priority: p })
+  }
   return field
 }
 

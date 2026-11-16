@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { Loading } from '../ui/Loading'
 
 // Leaflet pesa bastante: se carga aparte, solo cuando se muestra el mapa.
@@ -11,8 +12,9 @@ export function LocationMap(props: {
   /** Con esta función, un clic en el mapa coloca el punto. */
   onPick?: (lat: number, lng: number) => void
 }) {
+  const { t } = useLanguage()
   return (
-    <Suspense fallback={<Loading label="Cargando el mapa…" />}>
+    <Suspense fallback={<Loading label={t('map.loading')} />}>
       <PlotMap {...props} />
     </Suspense>
   )

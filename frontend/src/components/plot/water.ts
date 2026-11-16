@@ -1,14 +1,24 @@
+import { tr } from '../../i18n/active'
 import type { WaterAvailability } from '../../types/api'
 
-/** Textos de la disponibilidad de agua (water_availability de la API). */
+/** Textos de la disponibilidad de agua (water_availability de la API), en el idioma activo. */
 export const WATER_LABELS: Record<WaterAvailability, string> = {
-  low: 'Poca agua',
-  medium: 'Agua moderada',
-  high: 'Mucha agua',
+  get low() {
+    return tr('water.low')
+  },
+  get medium() {
+    return tr('water.medium')
+  },
+  get high() {
+    return tr('water.high')
+  },
 }
 
-export const WATER_OPTIONS: { value: WaterAvailability; label: string }[] = [
-  { value: 'low', label: 'Poca agua (riego escaso)' },
-  { value: 'medium', label: 'Agua moderada' },
-  { value: 'high', label: 'Mucha agua (riego asegurado)' },
-]
+/** Opciones del selector de agua, en el idioma activo. */
+export function waterOptions(): { value: WaterAvailability; label: string }[] {
+  return [
+    { value: 'low', label: tr('water.lowOption') },
+    { value: 'medium', label: tr('water.mediumOption') },
+    { value: 'high', label: tr('water.highOption') },
+  ]
+}

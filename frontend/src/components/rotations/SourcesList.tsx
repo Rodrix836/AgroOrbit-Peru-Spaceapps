@@ -1,8 +1,11 @@
 import type { SourceRef } from '../../types/api'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { td } from '../../i18n/dataText'
 
 export function SourcesList({ sources }: { sources: SourceRef[] }) {
+  const { t } = useLanguage()
   if (sources.length === 0) {
-    return <p className="text-muted">Sin fuentes registradas.</p>
+    return <p className="text-muted">{t('sources.none')}</p>
   }
   return (
     <ul className="space-y-1">
@@ -14,12 +17,12 @@ export function SourcesList({ sources }: { sources: SourceRef[] }) {
                 ↗
               </span>
               <a href={s.url} target="_blank" rel="noreferrer" className="text-cielo underline">
-                {s.title}
+                {td(s.title)}
               </a>
             </>
           ) : (
             // Sin enlace verificado: texto plano, sin flecha ni subrayado (no parece una cita real).
-            <span className="pl-6 text-muted">{s.title}</span>
+            <span className="pl-6 text-muted">{td(s.title)}</span>
           )}
         </li>
       ))}

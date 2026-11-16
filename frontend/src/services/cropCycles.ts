@@ -3,6 +3,7 @@
 import type { CropCycle, CropCycleCreate, CropCyclesResponse } from '../types/api'
 import { api } from './api'
 import { ApiError } from './apiError'
+import { tr } from '../i18n/active'
 
 /** Valores del formulario ('' = sin elegir / sin fecha). */
 export interface CycleForm {
@@ -31,19 +32,36 @@ export interface PartResult {
   message?: string
 }
 
+/** Qué parte se guardó, en el idioma activo («el agua y la prioridad» / «the water and priority»). */
 const LABEL = {
-  water: 'el agua y la prioridad',
-  current: 'el cultivo actual',
-  previous: 'el cultivo anterior',
-  start: 'la fecha de inicio',
+  get water() {
+    return tr('cycle.part.water')
+  },
+  get current() {
+    return tr('cycle.part.current')
+  },
+  get previous() {
+    return tr('cycle.part.previous')
+  },
+  get start() {
+    return tr('cycle.part.start')
+  },
 }
-export const WATER_PART_LABEL = LABEL.water
+export const waterPartLabel = (): string => LABEL.water
 
 const FIELD_LABELS: Record<string, string> = {
-  crop_code: 'Cultivo',
-  sowing_date: 'Fecha de inicio',
-  harvest_date: 'Fecha de cosecha',
-  status: 'Estado',
+  get crop_code() {
+    return tr('cycle.field.crop')
+  },
+  get sowing_date() {
+    return tr('cycle.field.start')
+  },
+  get harvest_date() {
+    return tr('cycle.field.harvest')
+  },
+  get status() {
+    return tr('cycle.field.status')
+  },
 }
 
 /** Con 422 muestra el mensaje del campo que indica details[].field; en otro caso, el mensaje de la API. */
@@ -57,7 +75,7 @@ export function cycleErrorMessage(e: unknown): string {
     }
     return e.message
   }
-  return e instanceof Error ? e.message : 'Ocurrió un error inesperado.'
+  return e instanceof Error ? e.message : tr('common.unexpectedError')
 }
 
 /** Con 409 (active_cycle_exists / planned_cycle_exists), el id del ciclo que ya existe. */
@@ -124,29 +142,44 @@ export async function syncCropCycles(
 }
 
 const joinY = (items: string[]) =>
-  items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`
+  items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} ${tr('cycle.and')} ${items[items.length - 1]}`
 
 const endWithDot = (s: string) => (s.endsWith('.') ? s : `${s}.`)
 
 /** Mensaje final: éxito, sin cambios, o qué parte se guardó y cuál no (con el mensaje de la API). */
 export function summarizeSave(results: PartResult[]): { ok: boolean; text: string } {
-  if (results.length === 0) return { ok: true, text: 'No hay cambios que guardar.' }
+  if (results.length === 0) return { ok: true, text: tr('cycle.sum.none') }
   const failed = results.filter((r) => !r.ok)
   const saved = results.filter((r) => r.ok)
-  if (failed.length === 0) return { ok: true, text: 'Guardado en tu cuenta.' }
+  if (failed.length === 0) return { ok: true, text: tr('cycle.sum.ok') }
+  const msg = (f: PartResult) => f.message ?? ''
   if (saved.length === 0) {
     return {
       ok: false,
       text: endWithDot(
-        failed.map((f, i) => `${i === 0 ? 'No se pudo guardar' : 'ni'} ${f.label}: ${f.message}`).join('; '),
+        failed
+          .map((f, i) =>
+            i === 0
+              ? tr('cycle.sum.failFirst', { label: f.label, msg: msg(f) })
+              : tr('cycle.sum.failNext', { label: f.label, msg: msg(f) }),
+          )
+          .join('; '),
       ),
     }
   }
   return {
     ok: false,
     text: endWithDot(
-      `Se guardó ${joinY(saved.map((s) => s.label))}, pero ` +
-        failed.map((f, i) => `${i === 0 ? 'no' : 'ni'} ${f.label}: ${f.message}`).join('; '),
+      tr('cycle.sum.partial', {
+        saved: joinY(saved.map((x) => x.label)),
+        fails: failed
+          .map((f, i) =>
+            i === 0
+              ? tr('cycle.sum.partialFirst', { label: f.label, msg: msg(f) })
+              : tr('cycle.sum.failNext', { label: f.label, msg: msg(f) }),
+          )
+          .join('; '),
+      }),
     ),
   }
 }

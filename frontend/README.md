@@ -37,6 +37,15 @@ Variables (`.env`, no se sube a git):
 - En Rotaciones, la prioridad parte de la guardada en la parcela; cambiarla ahí solo recalcula, no guarda.
 - La fecha de inicio de la petición de Rotaciones sale de `planned.sowing_date`. Sin fecha, se muestra el aviso «Falta un dato» y los calendarios marcan «Fecha de inicio supuesta». La cabecera de Diagnóstico muestra el cultivo actual (`current.crop_code`) con su nombre.
 
+## Idiomas (EN | ES)
+
+La interfaz está en **inglés por defecto** y se puede pasar a español con el selector `EN | ES` de la barra superior (junto al correo y «Log out»). La elección se guarda en `localStorage` (`agroorbit_lang`) y también cambia `<html lang>`.
+
+- **`src/i18n/translations.ts`**: diccionarios `en` y `es`. `es` se declara como `Record<keyof typeof en, string>`: una clave que falte (o sobre) en español rompe `tsc`. El archivo se generó a partir de una lista de claves; para ampliarlo basta añadir la clave en **los dos** objetos (los textos con `{nombre}` llevan parámetros: `t('clave', { nombre: 5 })`).
+- **`src/i18n/LanguageContext.tsx`**: `<LanguageProvider>` y `useLanguage()` → `{ lang, setLang, t, formatDateTime }`. `formatDateTime` usa `en-US` o `es-PE` y siempre hora de Perú (America/Lima).
+- **`src/i18n/active.ts`**: idioma activo y `tr()` (la misma traducción, para código que no es un componente: utilidades, frases de compensaciones, respuestas de la guía). Los formatos de fecha y número de `src/utils/format.ts` también siguen el idioma activo.
+- **Textos de los datos** (respuestas de la API, escenario de demostración de Rodrigo, contenido de Milene): llegan en español. `src/i18n/dataText.ts` (`td()`) los traduce al inglés con el diccionario de `dataTexts.ts` (coincidencia exacta o patrón). Si un texto no está, se muestra tal cual llegó. Los nombres de cultivo de los tres cultivos del piloto se traducen por su id. Los datos del propio usuario (por ejemplo, el nombre que le pone a su parcela) no se tocan.
+
 ## Guía flotante
 
 Botón «Guía» abajo a la derecha (`src/components/guide/`). **No usa ningún modelo de IA ni llama a servicios externos**: responde con reglas y con los datos que la app ya tiene cargados. Sin campo de texto: solo preguntas predefinidas por pantalla (Parcela: 2, Diagnóstico: 4, Rotaciones: 4).

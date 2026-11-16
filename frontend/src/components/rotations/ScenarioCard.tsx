@@ -10,25 +10,36 @@ import { hasCriteria } from './criteria'
 import { cropName } from './labels'
 import { SourcesList } from './SourcesList'
 import { displaySources, isSynthetic, stripSynthetic } from './synthetic'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { td } from '../../i18n/dataText'
 
 /** «En estas fechas, en N años: lluvia X–Y mm (mediana Z) · temperatura X–Y °C» (histórico real de NASA POWER). */
 function WindowLine({ stats }: { stats: CampaignStats }) {
+  const { t } = useLanguage()
   const { rain, temp } = stats
   const f0 = (v: number | null) => formatNumber(v ?? 0, 0)
   const f1 = (v: number | null) => formatFixed(v ?? 0, 1)
-  const NO = 'Histórico insuficiente para estas fechas'
   let body: string
   if (!rain.sufficient && !temp.sufficient) {
-    body = NO
+    body = t('wl.insufficient')
   } else {
     const sameYears = rain.sufficient && temp.sufficient && rain.n === temp.n
     const rainTxt = rain.sufficient
-      ? `lluvia ${f0(rain.min)}–${f0(rain.max)} mm (mediana ${f0(rain.median)}${sameYears ? '' : `, ${rain.n} años`})`
-      : `lluvia: ${NO.toLowerCase()}`
+      ? t('wl.rain', {
+          min: f0(rain.min),
+          max: f0(rain.max),
+          median: f0(rain.median),
+          years: sameYears ? '' : t('wl.rainYears', { n: rain.n }),
+        })
+      : t('wl.rainNo')
     const tempTxt = temp.sufficient
-      ? `temperatura ${f1(temp.min)}–${f1(temp.max)} °C${sameYears ? '' : ` (${temp.n} años)`}`
-      : `temperatura: ${NO.toLowerCase()}`
-    body = `${sameYears ? `En estas fechas, en ${rain.n} años: ` : 'En estas fechas: '}${rainTxt} · ${tempTxt}`
+      ? t('wl.temp', {
+          min: f1(temp.min),
+          max: f1(temp.max),
+          years: sameYears ? '' : ` ${t('wl.tempYears', { n: temp.n })}`,
+        })
+      : t('wl.tempNo')
+    body = `${sameYears ? t('wl.prefixSame', { n: rain.n }) : t('wl.prefix')} ${rainTxt} · ${tempTxt}`
   }
   return (
     <p className="mt-1 font-mono text-base text-cielo">
@@ -61,6 +72,7 @@ export function ScenarioCard({
   /** Histórico de NASA POWER en las fechas de cada campaña (mismo orden que las campañas); sin él no se muestra la línea. */
   windowStats?: CampaignStats[]
 }) {
+  const { t } = useLanguage()
   const { alt } = card
   const reference = card.role === 'reference'
   const named = alt.campaigns.map((c) => ({ ...c, crop: cropName(c.crop, crops) }))
@@ -72,53 +84,53 @@ export function ScenarioCard({
 
   const reasons = alt.reasons.filter((t) => !isSynthetic(t))
   const limits = alt.limitations.filter((t) => !isSynthetic(t))
-  const testTexts = [...alt.reasons, ...alt.limitations].filter(isSynthetic).map(stripSynthetic)
+  const testTexts = [...alt.reasons, ...alt.limitations].filter(isSynthetic).map((x) => td(stripSynthetic(x)))
   const hasTestScores = typeof alt.score === 'number' || hasCriteria(alt.criteria)
 
   return (
     <article className={`min-w-0 bg-panel p-6 md:p-8 ${reference ? 'border-2 border-edge' : 'border-2 border-transparent'}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <Eyebrow tone={reference ? 'muted' : 'cielo'}>{card.nombre}</Eyebrow>
+        <Eyebrow tone={reference ? 'muted' : 'cielo'}>{td(card.nombre)}</Eyebrow>
         {reference && (
           <span className="border border-edge px-2 py-0.5 font-mono text-[13px] uppercase tracking-[0.12em] text-muted">
-            Punto de comparación
+            {t('card.reference')}
           </span>
         )}
       </div>
 
       <h3 className="mt-3 font-display text-[clamp(26px,4vw,36px)] font-extrabold leading-none tracking-[-0.03em] text-ink">
-        {sequence || 'Sin secuencia'}
+        {sequence || t('card.noSequence')}
       </h3>
-      {card.descripcion && <p className="mt-3 text-ink">{card.descripcion}</p>}
+      {card.descripcion && <p className="mt-3 text-ink">{td(card.descripcion)}</p>}
 
-      <Eyebrow className="mb-3 mt-6">Las dos campañas</Eyebrow>
+      <Eyebrow className="mb-3 mt-6">{t('card.twoCampaigns')}</Eyebrow>
       <ol className="space-y-3">
         {named.map((c, i) => (
           <li key={i} className="border-l-2 border-edge pl-3">
             <p className="font-medium text-ink">
-              Campaña {i + 1} · {c.crop}
+              {t('card.campaign', { n: i + 1, crop: c.crop })}
             </p>
             <p className="font-mono text-base text-ink">
-              {formatDay(c.starts_on)} a {formatDay(c.ends_on)}
+              {t('card.range', { from: formatDay(c.starts_on), to: formatDay(c.ends_on) })}
             </p>
-            <p className="font-mono text-base text-muted">{daysBetween(c.starts_on, c.ends_on)} días</p>
+            <p className="font-mono text-base text-muted">{t('card.daysN', { n: daysBetween(c.starts_on, c.ends_on) })}</p>
             {windowStats?.[i] && <WindowLine stats={windowStats[i]} />}
           </li>
         ))}
       </ol>
       {totalDays !== null && (
         <p className="mt-3 font-mono text-base text-ink">
-          Total: <span className="font-medium">{totalDays} días</span>
+          <span className="font-medium">{t('card.total', { n: totalDays })}</span>
         </p>
       )}
 
-      <Eyebrow className="mb-3 mt-6">Calendario · fechas ilustrativas</Eyebrow>
+      <Eyebrow className="mb-3 mt-6">{t('card.calendar')}</Eyebrow>
       <CampaignCalendar campaigns={named} showList={false} />
 
       {reasons.length > 0 && (
         <>
           <Eyebrow tone="lima" className="mb-3 mt-6">
-            Qué se puede comparar
+            {t('card.compare')}
           </Eyebrow>
           <ul className="space-y-2">
             {reasons.map((r, i) => (
@@ -126,7 +138,7 @@ export function ScenarioCard({
                 <span aria-hidden className="font-mono font-medium text-lima">
                   ·
                 </span>
-                <span>{r}</span>
+                <span>{td(r)}</span>
               </li>
             ))}
           </ul>
@@ -136,7 +148,7 @@ export function ScenarioCard({
       {limits.length > 0 && (
         <>
           <Eyebrow tone="ambar" className="mb-3 mt-6">
-            Principal riesgo y límites
+            {t('card.risk')}
           </Eyebrow>
           <ul className="space-y-2">
             {limits.map((r, i) => (
@@ -144,7 +156,7 @@ export function ScenarioCard({
                 <span aria-hidden className="font-mono font-medium text-ambar">
                   –
                 </span>
-                <span>{r}</span>
+                <span>{td(r)}</span>
               </li>
             ))}
           </ul>
@@ -155,7 +167,7 @@ export function ScenarioCard({
       {testTexts.length > 0 && (
         <div className="mt-6 border border-dashed border-ambar p-4">
           <Eyebrow tone="ambar" className="mb-2">
-            Datos de prueba
+            {t('card.testData')}
           </Eyebrow>
           <ul className="space-y-2">
             {testTexts.map((t, i) => (
@@ -173,19 +185,19 @@ export function ScenarioCard({
       {/* score y criteria: solo plegados y rotulados como criterio de prueba */}
       {hasTestScores && (
         <details className="mt-6 border border-ambar bg-ambar-bg p-4">
-          <summary className="cursor-pointer font-medium text-ambar">Criterio de prueba (sintético)</summary>
-          {syntheticNote && <p className="mt-3 text-ink">{syntheticNote}</p>}
+          <summary className="cursor-pointer font-medium text-ambar">{t('card.testCriterion')}</summary>
+          {syntheticNote && <p className="mt-3 text-ink">{td(syntheticNote)}</p>}
           {typeof alt.score === 'number' && (
             <p className="mt-3 font-mono text-base text-ink">
-              Puntaje de prueba: {formatNumber(alt.score, 1)} / 100
-              <span className="text-muted"> · no es una recomendación ni una ganadora</span>
+              {t('card.testScore', { score: formatNumber(alt.score, 1) })}
+              <span className="text-muted"> {t('card.notWinner')}</span>
             </p>
           )}
           <CriteriaBreakdown criteria={alt.criteria} total={alt.score ?? 0} previous={previousCriteria} selected={false} />
         </details>
       )}
 
-      <Eyebrow className="mb-3 mt-6">Fuentes</Eyebrow>
+      <Eyebrow className="mb-3 mt-6">{t('card.sources')}</Eyebrow>
       <SourcesList sources={displaySources(alt.sources)} />
     </article>
   )

@@ -1,10 +1,12 @@
+import { useLanguage } from '../../i18n/LanguageContext'
 import { labelClass } from './styles'
 
-export function Loading({ label = 'Cargando…' }: { label?: string }) {
+export function Loading({ label }: { label?: string }) {
+  const { t } = useLanguage()
   return (
     <div role="status" className={`flex items-center gap-3 py-4 text-lima ${labelClass}`}>
       <span aria-hidden className="h-3 w-3 animate-pulse bg-lima" />
-      <span>{label}</span>
+      <span>{label ?? t('common.loading')}</span>
     </div>
   )
 }

@@ -5,19 +5,23 @@ import { TestBadge } from '../sensors/QualityNotice'
 import { Alert } from '../ui/Alert'
 import { Eyebrow } from '../ui/Eyebrow'
 import { SourceBadge } from '../ui/SourceBadge'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { tr } from '../../i18n/active'
+import { td } from '../../i18n/dataText'
 
 function num(v: number | string | null | undefined): number | null {
   return typeof v === 'number' ? v : null
 }
 
 function Row({ label, value, unit, detail }: { label: string; value: number | null; unit: string; detail?: string }) {
+  const { t } = useLanguage()
   return (
     <div className="border-t border-line py-3">
       <div className="flex items-baseline justify-between gap-4">
         <dt className="text-ink">{label}</dt>
         <dd className="text-right font-mono text-lg text-cielo">
           {value === null ? (
-            <span className="text-muted">Sin dato</span>
+            <span className="text-muted">{t('common.noData')}</span>
           ) : (
             <>
               {formatNumber(value, 1)}
@@ -33,7 +37,7 @@ function Row({ label, value, unit, detail }: { label: string; value: number | nu
 
 /** "X de Y días con dato", solo si llegan los dos números. */
 function coverage(valid: number | null, total: number | null): string | undefined {
-  return valid !== null && total !== null ? `${valid} de ${total} días con dato` : undefined
+  return valid !== null && total !== null ? tr('ctx.coverage', { valid, total }) : undefined
 }
 
 /**
@@ -44,8 +48,8 @@ export function ContextPanel({
   context,
   createdAt,
   example = false,
-  title = 'Con qué datos se calculó',
-  powerTitle = 'Clima de la zona',
+  title,
+  powerTitle,
   powerNote,
 }: {
   context: RecommendationContext
@@ -59,6 +63,9 @@ export function ContextPanel({
   /** Texto bajo los datos de NASA POWER (p. ej. de dónde sale el histórico). */
   powerNote?: string
 }) {
+  const { t } = useLanguage()
+  const heading = title ?? t('ctx.title')
+  const powerHeading = powerTitle ?? t('ctx.powerTitle')
   const { power, sensor } = context
   const ind = power?.indicators ?? {}
   const days = num(ind.dias_analizados)
@@ -71,16 +78,16 @@ export function ContextPanel({
   const partial = rainValid !== null && days !== null && rainValid < days
 
   return (
-    <section className="mb-8 border border-line bg-panel p-6 md:p-8" aria-label={title}>
+    <section className="mb-8 border border-line bg-panel p-6 md:p-8" aria-label={heading}>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Eyebrow tone="lima">{title}</Eyebrow>
+        <Eyebrow tone="lima">{heading}</Eyebrow>
         {/* PENDIENTE BACKEND: mientras la respuesta salga de mocks, las cifras no son reales. */}
-        {example && <SourceBadge kind="prototype" label="Datos de ejemplo" />}
+        {example && <SourceBadge kind="prototype" label={t('common.exampleData')} />}
       </div>
       {context.notice && (
         <div className="mb-6">
-          <Alert tone="warn" title="Aviso">
-            {context.notice}
+          <Alert tone="warn" title={t('ctx.notice')}>
+            {td(context.notice)}
           </Alert>
         </div>
       )}
@@ -90,43 +97,41 @@ export function ContextPanel({
         {power && (
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <Eyebrow tone="cielo">{powerTitle}</Eyebrow>
+              <Eyebrow tone="cielo">{powerHeading}</Eyebrow>
               <SourceBadge kind="nasa" label={power.source} />
             </div>
             {power.use === 'historico' ? (
               <p className="font-mono text-base text-ink">
-                Histórico de {formatDay(power.start)} a {formatDay(power.end)}
+                {t('ctx.history', { from: formatDay(power.start), to: formatDay(power.end) })}
               </p>
             ) : (
               <p className="font-mono text-base text-ink">
-                Período: {formatDay(power.start)} a {formatDay(power.end)}
+                {t('ctx.period', { from: formatDay(power.start), to: formatDay(power.end) })}
               </p>
             )}
             <p className="mt-1 text-muted">
-              {power.use === 'contexto_del_periodo' && 'Contexto reciente, no un histórico. '}
-              Días en hora solar local ({power.time_standard}) de NASA POWER; no es una medición sobre tu parcela.
+              {power.use === 'contexto_del_periodo' && `${t('ctx.recentContext')} `}
+              {t('ctx.powerNote', { tz: power.time_standard })}
             </p>
             <dl className="mt-3">
               <Row
-                label="Temperatura promedio del aire"
+                label={t('ctx.airTemp')}
                 value={num(ind.temperatura_promedio_c)}
                 unit="°C"
                 detail={coverage(num(ind.dias_temperatura_validos), days)}
               />
               <Row
-                label="Lluvia total del período"
+                label={t('ctx.rainTotal')}
                 value={rainTotal}
                 unit="mm"
                 detail={coverage(rainValid, days)}
               />
               {annualRain !== null && (
                 <Row
-                  label="Lluvia promedio anual"
+                  label={t('ctx.rainAnnual')}
                   value={annualRain}
-                  unit="mm/año"
-                  detail={`Cálculo del frontend, no un dato de NASA: lluvia total ÷ ${formatNumber(years, 1)} años del período.${
-                    partial ? ' Los días sin dato no se cuentan: el promedio puede quedar por debajo del real.' : ''
-                  }`}
+                  unit={t('ctx.perYear')}
+                  detail={`${t('ctx.annualNote', { years: formatNumber(years, 1) })}${partial ? t('ctx.annualPartial') : ''}`}
                 />
               )}
             </dl>
@@ -138,22 +143,22 @@ export function ContextPanel({
         {sensor && (
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <Eyebrow tone="ambar">Suelo</Eyebrow>
+              <Eyebrow tone="ambar">{t('ctx.soil')}</Eyebrow>
               <SourceBadge kind="sensor" />
               {sensor.quality_flag === 'test' && <TestBadge />}
             </div>
             <p className="font-medium text-ink">
               {sensor.used_as_evidence
-                ? 'Las lecturas del sensor se usaron como evidencia.'
-                : 'Las lecturas del sensor no se usaron como evidencia.'}
+                ? t('ctx.sensorUsed')
+                : t('ctx.sensorNotUsed')}
             </p>
-            {sensor.reason && <p className="mt-1 text-muted">{sensor.reason}</p>}
+            {sensor.reason && <p className="mt-1 text-muted">{td(sensor.reason)}</p>}
           </div>
         )}
       </div>
       {createdAt && (
         <p className="mt-6 border-t border-line pt-3 font-mono text-base text-muted">
-          Calculado: {formatDateTime(createdAt)} (hora de Perú)
+          {t('ctx.calculated', { when: formatDateTime(createdAt) })}
         </p>
       )}
     </section>

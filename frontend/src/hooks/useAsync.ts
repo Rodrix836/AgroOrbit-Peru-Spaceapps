@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../services/api'
+import { tr } from '../i18n/active'
 
 export interface AsyncState<T> {
   data: T | null
@@ -11,7 +12,7 @@ export interface AsyncState<T> {
 export function errorMessage(e: unknown): string {
   if (e instanceof ApiError) return e.message
   if (e instanceof Error) return e.message
-  return 'Ocurrió un error inesperado.'
+  return tr('common.unexpectedError')
 }
 
 /** Carga datos al montar y cuando cambian `deps`. Si `fn` es null, no carga. */

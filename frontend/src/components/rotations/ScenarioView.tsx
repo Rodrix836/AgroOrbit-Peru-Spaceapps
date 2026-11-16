@@ -4,6 +4,7 @@ import { useAsync } from '../../hooks/useAsync'
 import { useClimateHistory } from '../../hooks/useClimateHistory'
 import { usePlot } from '../../hooks/usePlot'
 import { api } from '../../services/api'
+import type { TKey } from '../../i18n/translations'
 import type { Priority } from '../../types/api'
 import type { ScenarioModel } from '../../types/scenario'
 import { computeTradeoffs } from '../../utils/tradeoffs'
@@ -22,11 +23,13 @@ import { assumptionValue, fieldLabel } from './labels'
 import { ScenarioCard } from './ScenarioCard'
 import { SourcesList } from './SourcesList'
 import { TradeoffsSection } from './TradeoffsSection'
+import { td } from '../../i18n/dataText'
+import { useLanguage } from '../../i18n/LanguageContext'
 
-const PRIORITIES: { value: Priority; label: string }[] = [
-  { value: 'save_water', label: 'Ahorrar agua' },
-  { value: 'improve_soil', label: 'Mejorar el suelo' },
-]
+const PRIORITIES = [
+  { value: 'save_water', labelKey: 'priority.save_water.label' },
+  { value: 'improve_soil', labelKey: 'priority.improve_soil.label' },
+] as const satisfies readonly { value: Priority; labelKey: TKey }[]
 
 /**
  * Vista del escenario de demostración (se abre con «Ver escenario de demostración» y se cierra con «Volver a la
@@ -46,6 +49,7 @@ export function ScenarioView({
   onBack: () => void
 }) {
   const { crops } = usePlot()
+  const { t } = useLanguage()
   const q = useAsync(() => api.getDemoScenario(plotId, priority), [plotId, priority])
   const scenario = q.data?.scenario ?? null
 
@@ -83,11 +87,12 @@ export function ScenarioView({
       if (changed.length > 0) break
     }
   }
-  const priorityLabel = PRIORITIES.find((p) => p.value === (scenario?.priority ?? priority))?.label ?? ''
+  const priorityLabelKey = PRIORITIES.find((p) => p.value === (scenario?.priority ?? priority))?.labelKey
+  const priorityLabel = priorityLabelKey ? t(priorityLabelKey) : ''
 
   const back = (
     <Button variant="outline" onClick={onBack}>
-      ← Volver a la evaluación real
+      {t('sc.back')}
     </Button>
   )
 
@@ -97,17 +102,17 @@ export function ScenarioView({
       <div className="mb-8">
         <Alert tone="warn">
           <p className="text-lg font-semibold">
-            {scenario?.aviso ?? 'Escenario de demostración. No es una recomendación validada para la parcela.'}
+            {scenario ? td(scenario.aviso) : t('sc.defaultNotice')}
           </p>
         </Alert>
       </div>
 
-      <PageHeader index="03" label="Rotaciones" title="Escenario de demostración" />
+      <PageHeader index="03" label={t('nav.rotations')} title={t('sc.title')} />
       <div className="-mt-4 mb-6">{back}</div>
 
       {/* Prioridad: cambia los pesos de prueba, no el orden de las tarjetas */}
-      <div className="mb-8 flex flex-wrap items-center gap-3 border-y border-line py-4" role="group" aria-label="Prioridad">
-        <Eyebrow className="mr-2">Prioridad</Eyebrow>
+      <div className="mb-8 flex flex-wrap items-center gap-3 border-y border-line py-4" role="group" aria-label={t('sc.priority')}>
+        <Eyebrow className="mr-2">{t('sc.priority')}</Eyebrow>
         {PRIORITIES.map((p) => (
           <Button
             key={p.value}
@@ -115,48 +120,48 @@ export function ScenarioView({
             aria-pressed={priority === p.value}
             onClick={() => onPriorityChange(p.value)}
           >
-            {p.label}
+            {t(p.labelKey)}
           </Button>
         ))}
       </div>
 
-      {q.loading && !scenario && <Loading label="Cargando el escenario…" />}
+      {q.loading && !scenario && <Loading label={t('sc.loading')} />}
       {q.error && <ErrorBox message={q.error} onRetry={q.reload} />}
       {q.data?.fallback && (
         <p className="mb-6 text-muted">
-          No se pudo leer el escenario desde la API ({q.data.fallback}); se muestra el que está guardado en la app.
+          {t('sc.fallback', { reason: q.data.fallback })}
         </p>
       )}
 
       {scenario && (
         <>
           {/* Etiquetas y supuestos, junto a la comparación */}
-          <section className="mb-6 border border-ambar bg-ambar-bg p-5 md:p-6" aria-label="Supuestos del escenario">
-            <ul className="mb-4 flex flex-wrap gap-2" aria-label="Etiquetas">
-              {['Textura franca supuesta', 'Fechas ilustrativas'].map((t) => (
-                <li key={t} className={`border border-ambar px-2 py-1 font-medium text-ambar ${labelClass}`}>
-                  {t}
+          <section className="mb-6 border border-ambar bg-ambar-bg p-5 md:p-6" aria-label={t('sc.assumptionsAria')}>
+            <ul className="mb-4 flex flex-wrap gap-2" aria-label={t('sc.tagsAria')}>
+              {[t('sc.tagTexture'), t('sc.tagDates')].map((tag) => (
+                <li key={tag} className={`border border-ambar px-2 py-1 font-medium text-ambar ${labelClass}`}>
+                  {tag}
                 </li>
               ))}
             </ul>
             <Eyebrow tone="ambar" className="mb-3">
-              Supuestos de este escenario
+              {t('sc.assumptionsTitle')}
             </Eyebrow>
             <ul className="space-y-2">
               {[scenario.supuestos.textura, scenario.supuestos.fechas]
                 .filter((t): t is string => !!t)
-                .map((t, i) => (
+                .map((txt, i) => (
                   <li key={`s${i}`} className="flex gap-3">
                     <span aria-hidden className="font-mono text-ambar">
                       –
                     </span>
-                    <span className="text-ink">{t}</span>
+                    <span className="text-ink">{td(txt)}</span>
                   </li>
                 ))}
             </ul>
             {scenario.assumptions.length > 0 && (
               <>
-                <p className="mb-2 mt-5 font-medium text-ink">Lista de supuestos de la respuesta</p>
+                <p className="mb-2 mt-5 font-medium text-ink">{t('sc.assumptionsList')}</p>
                 <ul className="space-y-2">
                   {scenario.assumptions.map((a, i) => (
                     <li key={`${a.field}-${i}`} className="flex gap-3">
@@ -165,7 +170,8 @@ export function ScenarioView({
                       </span>
                       <span className="text-ink">
                         <span className="font-medium">{fieldLabel(a.field, crops)}:</span>{' '}
-                        {assumptionValue(a.field, a.value, crops)}. <span className="text-muted">{a.reason}</span>
+                        {td(assumptionValue(a.field, a.value, crops))}.{' '}
+                        <span className="text-muted">{td(a.reason)}</span>
                       </span>
                     </li>
                   ))}
@@ -178,8 +184,8 @@ export function ScenarioView({
           {changed.length > 0 && (
             <div className="mb-6 border-l-4 border-ambar bg-panel p-4">
               <p className="text-ink">
-                <span className="font-medium">Pesos de prueba (sintéticos).</span> Con «{priorityLabel}» cambió cuánto
-                pesa cada criterio en el puntaje de prueba:{' '}
+                <span className="font-medium">{t('sc.weightsLabel')}</span>{' '}
+                {t('sc.weightsBody', { priority: priorityLabel })}{' '}
                 {changed.map((c, i) => (
                   <span key={c.id}>
                     {i > 0 && '; '}
@@ -189,7 +195,7 @@ export function ScenarioView({
                     </span>
                   </span>
                 ))}
-                . El orden de las tarjetas no cambia.
+                . {t('sc.weightsOrder')}
               </p>
             </div>
           )}
@@ -221,13 +227,13 @@ export function ScenarioView({
           {/* Lectura comparativa sin puntuaciones (Milene) */}
           <section className="mt-6 bg-panel p-6 md:p-8">
             <Eyebrow tone="cielo" className="mb-4">
-              Lectura comparativa sin puntuaciones
+              {t('sc.readingTitle')}
             </Eyebrow>
             <div className="space-y-6">
               {LECTURA_COMPARATIVA.map((r) => (
                 <div key={r.title}>
-                  <h3 className="font-semibold text-ink">{r.title}</h3>
-                  <p className="mt-1 max-w-prose text-ink">{r.text}</p>
+                  <h3 className="font-semibold text-ink">{td(r.title)}</h3>
+                  <p className="mt-1 max-w-prose text-ink">{td(r.text)}</p>
                   <div className="mt-2">
                     <SourcesList sources={r.sources} />
                   </div>
@@ -242,12 +248,12 @@ export function ScenarioView({
               <ContextPanel
                 context={scenario.context}
                 createdAt={scenario.createdAt}
-                title="Con qué datos"
-                powerTitle="Histórico real de NASA POWER para esta parcela"
-                powerNote={scenario.sintetico.clima}
+                title={t('sc.ctxTitle')}
+                powerTitle={t('sc.ctxPower')}
+                powerNote={scenario.sintetico.clima ? td(scenario.sintetico.clima) : undefined}
               />
             ) : (
-              <p className="mb-8 text-muted">El escenario no trae el contexto de NASA POWER para mostrar.</p>
+              <p className="mb-8 text-muted">{t('sc.noContext')}</p>
             )}
           </div>
 
@@ -255,37 +261,37 @@ export function ScenarioView({
           {(scenario.sintetico.puntuaciones || scenario.sintetico.requisitos_cultivo) && (
             <section
               className="mb-8 border border-dashed border-ambar bg-ambar-bg p-6 md:p-8"
-              aria-label="Datos de prueba del escenario"
+              aria-label={t('sc.testDataAria')}
             >
               <Eyebrow tone="ambar" className="mb-4">
-                Datos de prueba
+                {t('sc.testDataTitle')}
               </Eyebrow>
               <ul className="space-y-3">
                 {[scenario.sintetico.puntuaciones, scenario.sintetico.requisitos_cultivo]
                   .filter((t): t is string => !!t)
-                  .map((t, i) => (
+                  .map((txt, i) => (
                     <li key={i} className="flex gap-3">
                       <span aria-hidden className="font-mono text-ambar">
                         –
                       </span>
-                      <span className="text-ink">{t}</span>
+                      <span className="text-ink">{td(txt)}</span>
                     </li>
                   ))}
               </ul>
             </section>
           )}
 
-          <section className="mb-8 border border-line bg-panel p-6 md:p-8" aria-label="Para tener en cuenta">
+          <section className="mb-8 border border-line bg-panel p-6 md:p-8" aria-label={t('sc.keepInMind')}>
             <Eyebrow tone="lima" className="mb-4">
-              Para tener en cuenta
+              {t('sc.keepInMind')}
             </Eyebrow>
             <ul className="space-y-3">
-              {TEXTOS_AGRICULTOR.map((t, i) => (
+              {TEXTOS_AGRICULTOR.map((txt, i) => (
                 <li key={i} className="flex gap-3">
                   <span aria-hidden className="font-mono text-lima">
                     ·
                   </span>
-                  <span className="text-ink">{t}</span>
+                  <span className="text-ink">{td(txt)}</span>
                 </li>
               ))}
             </ul>

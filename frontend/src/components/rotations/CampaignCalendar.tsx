@@ -1,5 +1,6 @@
 import type { Campaign } from '../../types/api'
 import { formatDay } from '../../utils/format'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 function parse(day: string) {
   const [y, m, d] = day.split('-').map(Number)
@@ -14,6 +15,7 @@ const clamp = (n: number) => Math.max(0, Math.min(100, n))
  * Los 12 meses caben siempre en el ancho de la tarjeta (sin desplazamiento horizontal).
  */
 export function CampaignCalendar({ campaigns, showList = true }: { campaigns: Campaign[]; showList?: boolean }) {
+  const { t } = useLanguage()
   if (campaigns.length === 0) return null
   const startIdx = (day: string) => {
     const p = parse(day)
@@ -35,7 +37,7 @@ export function CampaignCalendar({ campaigns, showList = true }: { campaigns: Ca
 
   return (
     <div>
-      <div role="group" aria-label="Calendario de 12 meses">
+      <div role="group" aria-label={t('cal.aria')}>
         <div>
           <div className="grid grid-cols-12 border-b border-line">
             {months.map((m, i) => (
@@ -66,7 +68,7 @@ export function CampaignCalendar({ campaigns, showList = true }: { campaigns: Ca
                 }}
               >
                 <div
-                  title={`${c.crop}: ${formatDay(c.starts_on)} a ${formatDay(c.ends_on)}`}
+                  title={t('cal.title', { crop: c.crop, from: formatDay(c.starts_on), to: formatDay(c.ends_on) })}
                   className={`absolute top-1.5 flex h-9 items-center overflow-hidden whitespace-nowrap px-2 text-sm font-semibold ${
                     i === 0 ? 'bg-lima text-bg' : 'border border-lima bg-bg text-lima'
                   }`}
@@ -91,8 +93,8 @@ export function CampaignCalendar({ campaigns, showList = true }: { campaigns: Ca
         <ol className="mt-3 space-y-1">
           {campaigns.map((c, i) => (
             <li key={i} className="font-mono text-base text-ink">
-              <span className="text-lima">{String(i + 1).padStart(2, '0')}</span> {c.crop} · siembra{' '}
-              {formatDay(c.starts_on)} · cosecha {formatDay(c.ends_on)}
+              <span className="text-lima">{String(i + 1).padStart(2, '0')}</span>{' '}
+              {t('cal.item', { crop: c.crop, from: formatDay(c.starts_on), to: formatDay(c.ends_on) })}
             </li>
           ))}
         </ol>
