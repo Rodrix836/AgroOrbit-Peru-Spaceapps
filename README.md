@@ -8,7 +8,7 @@ Prototipo de apoyo a decisiones para la rotación de cultivos, hecho para el NAS
 
 | Parte | Publicado en | Sale de |
 |---|---|---|
-| **Aplicación web (incluye el mapa)** | https://agroorbit-three.vercel.app | Carpeta [`frontend/`](frontend/) de la rama **`frontend`** (commit `69df065`, comprobado el 15/11/2026), desplegada en Vercel. La misma versión está integrada en `main`. |
+| **Aplicación web (incluye el mapa)** | https://agroorbit-three.vercel.app | Carpeta [`frontend/`](frontend/) de la rama **`frontend`** (commit `bb1475e`, comprobado el 16/11/2026), desplegada en Vercel. La misma versión está integrada en `main`. |
 | **API** | https://agroorbit-api.onrender.com (`/health`, `/docs`) | Carpeta [`backend/`](backend/) de la rama **`main`**, desplegada en Render ([`render.yaml`](render.yaml)) |
 | **Base de datos y autenticación** | Supabase | Migraciones en [`supabase/migrations/`](supabase/migrations/) |
 | **Firmware del sensor** | Kit ESP32 | [`firmware/agroorbit_esp32/`](firmware/agroorbit_esp32/) (guía en [`firmware/README.md`](firmware/README.md)) |
@@ -39,6 +39,15 @@ El ejemplo de Rotaciones está en el **PR #23** ([Rodrix836/AgroOrbit-Peru-Space
 
 **Cómo lo usa el frontend:** carga copias de esos JSON en `frontend/src/data/`. Son las tomadas del commit `ec192fa` del mismo PR: tienen las mismas estrategias y fechas. Después se corrigió en `main` el enlace del artículo de ETc del caupí y se añadió el pH de EcoCrop al catálogo (PR «Fuentes y pH del catálogo»). Hasta que se vuelvan a copiar, las copias del frontend no tienen esos cambios. La pantalla usa sus propios textos de tarjeta (`frontend/src/data/lectura-milene.ts`).
 
+## Datos de la NASA usados
+
+| Fuente | Qué se usa | Dónde |
+|---|---|---|
+| **NASA POWER**, API diaria por punto (`power.larc.nasa.gov/api/temporal/daily/point`, comunidad `AG`, tiempo solar local) | Temperatura del aire a 2 m (`T2M`, °C), lluvia corregida (`PRECTOTCORR`, mm/día) y humedad del suelo superficial y de la zona de raíces (`GWETTOP`, `GWETROOT`, fracción 0–1). Datos diarios del 2016-01-01 al 2026-11-15, en el punto de la parcela (-4,97, -80,89) | Se guardan por parcela en Supabase (`backend/app/services/nasa/`). Se usan en 02 Diagnóstico (contexto regional y riesgo), en el clima por campaña del motor y en «Compensaciones» de 03 Rotaciones |
+| **NASA GIBS** (WMTS, `gibs.earthdata.nasa.gov`) | Imagen satelital `MODIS_Terra_CorrectedReflectance_TrueColor` de hace 3 días | Capa opcional del mapa de 01 Parcela (`frontend/src/components/plot/PlotMap.tsx`) |
+
+NASA POWER es **contexto regional**, con una celda de ½° × ⅝°, y se muestra siempre separado de la medición puntual del sensor ESP32. Usa el valor nulo `-999`, que se guarda como dato faltante, y llega con unos 3 días de retraso.
+
 ## Limitaciones y trabajo futuro
 
 Esto **no** está en la versión presentada:
@@ -49,7 +58,7 @@ Esto **no** está en la versión presentada:
   - Faltan la salinidad que tolera cada cultivo y los tipos de suelo que acepta.
   - El pH sí está: es el rango óptimo de FAO EcoCrop (maíz 5–7, caupí 5,5–7,5, camote 5–7).
 - **Suelo de la parcela sin medir.** Falta la textura (en el ejemplo, «franco» es un supuesto), y faltan pH y salinidad. El kit ESP32 solo mide humedad y temperatura del suelo, y en la demo es un kit de prueba (`quality_flag: test`) que no se usa como evidencia.
-- **Ficha EcoCrop del caupí por confirmar.** El catálogo usa `id=10835` (*V. unguiculata* ssp. *unguiculata*) y el frontend enlaza `id=2153` (*V. unguiculata*). El pH óptimo es el mismo en las dos; la temperatura óptima no (20–35 °C frente a 25–35 °C).
+- **Ficha EcoCrop del caupí: `id=10835`** (*V. unguiculata* ssp. *unguiculata*, 20–35 °C y pH 5,5–7,5 óptimos), la que usan el catálogo y la ficha comparativa. Los enlaces del frontend todavía apuntan a `id=2153` (*V. unguiculata*, 25–35 °C): falta cambiarlos.
 - **El escenario de demostración no se sirve por la API.** Sale de los JSON estáticos. La ruta que el frontend deja preparada (`POST /api/recommendations/demo`, con `VITE_SCENARIO_SOURCE=api`) no existe en el backend.
 - **`backend/app/services/climate_window_audit.py` no está conectado.** Ninguna ruta lo llama.
 - **El clima es histórico, no pronóstico.** NASA POWER da temperatura y lluvia de años anteriores en las mismas fechas, con unos 3 días de retraso. No reemplaza las mediciones de suelo.

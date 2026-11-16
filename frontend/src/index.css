@@ -80,3 +80,42 @@
     color: var(--color-cielo);
   }
 }
+
+
+/* Guía flotante: la mascota se balancea (6 px y 2 grados, ciclo de 3 s) y la ventana entra deslizándose.
+   Sin animación si la persona pidió menos movimiento. */
+@keyframes agro-bot-sway {
+  0%,
+  100% {
+    transform: translateX(-3px) rotate(-2deg);
+  }
+  50% {
+    transform: translateX(3px) rotate(2deg);
+  }
+}
+@keyframes agro-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.agro-bot {
+  animation: agro-bot-sway 3s ease-in-out infinite;
+}
+button:hover > .agro-bot,
+button:focus-visible > .agro-bot {
+  animation: none;
+}
+.agro-slide {
+  animation: agro-slide-in 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agro-bot,
+  .agro-slide {
+    animation: none;
+  }
+}
