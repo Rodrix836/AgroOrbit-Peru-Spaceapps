@@ -65,6 +65,20 @@ Mapa interactivo (Leaflet + react-leaflet, carga aparte con `React.lazy`) en `sr
 - **Imagen satelital NASA (opcional, apagada):** NASA GIBS por WMTS, sin clave: capa `MODIS_Terra_CorrectedReflectance_TrueColor`, `GoogleMapsCompatible_Level9`, JPEG, fecha de hace 3 días en UTC (la de hoy puede no estar publicada); la fecha se muestra siempre. Si no cargan los mosaicos, el interruptor avisa «Imagen no disponible» y el mapa base sigue funcionando. Atribución «NASA GIBS / EOSDIS».
 - **Celular (< 768 px o puntero táctil):** alto fijo de 280 px; el mapa empieza bloqueado para que un dedo siga desplazando la página, y el botón «Activar mapa» lo desbloquea.
 
+## 03 Rotaciones: mapa por prioridad
+
+En el bloque «Con qué datos se calculó» (`src/components/rotations/ContextPanel.tsx`), debajo del sensor, hay un mapa de la zona cuya imagen de NASA GIBS cambia con la prioridad. Se ve en la evaluación real y en el escenario de demostración; sin coordenadas de la parcela no se muestra.
+
+| Prioridad | Capa de GIBS | Juego de teselas | Detalle aproximado |
+|---|---|---|---|
+| Ahorrar agua | `SMAP_L4_Analyzed_Root_Zone_Soil_Moisture` | `GoogleMapsCompatible_Level6` (PNG) | ~9 km: sobre la parcela es casi un solo color |
+| Mejorar el suelo | `MODIS_Terra_NDVI_8Day` | `GoogleMapsCompatible_Level9` (PNG) | ~250 m |
+
+- Capas, juego de teselas y formato comprobados en el GetCapabilities de GIBS el 15/11/2026. Se pide la imagen de hace 4 días (UTC), porque las más recientes pueden no estar publicadas; la fecha se muestra siempre.
+- Reutiliza `PlotMap` con tres props opcionales (`overlay`, `overlayOn`, `compact`); sin ellas, 01 Parcela se ve igual que antes.
+- **Es contexto visual, no evidencia:** no hay leyenda con números ni se calcula nada a partir de la imagen, y no entra en la recomendación. Debajo va la fuente, la fecha y el aviso de que es una imagen de la zona, no una medición sobre la parcela.
+- Si la imagen no carga, sale «Imagen no disponible» y el mapa base con el marcador sigue funcionando.
+
 ## 03 Rotaciones: evaluación real y escenario de demostración
 
 - **Evaluación real de la parcela:** `POST /api/recommendations` con `plot_id`, `horizon_days` y `priority` (`improve_soil` para «Mejorar el suelo», `save_water` para «Ahorrar agua»). **No se envía `start_on`**: la API toma la fecha del ciclo `planned`. Hoy, con los datos reales, devuelve `insufficient_data`: la pantalla lista lo que falta y, debajo, el botón **«Ver escenario de demostración»**.

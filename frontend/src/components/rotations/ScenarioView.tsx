@@ -48,7 +48,7 @@ export function ScenarioView({
   onPriorityChange: (p: Priority) => void
   onBack: () => void
 }) {
-  const { crops } = usePlot()
+  const { crops, plot } = usePlot()
   const { t } = useLanguage()
   const q = useAsync(() => api.getDemoScenario(plotId, priority), [plotId, priority])
   const scenario = q.data?.scenario ?? null
@@ -251,6 +251,9 @@ export function ScenarioView({
                 title={t('sc.ctxTitle')}
                 powerTitle={t('sc.ctxPower')}
                 powerNote={scenario.sintetico.clima ? td(scenario.sintetico.clima) : undefined}
+                priority={priority}
+                lat={plot?.latitude}
+                lng={plot?.longitude}
               />
             ) : (
               <p className="mb-8 text-muted">{t('sc.noContext')}</p>

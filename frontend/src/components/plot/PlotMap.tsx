@@ -16,6 +16,20 @@ const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright
 // MODIS_Terra_CorrectedReflectance_TrueColor, imagen JPEG, GoogleMapsCompatible_Level9 (zoom nativo hasta 9),
 // dimensión Time diaria (AAAA-MM-DD, UTC).
 const GIBS_LAYER = 'MODIS_Terra_CorrectedReflectance_TrueColor'
+const GIBS_MATRIX_SET = 'GoogleMapsCompatible_Level9'
+
+/** Capa de NASA GIBS (WMTS, EPSG:3857) que reemplaza a la de color real. */
+export interface MapOverlay {
+  /** Identificador de la capa en el GetCapabilities de GIBS. */
+  layer: string
+  matrixSet: string
+  maxNativeZoom: number
+  /** Día de la imagen (AAAA-MM-DD, UTC). */
+  date: string
+  ext: 'png' | 'jpeg'
+  /** Opacidad de 0 a 1 (las capas PNG dejan ver el mapa base). */
+  opacity?: number
+}
 const GIBS_ATTRIBUTION = '<a href="https://earthdata.nasa.gov/gibs">NASA GIBS / EOSDIS</a>'
 /** El día de hoy puede no estar publicado todavía: se pide el de hace 3 días. */
 const GIBS_DAYS_AGO = 3
@@ -95,11 +109,20 @@ export default function PlotMap({
   lat,
   lng,
   onPick,
+  overlay,
+  overlayOn = false,
+  compact = false,
 }: {
   lat: string | number | null
   lng: string | number | null
   /** Con esta función, un clic en el mapa coloca el punto (se usa al registrar una parcela). */
   onPick?: (lat: number, lng: number) => void
+  /** Otra capa de NASA GIBS en lugar de la de color real (p. ej. humedad del suelo o vegetación). */
+  overlay?: MapOverlay
+  /** La imagen satelital empieza encendida. */
+  overlayOn?: boolean
+  /** Sin la leyenda larga ni la línea de la imagen, y con menos alto: quien lo usa pone sus propios textos. */
+  compact?: boolean
 }) {
   const la = parseCoord(lat, -90, 90)
   const lo = parseCoord(lng, -180, 180)
@@ -108,7 +131,14 @@ export default function PlotMap({
 
   // Imagen satelital de NASA GIBS (apagada por defecto).
   const gibsDate = useMemo(() => utcDaysAgo(GIBS_DAYS_AGO), [])
-  const [sat, setSat] = useState<Sat>('off')
+  const gibs: MapOverlay = overlay ?? {
+    layer: GIBS_LAYER,
+    matrixSet: GIBS_MATRIX_SET,
+    maxNativeZoom: 9,
+    date: gibsDate,
+    ext: 'jpeg',
+  }
+  const [sat, setSat] = useState<Sat>(overlayOn ? 'loading' : 'off')
   const tiles = useRef({ ok: 0, err: 0 })
   const toggleSat = () => {
     tiles.current = { ok: 0, err: 0 }
@@ -198,7 +228,7 @@ export default function PlotMap({
       <div
         role="group"
         aria-label={label}
-        className="relative h-[280px] w-full overflow-hidden border border-edge bg-bg md:h-[360px]"
+        className={`relative w-full overflow-hidden border border-edge bg-bg ${compact ? 'h-[240px]' : 'h-[280px] md:h-[360px]'}`}
       >
         <MapContainer
           center={cell ? cell.center : PERU_CENTER}
@@ -213,10 +243,11 @@ export default function PlotMap({
           <TileLayer url={OSM_URL} attribution={OSM_ATTRIBUTION} maxZoom={19} className="agro-osm-dark" />
           {(sat === 'loading' || sat === 'on') && (
             <TileLayer
-              key={gibsDate}
-              url={`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${GIBS_LAYER}/default/${gibsDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpeg`}
+              key={`${gibs.layer}-${gibs.date}`}
+              url={`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${gibs.layer}/default/${gibs.date}/${gibs.matrixSet}/{z}/{y}/{x}.${gibs.ext}`}
               attribution={GIBS_ATTRIBUTION}
-              maxNativeZoom={9}
+              opacity={gibs.opacity ?? 1}
+              maxNativeZoom={gibs.maxNativeZoom}
               maxZoom={19}
               eventHandlers={satHandlers}
             />
@@ -241,11 +272,14 @@ export default function PlotMap({
       {onPick && <p className="mt-2 text-ink">{pos ? t('map.pickChange') : t('map.pickFirst')}</p>}
 
       {/* Satélite: fecha de la imagen y fuente (siempre visibles) */}
-      <p className="mt-2 font-mono text-base text-muted">
-        {t('map.satLine', { date: formatDay(gibsDate) })}
-      </p>
+      {!compact && (
+        <p className="mt-2 font-mono text-base text-muted">
+          {t('map.satLine', { date: formatDay(gibsDate) })}
+        </p>
+      )}
 
       {/* Leyenda */}
+      {!compact && (
       <figcaption className="mt-4 border-t border-line pt-3">
         <Eyebrow className="mb-2">{t('map.legendTitle')}</Eyebrow>
         <ul className="space-y-2">
@@ -281,6 +315,7 @@ export default function PlotMap({
           </p>
         )}
       </figcaption>
+      )}
     </figure>
   )
 }

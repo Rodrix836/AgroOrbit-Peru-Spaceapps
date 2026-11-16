@@ -228,7 +228,14 @@ export function RotationsPage() {
 
       {/* Siempre visible, encima del resultado */}
       {!rec.loading && data?.context && !(mockup && contextHasPlaceholders) && (
-        <ContextPanel context={data.context} createdAt={data.created_at} example={RECOMMENDATIONS_ARE_MOCK} />
+        <ContextPanel
+          context={data.context}
+          createdAt={data.created_at}
+          example={RECOMMENDATIONS_ARE_MOCK}
+          priority={priority}
+          lat={plot.latitude}
+          lng={plot.longitude}
+        />
       )}
 
       {/* Plan B: la respuesta es solo la maqueta del formato (marcadores o puntajes en 0). */}
