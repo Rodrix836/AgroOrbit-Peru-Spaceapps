@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { usePublishGuide } from '../components/guide/data'
 import { AlternativeCard } from '../components/rotations/AlternativeCard'
 import { ContextPanel } from '../components/rotations/ContextPanel'
 import { InsufficientPanel } from '../components/rotations/InsufficientPanel'
@@ -88,6 +89,12 @@ export function RotationsPage() {
     void run(buildRequest(plot, priority))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plotId, priority])
+
+  // Lo que ya está cargado, para la Guía (no hace peticiones propias).
+  usePublishGuide(
+    'recommendation',
+    useMemo(() => ({ data: rec.data, loading: rec.loading, error: rec.error }), [rec.data, rec.loading, rec.error]),
+  )
 
   if (plotLoading) return <Loading label="Cargando tu parcela…" />
   if (plotError) return <ErrorBox message={plotError} onRetry={reload} />

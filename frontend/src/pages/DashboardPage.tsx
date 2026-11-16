@@ -1,3 +1,4 @@
+import { usePublishGuide } from '../components/guide/data'
 import { ClimateRisk } from '../components/nasa/ClimateRisk'
 import { NasaCards } from '../components/nasa/NasaCards'
 import { NasaChart } from '../components/nasa/NasaChart'
@@ -14,6 +15,7 @@ import { Loading } from '../components/ui/Loading'
 import { PageHeader } from '../components/ui/PageHeader'
 import { PanelGrid } from '../components/ui/PanelGrid'
 import { SectionCard } from '../components/ui/SectionCard'
+import { useMemo } from 'react'
 import { useClimateHistory } from '../hooks/useClimateHistory'
 import { useNasa } from '../hooks/useNasa'
 import { usePlot } from '../hooks/usePlot'
@@ -27,6 +29,28 @@ export function DashboardPage() {
   const nasa = useNasa(plot?.id ?? null)
   // Histórico de 10 años (T2M y PRECTOTCORR) para el bloque de riesgo e incertidumbre; aparte del período elegido.
   const history = useClimateHistory(plot?.id ?? null)
+  // Lo que ya está cargado, para la Guía (no hace peticiones propias).
+  usePublishGuide(
+    'readings',
+    useMemo(
+      () => ({ data: readings.data, loading: readings.loading, error: readings.error }),
+      [readings.data, readings.loading, readings.error],
+    ),
+  )
+  usePublishGuide(
+    'nasa',
+    useMemo(
+      () => ({ data: nasa.data, view: nasa.view, loading: nasa.loading, error: nasa.error, problem: nasa.problem }),
+      [nasa.data, nasa.view, nasa.loading, nasa.error, nasa.problem],
+    ),
+  )
+  usePublishGuide(
+    'history',
+    useMemo(
+      () => ({ data: history.data, loading: history.loading, error: history.error }),
+      [history.data, history.loading, history.error],
+    ),
+  )
   // La última lectura de humedad del sensor, para avisar si es de un kit de prueba.
   const lastMoisture = [...(readings.data ?? [])].reverse().find((r) => r.sensor_type === 'soil_moisture')
   const sensorIsTest = lastMoisture?.quality_flag === 'test'
