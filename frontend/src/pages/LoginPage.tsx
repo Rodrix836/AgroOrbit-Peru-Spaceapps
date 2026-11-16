@@ -7,6 +7,11 @@ import { inputClass } from '../components/ui/styles'
 import { useAuth } from '../hooks/useAuth'
 import { useLanguage } from '../i18n/LanguageContext'
 
+// Cuenta de demostración para el jurado del NASA Space Apps. Es pública a propósito (se muestra en esta pantalla):
+// no reutilizar esta contraseña en ningún otro servicio y cambiarla cuando termine la evaluación.
+const DEMO_EMAIL = 'rodrigonicolasbravozapata@gmail.com'
+const DEMO_PASSWORD = 'rodrixagro'
+
 export function LoginPage() {
   const { user, signIn } = useAuth()
   const { t } = useLanguage()
@@ -64,6 +69,32 @@ export function LoginPage() {
         <Button size="lg" disabled={busy} className="w-full">
           {busy ? t('login.submitBusy') : t('login.submit')}
         </Button>
+        {/* Cuenta de demostración: el jurado no tiene cuenta propia */}
+        <div className="border-t border-line pt-5">
+          <Eyebrow tone="cielo">{t('login.demoTitle')}</Eyebrow>
+          <p className="mt-2 text-muted">{t('login.demoIntro')}</p>
+          <dl className="mt-3 space-y-2">
+            <div>
+              <dt className="text-muted">{t('login.email')}</dt>
+              <dd className="break-all font-mono text-ink">{DEMO_EMAIL}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">{t('login.password')}</dt>
+              <dd className="font-mono text-ink">{DEMO_PASSWORD}</dd>
+            </div>
+          </dl>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-4 w-full"
+            onClick={() => {
+              setEmail(DEMO_EMAIL)
+              setPassword(DEMO_PASSWORD)
+            }}
+          >
+            {t('login.demoFill')}
+          </Button>
+        </div>
       </form>
     </div>
   )
