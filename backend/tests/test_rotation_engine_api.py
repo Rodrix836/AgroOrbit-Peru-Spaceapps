@@ -94,7 +94,7 @@ def test_valle_del_chira_with_farmer_data_is_blocked_only_by_catalog(client, db,
     reasons = {m["field"]: m["reason"] for m in data["missing"]}
     assert list(reasons) == ["crops.maiz.requirements", "crops.frijol_caupi.requirements",
                              "crops.camote.requirements"]
-    assert reasons["crops.maiz.requirements"].endswith("pH del suelo, salinidad que tolera y tipos de suelo.")
+    assert reasons["crops.maiz.requirements"].endswith("«Maíz»: salinidad que tolera y tipos de suelo.")
     assert "agua por campaña" in reasons["crops.frijol_caupi.requirements"]
     assert "agua por campaña" in reasons["crops.camote.requirements"]
 

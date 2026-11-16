@@ -205,7 +205,7 @@ def test_reasons_are_plain_language(client, owner_headers, test_plot):
     reasons = {m["field"]: m["reason"] for m in data["missing"]}
     assert reasons["plot.previous_crop"] == "Falta indicar qué cultivo tuviste antes en esta parcela."
     assert reasons["crops.maiz.requirements"] == ("Todavía no tenemos, de una fuente confiable, estos datos del "
-                                                  "cultivo «Maíz»: pH del suelo, salinidad que tolera y tipos de suelo.")
+                                                  "cultivo «Maíz»: salinidad que tolera y tipos de suelo.")
     jargon = ("POST ", "/api/", "quality_flag", "finished", "planned", "start_on", "POWER", "motor")
     for text in [*reasons.values(), data["context"]["notice"], data["context"]["sensor"]["reason"]]:
         assert not any(word in text for word in jargon), text

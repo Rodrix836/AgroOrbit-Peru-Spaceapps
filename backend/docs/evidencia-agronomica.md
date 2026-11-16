@@ -58,7 +58,7 @@ El catálogo contiene además `duration_by_harvest`: vainas verdes 60–160 día
 [fao-duration]: https://www.fao.org/4/s2022e/s2022e07.htm
 [ecocrop-cowpea]: https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=10835
 [cowpea-harvest]: https://ecocrop.apps.fao.org/ecocrop/srv/en/cropView?id=10835
-[cowpea-water]: https://doi.org/10.15809/irriga.2008v13n2p182-190
+[cowpea-water]: https://revistas.fca.unesp.br/index.php/irriga/article/view/3363 "DOI 10.15809/irriga.2008v13n2p182-190"
 [ecocrop-sweetpotato]: https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=1265
 [sweetpotato-fao]: https://www.fao.org/4/t0554e/T0554E14.htm
 [sweetpotato-cip]: https://cipotato.org/sweetpotato/how-sweetpotato-grows/

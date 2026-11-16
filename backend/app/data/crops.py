@@ -10,8 +10,8 @@ CULTIVOS = {
         "agua_max_mm_campana": 800,
         "duration_min_days": 125,
         "duration_max_days": 180,
-        "soil_ph_min": None,
-        "soil_ph_max": None,
+        "soil_ph_min": 5.0,
+        "soil_ph_max": 7.0,
         "soil_salinity_max_ds_m": None,
         "soil_texture_accepted": None,
         "fuentes": [
@@ -47,6 +47,15 @@ CULTIVOS = {
                     "clima, variedad y fecha de siembra; se prefieren datos locales."
                 ),
             },
+            {
+                "titulo": "FAO EcoCrop data sheet: Zea mays ssp. mays",
+                "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=238663",
+                "campos": ["soil_ph_min", "soil_ph_max"],
+                "nota": (
+                    "pH 5-7 es el rango óptimo de EcoCrop; el absoluto es "
+                    "4,5-8,5. Verificado por Milene el 15/11/2026."
+                ),
+            },
         ]
     },
     "frijol_caupi": {
@@ -61,8 +70,8 @@ CULTIVOS = {
             "green_pods": {"min_days": 60, "max_days": 160},
             "dry_seed": {"min_days": 90, "max_days": 240},
         },
-        "soil_ph_min": None,
-        "soil_ph_max": None,
+        "soil_ph_min": 5.5,
+        "soil_ph_max": 7.5,
         "soil_salinity_max_ds_m": None,
         "soil_texture_accepted": None,
         "fuentes": [
@@ -74,10 +83,14 @@ CULTIVOS = {
                     "temperatura_max_c",
                     "duration_min_days",
                     "duration_max_days",
+                    "soil_ph_min",
+                    "soil_ph_max",
                 ],
                 "nota": (
                     "20-35 °C es el rango óptimo, no el límite absoluto. "
-                    "La ficha de cultivo indica 60-240 días como rango general."
+                    "La ficha de cultivo indica 60-240 días como rango general. "
+                    "pH 5,5-7,5 es el rango óptimo (absoluto 4,3-8,8); la ficha "
+                    "id=2153 (Vigna unguiculata) da el mismo pH óptimo."
                 ),
             },
             {
@@ -92,9 +105,11 @@ CULTIVOS = {
             },
             {
                 "titulo": "Cowpea evapotranspiration and crop coefficient in the Gurgueia Valley, Piaui State, Brazil",
-                "url": "https://doi.org/10.15809/irriga.2008v13n2p182-190",
+                "url": "https://revistas.fca.unesp.br/index.php/irriga/article/view/3363",
                 "campos": ["agua_min_mm_campana", "agua_max_mm_campana"],
                 "nota": (
+                    "Irriga 13(2):182-190, DOI 10.15809/irriga.2008v13n2p182-190 "
+                    "(el DOI redirige a la portada de la revista). "
                     "Reporta ETc de 288.5 mm/ciclo para cv. BR-17 Gurguéia "
                     "en un sitio y campaña. Es un resultado específico, no "
                     "suficiente para establecer mínimos y máximos generales; "
@@ -111,8 +126,8 @@ CULTIVOS = {
         "agua_max_mm_campana": None,
         "duration_min_days": 80,
         "duration_max_days": 170,
-        "soil_ph_min": None,
-        "soil_ph_max": None,
+        "soil_ph_min": 5.0,
+        "soil_ph_max": 7.0,
         "soil_salinity_max_ds_m": None,
         "soil_texture_accepted": None,
         "fuentes": [
@@ -124,6 +139,8 @@ CULTIVOS = {
                     "temperatura_max_c",
                     "duration_min_days",
                     "duration_max_days",
+                    "soil_ph_min",
+                    "soil_ph_max",
                 ],
                 "nota": (
                     "18-28 °C es el rango óptimo de EcoCrop, no sus límites "
