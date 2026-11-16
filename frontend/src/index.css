@@ -80,3 +80,42 @@
     color: var(--color-cielo);
   }
 }
+
+
+/* Guía flotante: balanceo suave del botón (6 px, ciclo de 3 s) y entrada deslizante de la ventana.
+   Sin animación si la persona pidió menos movimiento. */
+@keyframes agro-sway {
+  0%,
+  100% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+@keyframes agro-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.agro-sway {
+  animation: agro-sway 3s ease-in-out infinite;
+}
+.agro-sway:hover,
+.agro-sway:focus-visible {
+  animation: none;
+}
+.agro-slide {
+  animation: agro-slide-in 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agro-sway,
+  .agro-slide {
+    animation: none;
+  }
+}

@@ -37,6 +37,15 @@ Variables (`.env`, no se sube a git):
 - En Rotaciones, la prioridad parte de la guardada en la parcela; cambiarla ahí solo recalcula, no guarda.
 - La fecha de inicio de la petición de Rotaciones sale de `planned.sowing_date`. Sin fecha, se muestra el aviso «Falta un dato» y los calendarios marcan «Fecha de inicio supuesta». La cabecera de Diagnóstico muestra el cultivo actual (`current.crop_code`) con su nombre.
 
+## Guía flotante
+
+Botón «Guía» abajo a la derecha (`src/components/guide/`). **No usa ningún modelo de IA ni llama a servicios externos**: responde con reglas y con los datos que la app ya tiene cargados. Sin campo de texto: solo preguntas predefinidas por pantalla (Parcela: 2, Diagnóstico: 4, Rotaciones: 4).
+
+- **Preguntas y respuestas:** `questions.ts` (una función por respuesta, con su fuente y, si aplica, un enlace). Para ampliarla basta añadir un objeto a `GUIDE_QUESTIONS`.
+- **Datos:** las pantallas publican lo que ya cargaron con `usePublishGuide` (`data.tsx`: sensor, NASA, histórico, evaluación y escenario); la guía no hace peticiones. Si algo no está cargado, la respuesta lo dice; nunca rellena con valores de ejemplo. En modo ejemplo (`VITE_USE_MOCKS=true`) lo avisa en cada respuesta.
+- **Límites:** no da consejos de siembra, riego ni rendimiento y no declara ganadora a ninguna estrategia.
+- **Animación:** el botón se balancea ~6 px en ciclos de 3 s mientras está cerrado y se detiene al pasar el cursor o enfocarlo; la ventana entra deslizándose y las respuestas se escriben con un efecto breve. Con `prefers-reduced-motion` no hay ninguna animación. Escape cierra la ventana.
+
 ## 01 Parcela: mapa
 
 Mapa interactivo (Leaflet + react-leaflet, carga aparte con `React.lazy`) en `src/components/plot/PlotMap.tsx`; reemplaza a la antigua cuadrícula `MapFrame`.

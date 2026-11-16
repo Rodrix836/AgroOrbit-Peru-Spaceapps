@@ -7,6 +7,7 @@ import { api } from '../../services/api'
 import type { Priority } from '../../types/api'
 import type { ScenarioModel } from '../../types/scenario'
 import { computeTradeoffs } from '../../utils/tradeoffs'
+import { usePublishGuide } from '../guide/data'
 import { Alert } from '../ui/Alert'
 import { Button } from '../ui/Button'
 import { ErrorBox } from '../ui/ErrorBox'
@@ -53,6 +54,12 @@ export function ScenarioView({
   const tradeoffs = useMemo(
     () => (scenario && history.data ? computeTradeoffs(scenario.cards, history.data) : null),
     [scenario, history.data],
+  )
+
+  // Para la Guía: el escenario abierto y sus compensaciones (ya calculados; la guía no pide nada).
+  usePublishGuide(
+    'demo',
+    useMemo(() => (scenario ? { scenario, tradeoffs } : undefined), [scenario, tradeoffs]),
   )
 
   // El escenario que se veía con la otra prioridad: sirve para mostrar qué pesos de prueba cambiaron.
