@@ -8,7 +8,7 @@ Prototipo de apoyo a decisiones para la rotación de cultivos, hecho para el NAS
 
 | Parte | Publicado en | Sale de |
 |---|---|---|
-| **Aplicación web (incluye el mapa)** | https://agroorbit-three.vercel.app | Carpeta [`frontend/`](frontend/) de la rama **`frontend`** (commit `69df065`, comprobado el 15/11/2026), desplegada en Vercel. La misma versión está integrada en `main`. |
+| **Aplicación web (incluye el mapa)** | https://agroorbit-three.vercel.app | Carpeta [`frontend/`](frontend/) de la rama **`frontend`** (commit `bb1475e`, comprobado el 16/11/2026), desplegada en Vercel. La misma versión está integrada en `main`. |
 | **API** | https://agroorbit-api.onrender.com (`/health`, `/docs`) | Carpeta [`backend/`](backend/) de la rama **`main`**, desplegada en Render ([`render.yaml`](render.yaml)) |
 | **Base de datos y autenticación** | Supabase | Migraciones en [`supabase/migrations/`](supabase/migrations/) |
 | **Firmware del sensor** | Kit ESP32 | [`firmware/agroorbit_esp32/`](firmware/agroorbit_esp32/) (guía en [`firmware/README.md`](firmware/README.md)) |
@@ -38,6 +38,15 @@ El ejemplo de Rotaciones está en el **PR #23** ([Rodrix836/AgroOrbit-Peru-Space
 - La evaluación real de la parcela sigue devolviendo `insufficient_data`: falta la textura del suelo y faltan requisitos de los cultivos.
 
 **Cómo lo usa el frontend:** carga copias de esos JSON en `frontend/src/data/`. Son las tomadas del commit `ec192fa` del mismo PR: tienen las mismas estrategias y fechas. Después se corrigió en `main` el enlace del artículo de ETc del caupí y se añadió el pH de EcoCrop al catálogo (PR «Fuentes y pH del catálogo»). Hasta que se vuelvan a copiar, las copias del frontend no tienen esos cambios. La pantalla usa sus propios textos de tarjeta (`frontend/src/data/lectura-milene.ts`).
+
+## Datos de la NASA usados
+
+| Fuente | Qué se usa | Dónde |
+|---|---|---|
+| **NASA POWER**, API diaria por punto (`power.larc.nasa.gov/api/temporal/daily/point`, comunidad `AG`, tiempo solar local) | Temperatura del aire a 2 m (`T2M`, °C), lluvia corregida (`PRECTOTCORR`, mm/día) y humedad del suelo superficial y de la zona de raíces (`GWETTOP`, `GWETROOT`, fracción 0–1). Datos diarios del 2016-01-01 al 2026-11-15, en el punto de la parcela (-4,97, -80,89) | Se guardan por parcela en Supabase (`backend/app/services/nasa/`). Se usan en 02 Diagnóstico (contexto regional y riesgo), en el clima por campaña del motor y en «Compensaciones» de 03 Rotaciones |
+| **NASA GIBS** (WMTS, `gibs.earthdata.nasa.gov`) | Imagen satelital `MODIS_Terra_CorrectedReflectance_TrueColor` de hace 3 días | Capa opcional del mapa de 01 Parcela (`frontend/src/components/plot/PlotMap.tsx`) |
+
+NASA POWER es **contexto regional**, con una celda de ½° × ⅝°, y se muestra siempre separado de la medición puntual del sensor ESP32. Usa el valor nulo `-999`, que se guarda como dato faltante, y llega con unos 3 días de retraso.
 
 ## Limitaciones y trabajo futuro
 
