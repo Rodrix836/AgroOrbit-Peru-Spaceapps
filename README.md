@@ -49,7 +49,7 @@ Esto **no** está en la versión presentada:
   - Faltan la salinidad que tolera cada cultivo y los tipos de suelo que acepta.
   - El pH sí está: es el rango óptimo de FAO EcoCrop (maíz 5–7, caupí 5,5–7,5, camote 5–7).
 - **Suelo de la parcela sin medir.** Falta la textura (en el ejemplo, «franco» es un supuesto), y faltan pH y salinidad. El kit ESP32 solo mide humedad y temperatura del suelo, y en la demo es un kit de prueba (`quality_flag: test`) que no se usa como evidencia.
-- **Ficha EcoCrop del caupí: `id=10835`** (*V. unguiculata* ssp. *unguiculata*, 20–35 °C y pH 5,5–7,5 óptimos), la que usan el catálogo y la ficha comparativa. Los enlaces del frontend todavía apuntan a `id=2153` (*V. unguiculata*, 25–35 °C) y faltan cambiar.
+- **Ficha EcoCrop del caupí: `id=10835`** (*V. unguiculata* ssp. *unguiculata*, 20–35 °C y pH 5,5–7,5 óptimos), la que usan el catálogo y la ficha comparativa. Los enlaces del frontend todavía apuntan a `id=2153` (*V. unguiculata*, 25–35 °C) : falta cambiarlos.
 - **El escenario de demostración no se sirve por la API.** Sale de los JSON estáticos. La ruta que el frontend deja preparada (`POST /api/recommendations/demo`, con `VITE_SCENARIO_SOURCE=api`) no existe en el backend.
 - **`backend/app/services/climate_window_audit.py` no está conectado.** Ninguna ruta lo llama.
 - **El clima es histórico, no pronóstico.** NASA POWER da temperatura y lluvia de años anteriores en las mismas fechas, con unos 3 días de retraso. No reemplaza las mediciones de suelo.
