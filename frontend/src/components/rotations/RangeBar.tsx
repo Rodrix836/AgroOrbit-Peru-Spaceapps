@@ -1,4 +1,5 @@
 import { formatFixed, formatNumber } from '../../utils/format'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 /**
  * Barra de rango mínimo–máximo con la mediana marcada. Todas las barras de una misma columna usan la misma escala
@@ -34,6 +35,7 @@ export function RangeBar({
   const left = pct(min)
   // Un rango muy angosto se sigue viendo (mínimo 1,5 % del ancho).
   const width = Math.max(1.5, pct(max) - left)
+  const { t } = useLanguage()
   const f = (v: number) => (decimals > 0 ? formatFixed(v, decimals) : formatNumber(v, 0))
   return (
     <div>
@@ -42,7 +44,7 @@ export function RangeBar({
       </p>
       <div
         role="img"
-        aria-label={`${label}: de ${f(min)} a ${f(max)} ${unit}, mediana ${f(median)} ${unit}`}
+        aria-label={t('range.aria', { label, min: f(min), max: f(max), unit, median: f(median) })}
         className="relative mt-1 h-4 border border-line bg-track"
       >
         <div className="absolute inset-y-0 border-x-2 border-cielo bg-cielo/30" style={{ left: `${left}%`, width: `${width}%` }} />
@@ -55,16 +57,16 @@ export function RangeBar({
         </span>
       </div>
       <p className="font-mono text-base text-cielo">
-        mediana {f(median)} <span className="text-muted">{unit}</span>
+        {t('range.median', { v: f(median), unit })}
       </p>
       {maxLabel && (
         <p className="font-mono text-[13px] text-ink">
-          máx. {f(max)} {unit} en {maxLabel}
+          {t('range.max', { v: f(max), unit, label: maxLabel })}
         </p>
       )}
       {minLabel && (
         <p className="font-mono text-[13px] text-ink">
-          mín. {f(min)} {unit} en {minLabel}
+          {t('range.min', { v: f(min), unit, label: minLabel })}
         </p>
       )}
     </div>
@@ -73,6 +75,7 @@ export function RangeBar({
 
 /** Barra simple de una magnitud (0 a `scaleMax`), con la misma escala en todas las filas. */
 export function ValueBar({ value, scaleMax, unit, label }: { value: number; scaleMax: number; unit: string; label: string }) {
+  const { t } = useLanguage()
   const w = scaleMax > 0 ? Math.min(100, Math.max(0, (value / scaleMax) * 100)) : 0
   return (
     <div>
@@ -81,7 +84,7 @@ export function ValueBar({ value, scaleMax, unit, label }: { value: number; scal
       </p>
       <div
         role="img"
-        aria-label={`${label}: ${formatNumber(value, 0)} ${unit}`}
+        aria-label={t('range.valueAria', { label, v: formatNumber(value, 0), unit })}
         className="relative mt-1 h-4 border border-line bg-track"
       >
         <div className="absolute inset-y-0 left-0 border-r-2 border-cielo bg-cielo/30" style={{ width: `${Math.max(1.5, w)}%` }} />

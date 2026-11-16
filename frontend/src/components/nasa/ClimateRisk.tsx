@@ -7,8 +7,12 @@ import { todayLima } from '../../utils/period'
 import { Eyebrow } from '../ui/Eyebrow'
 import { SourceBadge } from '../ui/SourceBadge'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { localeOf, tr } from '../../i18n/active'
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
+/** Mes abreviado (1 a 12) en el idioma activo. */
+const monthShort = (m: number) =>
+  new Date(Date.UTC(2000, m - 1, 1)).toLocaleDateString(localeOf(), { timeZone: 'UTC', month: 'short' })
 const MARGIN = { top: 5, right: 24, left: 8, bottom: 5 }
 
 interface Row {
@@ -24,7 +28,7 @@ interface Row {
 
 const toRows = (r: RiskResult): Row[] =>
   r.stats.map((s) => ({
-    m: MONTHS[s.month - 1],
+    m: monthShort(s.month),
     band: s.min !== null && s.max !== null ? [s.min, s.max] : null,
     median: s.median,
     last: s.last,
@@ -35,26 +39,34 @@ const toRows = (r: RiskResult): Row[] =>
 /** «2 años», «1 año», «2.5 años» (años de datos guardados). */
 const storedYears = (n: number) => {
   const v = Math.round(n * 10) / 10
-  return `${formatNumber(v, 1)} ${v === 1 ? 'año' : 'años'}`
+  return tr(v === 1 ? 'nasa.risk.year' : 'nasa.risk.years', { n: formatNumber(v, 1) })
 }
 
 /** Texto de cuántos años entran: «10 años, 2016–2026». */
 const yearsText = (r: RiskResult) =>
-  `${r.years} ${r.years === 1 ? 'año' : 'años'}, ${r.firstYear}–${r.lastYear}`
+  tr('nasa.risk.yearsRange', {
+    years: tr(r.years === 1 ? 'nasa.risk.year' : 'nasa.risk.years', { n: r.years }),
+    first: r.firstYear ?? '',
+    last: r.lastYear ?? '',
+  })
 
 function RiskTooltip({ active, payload, unit }: { active?: boolean; payload?: { payload: Row }[]; unit: string }) {
   if (!active || !payload?.length) return null
   const r = payload[0].payload
-  const f = (v: number | null) => (v === null ? 'sin dato' : `${formatNumber(v, 1)} ${unit}`)
+  const f = (v: number | null) => (v === null ? tr('nasa.risk.noValue') : `${formatNumber(v, 1)} ${unit}`)
   return (
     <div style={TOOLTIP_STYLE} className="font-mono text-[13px] leading-5">
       <p className="text-ink">{r.m}</p>
       <p>
-        Mín.–máx.: {r.band ? `${formatNumber(r.band[0], 1)} a ${formatNumber(r.band[1], 1)} ${unit}` : 'sin rango'}
+        {tr('nasa.risk.tipMinMax', {
+          range: r.band
+            ? tr('nasa.risk.tipRange', { a: formatNumber(r.band[0], 1), b: formatNumber(r.band[1], 1), unit })
+            : tr('nasa.risk.noRange'),
+        })}
       </p>
-      <p>Mediana: {f(r.median)}</p>
-      <p>Últimos 12 meses: {f(r.last)}</p>
-      <p>Años usados: {r.n}</p>
+      <p>{tr('nasa.risk.tipMedian', { v: f(r.median) })}</p>
+      <p>{tr('nasa.risk.tipLast12', { v: f(r.last) })}</p>
+      <p>{tr('nasa.risk.tipYears', { n: r.n })}</p>
     </div>
   )
 }
@@ -70,21 +82,18 @@ function RiskChart({
   result: RiskResult
   fromZero: boolean
 }) {
+  const { t } = useLanguage()
   if (!result.sufficient) {
     return (
       <div>
         <Eyebrow tone="cielo">{title}</Eyebrow>
         <div className="mt-3 border border-dashed border-ambar bg-ambar-bg p-4">
-          <p className="font-semibold text-ink">Histórico insuficiente para mostrar el rango</p>
+          <p className="font-semibold text-ink">{t('nasa.risk.insuffTitle')}</p>
           <p className="mt-1 text-ink">
-            Hay {storedYears(result.spanYears)} de datos guardados; se necesitan al menos {MIN_YEARS} para mostrar el
-            rango.
+            {t('nasa.risk.insuffBody', { stored: storedYears(result.spanYears), min: MIN_YEARS })}
           </p>
           {result.spanYears >= MIN_YEARS && (
-            <p className="mt-1 text-muted">
-              Hay datos de ese período, pero muy pocos meses tienen al menos 80 % de sus días con dato. No
-              rellenamos lo que falta.
-            </p>
+            <p className="mt-1 text-muted">{t('nasa.risk.insuffFew')}</p>
           )}
         </div>
       </div>
@@ -99,7 +108,8 @@ function RiskChart({
     <div>
       <Eyebrow tone="cielo">{title}</Eyebrow>
       <p className="mt-1 font-mono text-base text-ink">
-        {yearsText(result)} <span className="text-muted">· cada mes usa entre {result.nMin} y {result.nMax} años</span>
+        {yearsText(result)}{' '}
+        <span className="text-muted">{t('nasa.risk.eachMonthUses', { min: result.nMin, max: result.nMax })}</span>
       </p>
       <div className="mt-3 h-64 w-full">
         <ResponsiveContainer>
@@ -147,26 +157,26 @@ function RiskChart({
       <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 font-mono text-base text-muted">
         <li>
           <span aria-hidden className="mr-2 inline-block h-3 w-5 bg-cielo/25 align-middle" />
-          Banda mín.–máx. ({unit})
+          {t('nasa.risk.bandLegend', { unit })}
         </li>
         <li>
           <span aria-hidden className="mr-2 inline-block h-0.5 w-5 bg-cielo align-middle" />
-          Mediana
+          {t('nasa.risk.colMedian')}
         </li>
         <li>
           <span aria-hidden className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-ink align-middle" />
-          Últimos 12 meses
+          {t('nasa.risk.lastTwelve')}
         </li>
       </ul>
       <details className="mt-3 border border-line p-3">
-        <summary className="cursor-pointer font-medium text-ink">Ver los números por mes</summary>
+        <summary className="cursor-pointer font-medium text-ink">{t('nasa.risk.details')}</summary>
         <table className="mt-3 w-full font-mono text-base">
           <thead className="text-left text-muted">
             <tr>
-              <th className="py-1 pr-2 font-normal">Mes</th>
-              <th className="py-1 pr-2 font-normal">Mín.–máx.</th>
-              <th className="py-1 pr-2 font-normal">Mediana</th>
-              <th className="py-1 font-normal">Últ. 12 m</th>
+              <th className="py-1 pr-2 font-normal">{t('nasa.risk.colMonth')}</th>
+              <th className="py-1 pr-2 font-normal">{t('nasa.risk.colMinMax')}</th>
+              <th className="py-1 pr-2 font-normal">{t('nasa.risk.colMedian')}</th>
+              <th className="py-1 font-normal">{t('nasa.risk.colLast')}</th>
             </tr>
           </thead>
           <tbody>
@@ -174,7 +184,7 @@ function RiskChart({
               <tr key={r.m} className="border-t border-line align-top">
                 <td className="py-1 pr-2 text-ink">{r.m}</td>
                 <td className="py-1 pr-2 text-cielo">
-                  {r.band ? `${formatNumber(r.band[0], 1)}–${formatNumber(r.band[1], 1)}` : <span className="text-muted">sin rango</span>}
+                  {r.band ? `${formatNumber(r.band[0], 1)}–${formatNumber(r.band[1], 1)}` : <span className="text-muted">{t('nasa.risk.noRange')}</span>}
                 </td>
                 <td className="py-1 pr-2 text-cielo">
                   {r.median === null ? <span className="text-muted">—</span> : formatNumber(r.median, 1)}
@@ -184,7 +194,7 @@ function RiskChart({
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-muted">Unidad: {unit}. «Sin rango»: ese mes tiene menos de {MIN_YEARS} años válidos.</p>
+        <p className="mt-2 text-muted">{t('nasa.risk.unitNote', { unit, min: MIN_YEARS })}</p>
       </details>
     </div>
   )
@@ -195,6 +205,7 @@ function RiskChart({
  * anteriores (banda mínimo–máximo, mediana y los últimos 12 meses). Cálculo del frontend sobre datos de NASA POWER.
  */
 export function ClimateRisk({ history, example = false }: { history: ClimateHistory; example?: boolean }) {
+  const { t } = useLanguage()
   const today = todayLima()
   const rain = monthlyHistory(history.rain, 'sum', today)
   const temp = monthlyHistory(history.temperature, 'mean', today)
@@ -204,28 +215,25 @@ export function ClimateRisk({ history, example = false }: { history: ClimateHist
     <div className="space-y-8">
       <div className="flex flex-wrap items-center gap-2">
         <SourceBadge kind="nasa" />
-        <SourceBadge kind="prototype" label="Cálculo del frontend sobre datos de NASA POWER" />
-        {example && <SourceBadge kind="prototype" label="Datos de ejemplo" />}
+        <SourceBadge kind="prototype" label={t('nasa.risk.badge')} />
+        {example && <SourceBadge kind="prototype" label={t('common.exampleData')} />}
       </div>
       <p className="max-w-prose text-ink">
-        La banda muestra lo que ha pasado en años anteriores en esta zona según NASA POWER. No es un pronóstico.
-        Cuanto más ancha la banda, más distinto ha sido ese mes de un año a otro.
+        {t('nasa.risk.intro')}
       </p>
       {rows === 0 ? (
         <div className="border border-dashed border-ambar bg-ambar-bg p-4">
-          <p className="font-semibold text-ink">Histórico insuficiente para mostrar el rango</p>
-          <p className="mt-1 text-muted">Todavía no hay histórico de NASA POWER guardado para esta parcela.</p>
+          <p className="font-semibold text-ink">{t('nasa.risk.insuffTitle')}</p>
+          <p className="mt-1 text-muted">{t('nasa.risk.noHistory')}</p>
         </div>
       ) : (
         <div className="grid gap-10 lg:grid-cols-2">
-          <RiskChart title="Lluvia por mes (mm), suma mensual" unit="mm" result={rain} fromZero />
-          <RiskChart title="Temperatura media por mes (°C)" unit="°C" result={temp} fromZero={false} />
+          <RiskChart title={t('nasa.risk.rainTitle')} unit="mm" result={rain} fromZero />
+          <RiskChart title={t('nasa.risk.tempTitle')} unit="°C" result={temp} fromZero={false} />
         </div>
       )}
       <p className="text-muted">
-        Un mes de un año solo cuenta si al menos el 80 % de sus días tiene dato; los días sin dato no se rellenan ni se
-        cuentan como 0. La lluvia de cada mes es la suma de sus días con dato y la temperatura, su promedio. «Últimos 12
-        meses»: el valor más reciente de cada mes dentro del último año.
+        {t('nasa.risk.footnote')}
       </p>
     </div>
   )

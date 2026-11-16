@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { formatNumber } from '../../utils/format'
 import { Eyebrow } from './Eyebrow'
 import { SourceBadge } from './SourceBadge'
@@ -37,6 +38,7 @@ export function StatCard({
   extra,
   dim = false,
 }: Props) {
+  const { t } = useLanguage()
   const tone = TONES[source]
   return (
     <div className="border-t border-line pt-4">
@@ -45,7 +47,7 @@ export function StatCard({
         {badge}
       </div>
       {value === null ? (
-        <p className="mt-2 font-mono text-3xl font-medium text-muted">Sin dato</p>
+        <p className="mt-2 font-mono text-3xl font-medium text-muted">{t('common.noData')}</p>
       ) : (
         <p className={`mt-2 flex items-baseline gap-2 font-mono ${tone.text} ${dim ? 'opacity-40' : ''}`}>
           <span className="text-5xl font-medium tracking-tight">{formatNumber(value, digits)}</span>
@@ -53,7 +55,7 @@ export function StatCard({
         </p>
       )}
       {extra}
-      {when !== undefined && <p className="mt-2 font-mono text-base text-ink">{when ?? 'Sin fecha'}</p>}
+      {when !== undefined && <p className="mt-2 font-mono text-base text-ink">{when ?? t('common.noDate')}</p>}
       {note && <p className="mt-1 text-muted">{note}</p>}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <SourceBadge kind={source} />

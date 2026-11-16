@@ -37,6 +37,15 @@ Variables (`.env`, no se sube a git):
 - En Rotaciones, la prioridad parte de la guardada en la parcela; cambiarla ahí solo recalcula, no guarda.
 - La fecha de inicio de la petición de Rotaciones sale de `planned.sowing_date`. Sin fecha, se muestra el aviso «Falta un dato» y los calendarios marcan «Fecha de inicio supuesta». La cabecera de Diagnóstico muestra el cultivo actual (`current.crop_code`) con su nombre.
 
+## Idiomas (EN | ES)
+
+La interfaz está en **inglés por defecto** y se puede pasar a español con el selector `EN | ES` de la barra superior (junto al correo y «Log out»). La elección se guarda en `localStorage` (`agroorbit_lang`) y también cambia `<html lang>`.
+
+- **`src/i18n/translations.ts`**: diccionarios `en` y `es`. `es` se declara como `Record<keyof typeof en, string>`: una clave que falte (o sobre) en español rompe `tsc`. El archivo se generó a partir de una lista de claves; para ampliarlo basta añadir la clave en **los dos** objetos (los textos con `{nombre}` llevan parámetros: `t('clave', { nombre: 5 })`).
+- **`src/i18n/LanguageContext.tsx`**: `<LanguageProvider>` y `useLanguage()` → `{ lang, setLang, t, formatDateTime }`. `formatDateTime` usa `en-US` o `es-PE` y siempre hora de Perú (America/Lima).
+- **`src/i18n/active.ts`**: idioma activo y `tr()` (la misma traducción, para código que no es un componente: utilidades, frases de compensaciones, respuestas de la guía). Los formatos de fecha y número de `src/utils/format.ts` también siguen el idioma activo.
+- **Textos de los datos** (respuestas de la API, escenario de demostración de Rodrigo, contenido de Milene): llegan en español. `src/i18n/dataText.ts` (`td()`) los traduce al inglés con el diccionario de `dataTexts.ts` (coincidencia exacta o patrón). Si un texto no está, se muestra tal cual llegó. Los nombres de cultivo de los tres cultivos del piloto se traducen por su id. Los datos del propio usuario (por ejemplo, el nombre que le pone a su parcela) no se tocan.
+
 ## Guía flotante
 
 Botón «Guía» abajo a la derecha (`src/components/guide/`). **No usa ningún modelo de IA ni llama a servicios externos**: responde con reglas y con los datos que la app ya tiene cargados. Sin campo de texto: solo preguntas predefinidas por pantalla (Parcela: 2, Diagnóstico: 4, Rotaciones: 4).
@@ -55,6 +64,20 @@ Mapa interactivo (Leaflet + react-leaflet, carga aparte con `React.lazy`) en `sr
 - **Celda de NASA POWER:** rectángulo azul con la celda de la rejilla meteorológica (½° de latitud × ⅝° de longitud) cuyo centro está más cerca (`src/utils/powerGrid.ts`). El tamaño sale de la metodología de POWER (Release 9). La alineación no está en la documentación: se comprobó consultando la API de POWER a ambos lados de los bordes (centros en múltiplos de 0,5° de latitud y en −180° + j·0,625° de longitud).
 - **Imagen satelital NASA (opcional, apagada):** NASA GIBS por WMTS, sin clave: capa `MODIS_Terra_CorrectedReflectance_TrueColor`, `GoogleMapsCompatible_Level9`, JPEG, fecha de hace 3 días en UTC (la de hoy puede no estar publicada); la fecha se muestra siempre. Si no cargan los mosaicos, el interruptor avisa «Imagen no disponible» y el mapa base sigue funcionando. Atribución «NASA GIBS / EOSDIS».
 - **Celular (< 768 px o puntero táctil):** alto fijo de 280 px; el mapa empieza bloqueado para que un dedo siga desplazando la página, y el botón «Activar mapa» lo desbloquea.
+
+## 03 Rotaciones: mapa por prioridad
+
+En el bloque «Con qué datos se calculó» (`src/components/rotations/ContextPanel.tsx`), debajo del sensor, hay un mapa de la zona cuya imagen de NASA GIBS cambia con la prioridad. Se ve en la evaluación real y en el escenario de demostración; sin coordenadas de la parcela no se muestra.
+
+| Prioridad | Capa de GIBS | Juego de teselas | Detalle aproximado |
+|---|---|---|---|
+| Ahorrar agua | `SMAP_L4_Analyzed_Root_Zone_Soil_Moisture` | `GoogleMapsCompatible_Level6` (PNG) | ~9 km: sobre la parcela es casi un solo color |
+| Mejorar el suelo | `MODIS_Terra_NDVI_8Day` | `GoogleMapsCompatible_Level9` (PNG) | ~250 m |
+
+- Capas, juego de teselas y formato comprobados en el GetCapabilities de GIBS el 15/11/2026. Se pide la imagen de hace 4 días (UTC), porque las más recientes pueden no estar publicadas; la fecha se muestra siempre.
+- Reutiliza `PlotMap` con tres props opcionales (`overlay`, `overlayOn`, `compact`); sin ellas, 01 Parcela se ve igual que antes.
+- **Es contexto visual, no evidencia:** no hay leyenda con números ni se calcula nada a partir de la imagen, y no entra en la recomendación. Debajo va la fuente, la fecha y el aviso de que es una imagen de la zona, no una medición sobre la parcela.
+- Si la imagen no carga, sale «Imagen no disponible» y el mapa base con el marcador sigue funcionando.
 
 ## 03 Rotaciones: evaluación real y escenario de demostración
 

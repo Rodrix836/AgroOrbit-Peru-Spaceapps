@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '../services/supabase'
 import { USE_MOCKS } from '../services/api'
+import { tr } from '../i18n/active'
 
 interface AuthUser {
   email: string
@@ -41,9 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    if (!supabase) return 'El inicio de sesión no está configurado (faltan variables de Supabase).'
+    if (!supabase) return tr('auth.notConfigured')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return 'No se pudo iniciar sesión. Revisa tu correo y contraseña.'
+    if (error) return tr('auth.failed')
     return null
   }
 

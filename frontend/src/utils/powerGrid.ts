@@ -1,3 +1,6 @@
+import { tr } from '../i18n/active'
+import { formatFixed } from './format'
+
 /**
  * Rejilla meteorológica de NASA POWER.
  *
@@ -42,10 +45,11 @@ export function parseCoord(v: string | number | null | undefined, min: number, m
   return Number.isFinite(n) && n >= min && n <= max ? n : null
 }
 
-/** «4,75° S» / «80,94° O». */
+/** «4.75° S» / «80.94° W» (en español, «O» de oeste). */
 export function formatDegrees(value: number, axis: 'lat' | 'lng'): string {
-  const hemi = axis === 'lat' ? (value < 0 ? 'S' : 'N') : value < 0 ? 'O' : 'E'
-  return `${Math.abs(value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}° ${hemi}`
+  const hemi =
+    axis === 'lat' ? (value < 0 ? tr('geo.south') : tr('geo.north')) : value < 0 ? tr('geo.west') : tr('geo.east')
+  return `${formatFixed(Math.abs(value), 2)}° ${hemi}`
 }
 
 /** Fecha AAAA-MM-DD (UTC) de hace `days` días: GIBS publica por día UTC y el de hoy puede no estar listo. */

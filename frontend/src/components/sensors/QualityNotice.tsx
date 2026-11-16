@@ -1,11 +1,14 @@
 import type { SensorReading } from '../../types/api'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { tr } from '../../i18n/active'
 import { labelClass } from '../ui/styles'
 
 /** Etiqueta ámbar "DATO DE PRUEBA": la lectura viene de un kit de prueba (quality_flag = test). */
 export function TestBadge() {
+  const { t } = useLanguage()
   return (
     <span className={`inline-flex items-center border border-ambar bg-ambar-bg px-2 py-0.5 text-ambar ${labelClass}`}>
-      Dato de prueba
+      {t('common.testData')}
     </span>
   )
 }
@@ -15,9 +18,9 @@ export function qualityWarning(reading: SensorReading | null): string | null {
   switch (reading?.quality_flag) {
     case 'clamped_dry':
     case 'clamped_wet':
-      return 'Lectura en el límite de calibración.'
+      return tr('quality.clamped')
     case 'suspect':
-      return 'Lectura dudosa.'
+      return tr('quality.suspect')
     default:
       return null
   }

@@ -1,12 +1,33 @@
 import type { Criteria, CriterionId, CriterionScore } from '../../types/api'
 import { formatNumber } from '../../utils/format'
+import { tr } from '../../i18n/active'
 
 /** Los cuatro criterios del prototipo, en el orden en que se muestran. */
 export const CRITERIA: { id: CriterionId; label: string }[] = [
-  { id: 'clima', label: 'Clima' },
-  { id: 'agua', label: 'Agua' },
-  { id: 'suelo', label: 'Suelo' },
-  { id: 'diversificacion', label: 'Diversificación' },
+  {
+    id: 'clima',
+    get label() {
+      return tr('criteria.clima')
+    },
+  },
+  {
+    id: 'agua',
+    get label() {
+      return tr('criteria.agua')
+    },
+  },
+  {
+    id: 'suelo',
+    get label() {
+      return tr('criteria.suelo')
+    },
+  },
+  {
+    id: 'diversificacion',
+    get label() {
+      return tr('criteria.diversificacion')
+    },
+  },
 ]
 
 /** Peso (0 a 1) como porcentaje: 0.4 → «40 %». */

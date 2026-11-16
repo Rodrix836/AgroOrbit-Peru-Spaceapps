@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { usePlot } from '../../hooks/usePlot'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { USE_MOCKS } from '../../services/api'
 import { Eyebrow } from '../ui/Eyebrow'
 import { labelClass } from '../ui/styles'
@@ -57,6 +58,7 @@ interface Message {
 
 /** Respuesta con efecto de escritura breve. Para lectores de pantalla, el texto completo está desde el inicio. */
 function AnswerBubble({ answer, instant, onProgress }: { answer: GuideAnswer; instant: boolean; onProgress: () => void }) {
+  const { t } = useLanguage()
   const total = useMemo(
     () => answer.blocks.reduce((n, b) => n + (b.kind === 'p' ? b.text.length : b.items.reduce((m, i) => m + i.length, 0)), 0),
     [answer],
@@ -97,7 +99,7 @@ function AnswerBubble({ answer, instant, onProgress }: { answer: GuideAnswer; in
             </ul>
           ),
         )}
-        <p>Fuente: {answer.source}</p>
+        <p>{t('guide.source', { source: answer.source })}</p>
       </div>
       <div aria-hidden className="space-y-2 text-ink">
         {answer.blocks.map((b, i) => {
@@ -124,7 +126,7 @@ function AnswerBubble({ answer, instant, onProgress }: { answer: GuideAnswer; in
       </div>
       {done && (
         <div className="mt-3 space-y-2 border-t border-line pt-2">
-          <p className="font-mono text-[13px] text-muted">Fuente: {answer.source}</p>
+          <p className="font-mono text-[13px] text-muted">{t('guide.source', { source: answer.source })}</p>
           {answer.link && (
             <Link
               to={answer.link.to}
@@ -145,6 +147,7 @@ function AnswerBubble({ answer, instant, onProgress }: { answer: GuideAnswer; in
  */
 export function Guide() {
   const { pathname } = useLocation()
+  const { t, lang } = useLanguage()
   const route = routeOf(pathname)
   const questions = questionsFor(route)
   const { plot, crops, cycles } = usePlot()
@@ -169,7 +172,7 @@ export function Guide() {
   const endRef = useRef<HTMLDivElement>(null)
 
   // Al cambiar de pantalla la conversación empieza de nuevo (las preguntas son otras).
-  useEffect(() => setMessages([]), [route])
+  useEffect(() => setMessages([]), [route, lang]) // al cambiar de pantalla o de idioma, la conversación empieza de nuevo
 
   const close = useCallback(() => {
     setOpen(false)
@@ -230,8 +233,8 @@ export function Guide() {
     const answer: GuideAnswer = USE_MOCKS
       ? {
           ...base,
-          blocks: [{ kind: 'p', text: 'Modo ejemplo: los datos de la app son de muestra, no son de tu parcela.' }, ...base.blocks],
-          source: `${base.source} (modo ejemplo)`,
+          blocks: [{ kind: 'p', text: t('guide.mockNote') }, ...base.blocks],
+          source: `${base.source} ${t('guide.mockSuffix')}`,
         }
       : base
     setMessages((m) => [...m, { id: nextId.current++, question: q.text, answer }])
@@ -250,7 +253,7 @@ export function Guide() {
         onMouseLeave={hideBubbleSoon}
         onFocus={() => !open && showBubble()}
         onBlur={hideBubbleSoon}
-        aria-label={open ? 'Cerrar la guía de AgroOrbit' : 'Abrir la guía de AgroOrbit'}
+        aria-label={open ? t('guide.close') : t('guide.open')}
         aria-expanded={open}
         aria-haspopup="dialog"
         className="fixed bottom-2 left-2 z-[1999] bg-transparent p-2"
@@ -275,12 +278,12 @@ export function Guide() {
               onClick={toggle}
               className="min-h-[44px] flex-1 text-left font-medium text-ink hover:text-lima"
             >
-              ¿Te explico esta pantalla?
+              {t('guide.bubble')}
             </button>
             <button
               type="button"
               onClick={dismissBubble}
-              aria-label="Cerrar este aviso"
+              aria-label={t('guide.bubbleClose')}
               className="inline-flex h-11 w-11 flex-none items-center justify-center text-muted hover:text-ink"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" fill="none" aria-hidden>
@@ -294,7 +297,7 @@ export function Guide() {
       {open && (
     <div
       role="dialog"
-      aria-label="Guía de AgroOrbit"
+      aria-label={t('guide.dialog')}
       className={`fixed z-[2000] flex flex-col border border-edge bg-panel shadow-[0_0_0_1px_#0b110e] max-sm:inset-2 sm:bottom-[120px] sm:left-4 sm:max-h-[min(620px,calc(100dvh-136px))] sm:w-[340px] ${
         reduced ? '' : 'agro-slide'
       }`}
@@ -302,14 +305,14 @@ export function Guide() {
       <header className="flex items-start gap-3 border-b border-line p-4">
         <Mascot className="h-10 flex-none" />
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-xl font-extrabold leading-tight tracking-[-0.02em] text-ink">Guía de AgroOrbit</h2>
-          <p className="mt-1 text-muted">Respuestas automáticas con los datos de tu parcela. No es un asesor agronómico.</p>
+          <h2 className="font-display text-xl font-extrabold leading-tight tracking-[-0.02em] text-ink">{t('guide.dialog')}</h2>
+          <p className="mt-1 text-muted">{t('guide.subtitle')}</p>
         </div>
         <button
           ref={closeBtn}
           type="button"
           onClick={close}
-          aria-label="Cerrar la guía"
+          aria-label={t('guide.closeBtn')}
           className="inline-flex h-11 w-11 flex-none items-center justify-center border border-edge text-ink hover:border-lima"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" stroke="currentColor" strokeWidth="2" fill="none" aria-hidden>
@@ -320,7 +323,7 @@ export function Guide() {
 
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto p-4">
         <Eyebrow tone="lima" className="mb-2">
-          Elige una pregunta
+          {t('guide.choose')}
         </Eyebrow>
         <ul className="space-y-2">
           {questions.map((q) => (
@@ -340,7 +343,7 @@ export function Guide() {
           <div role="log" aria-live="polite" className="mt-5 space-y-4 border-t border-line pt-4">
             {messages.map((m) => (
               <div key={m.id} className="space-y-2">
-                <p className={`text-lima ${labelClass}`}>Tú preguntaste</p>
+                <p className={`text-lima ${labelClass}`}>{t('guide.youAsked')}</p>
                 <p className="font-medium text-ink">{m.question}</p>
                 <AnswerBubble answer={m.answer} instant={reduced} onProgress={scrollDown} />
               </div>

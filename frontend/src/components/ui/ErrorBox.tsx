@@ -1,3 +1,4 @@
+import { useLanguage } from '../../i18n/LanguageContext'
 import { Alert } from './Alert'
 import { Button } from './Button'
 
@@ -7,12 +8,13 @@ interface Props {
 }
 
 export function ErrorBox({ message, onRetry }: Props) {
+  const { t } = useLanguage()
   return (
-    <Alert tone="danger" title="Error" role="alert">
+    <Alert tone="danger" title={t('common.error')} role="alert">
       <p>{message}</p>
       {onRetry && (
         <Button variant="outline" onClick={onRetry} className="mt-3">
-          Reintentar
+          {t('common.retry')}
         </Button>
       )}
     </Alert>

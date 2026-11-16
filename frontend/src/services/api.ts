@@ -39,6 +39,7 @@ import {
   mockReadings,
   mockRecommendation,
 } from './mocks'
+import { tr } from '../i18n/active'
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
@@ -64,22 +65,28 @@ const DEMO_SCENARIO_PATH = '/api/recommendations/demo'
 export const NASA_ERROR_CODES = ['nasa_power_unavailable', 'nasa_power_invalid_response']
 
 /** Mensajes en español para los códigos estables de la API (`error.code`). */
-const MESSAGES: Record<string, string> = {
-  missing_token: 'Tu sesión terminó. Vuelve a iniciar sesión.',
-  invalid_token: 'Tu sesión no es válida. Vuelve a iniciar sesión.',
-  token_expired: 'Tu sesión venció. Vuelve a iniciar sesión.',
-  plot_not_found: 'No encontramos esa parcela. Puede que no exista o que no sea tuya.',
-  profile_not_found: 'Falta crear tu perfil de usuario. Cierra sesión y vuelve a entrar.',
-  nasa_power_unavailable:
-    'NASA POWER no responde en este momento. Inténtalo de nuevo en unos minutos.',
-  nasa_power_invalid_response:
-    'NASA POWER respondió con datos incompletos o no válidos, y no los usamos.',
-  cycle_not_found: 'No encontramos ese ciclo de cultivo. Recarga la página e inténtalo de nuevo.',
-  active_cycle_exists: 'La parcela ya tiene un cultivo actual.',
-  planned_cycle_exists: 'La parcela ya tiene una próxima campaña.',
-  validation_error: 'Algunos datos no son válidos. Revisa los campos e inténtalo de nuevo.',
-  invalid_date_range: 'El rango de fechas no es válido.',
-  network_error: 'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.',
+/** Códigos de error con mensaje propio (el texto sale del diccionario, en el idioma activo). */
+const MESSAGE_CODES = [
+  'missing_token',
+  'invalid_token',
+  'token_expired',
+  'plot_not_found',
+  'profile_not_found',
+  'nasa_power_unavailable',
+  'nasa_power_invalid_response',
+  'cycle_not_found',
+  'active_cycle_exists',
+  'planned_cycle_exists',
+  'validation_error',
+  'invalid_date_range',
+  'network_error',
+] as const
+type MessageCode = (typeof MESSAGE_CODES)[number]
+const isMessageCode = (c: string): c is MessageCode => (MESSAGE_CODES as readonly string[]).includes(c)
+const MESSAGES = {
+  get(code: string): string | undefined {
+    return isMessageCode(code) ? tr(`err.${code}`) : undefined
+  },
 }
 
 export { ApiError }
@@ -96,7 +103,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     res = await fetch(`${BASE_URL}${path}`, { ...init, headers })
   } catch {
-    throw new ApiError(0, MESSAGES.network_error, 'network_error')
+    throw new ApiError(0, MESSAGES.get('network_error') ?? '', 'network_error')
   }
   if (!res.ok) {
     let code = 'unknown'
@@ -112,7 +119,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
     throw new ApiError(
       res.status,
-      MESSAGES[code] ?? (apiMessage || `Error ${res.status} del servidor.`),
+      MESSAGES.get(code) ?? (apiMessage || tr('err.server', { status: res.status })),
       code,
       details,
     )
@@ -217,7 +224,7 @@ export const api = {
       if (MOCK_SCENARIO === 'nasa_down') {
         return new Promise((_, reject) =>
           setTimeout(
-            () => reject(new ApiError(503, MESSAGES.nasa_power_unavailable, 'nasa_power_unavailable')),
+            () => reject(new ApiError(503, MESSAGES.get('nasa_power_unavailable') ?? '', 'nasa_power_unavailable')),
             250,
           ),
         )
@@ -256,7 +263,7 @@ export const api = {
       return {
         scenario: fromFile(),
         source: 'static' as const,
-        fallback: e instanceof Error ? e.message : 'No se pudo leer el escenario desde la API.',
+        fallback: e instanceof Error ? e.message : tr('sc.readFail'),
       }
     }
   },

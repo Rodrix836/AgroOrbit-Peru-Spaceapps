@@ -6,11 +6,12 @@ import { Eyebrow } from '../ui/Eyebrow'
 import { SourceBadge } from '../ui/SourceBadge'
 import { AXIS_TICK, GRID_STROKE, TOOLTIP_STYLE } from '../ui/styles'
 import { nasaSeries } from './NasaCards'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 /** Dos tonos de azul y dos trazos distintos: la capa superficial en azul claro y continua, la zona de raíces en azul más oscuro y punteada. */
 const VARIABLES = [
-  { key: 'GWETTOP', label: 'Capa superficial (~5 cm)', stroke: '#a9d6ff', dash: undefined },
-  { key: 'GWETROOT', label: 'Zona de raíces', stroke: '#4a86e0', dash: '6 4' },
+  { key: 'GWETTOP', labelKey: 'nasa.soil.top', stroke: '#a9d6ff', dash: undefined },
+  { key: 'GWETROOT', labelKey: 'nasa.soil.root', stroke: '#4a86e0', dash: '6 4' },
 ] as const
 
 /** Muestra del trazo de una serie (color y continuo/punteado), para la leyenda y las tarjetas. */
@@ -49,6 +50,7 @@ export function NasaSoilMoisture({
   sensorIsTest: boolean
   example?: boolean
 }) {
+  const { t } = useLanguage()
   if (!hasSoilModel(observations)) return null
 
   // Un registro por día del período; el día sin dato queda vacío (null), no en 0.
@@ -66,13 +68,13 @@ export function NasaSoilMoisture({
   return (
     <div className="space-y-4 border-t border-line pt-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <Eyebrow tone="cielo">Humedad del suelo según NASA (modelo)</Eyebrow>
+        <Eyebrow tone="cielo">{t('nasa.soil.title')}</Eyebrow>
         <SourceBadge kind="nasa" />
-        {example && <SourceBadge kind="prototype" label="Datos de ejemplo" />}
+        {example && <SourceBadge kind="prototype" label={t('common.exampleData')} />}
       </div>
 
       <p className="font-mono text-base text-muted">
-        {view.period.label}: {formatDay(view.from)} a {formatDay(view.to)}
+        {t('nasa.cards.range', { label: view.period.label, from: formatDay(view.from), to: formatDay(view.to) })}
       </p>
 
       {hasValues ? (
@@ -84,20 +86,22 @@ export function NasaSoilMoisture({
                 <div key={v.key} className="border-t border-line py-3">
                   <dt className="flex items-center gap-3 whitespace-nowrap text-ink">
                     <LineSample stroke={v.stroke} dash={v.dash} />
-                    {v.label}
+                    {t(v.labelKey)}
                   </dt>
                   <dd className="mt-1 whitespace-nowrap font-mono text-lg" style={{ color: v.stroke }}>
                     {last ? (
                       <>
                         {fraction(last.value as number)} <span className="text-muted">·</span> {percent(last.value as number)}{' '}
-                        <span className="text-base text-muted">de saturación</span>
+                        <span className="text-base text-muted">{t('nasa.soil.saturation')}</span>
                       </>
                     ) : (
-                      <span className="text-muted">Sin dato</span>
+                      <span className="text-muted">{t('common.noData')}</span>
                     )}
                   </dd>
                   {last && (
-                    <p className="mt-1 font-mono text-base text-muted">Último dato: {formatDay(last.observed_on)}</p>
+                    <p className="mt-1 font-mono text-base text-muted">
+                      {t('nasa.soil.lastData', { day: formatDay(last.observed_on) })}
+                    </p>
                   )}
                 </div>
               )
@@ -105,7 +109,7 @@ export function NasaSoilMoisture({
           </dl>
 
           <div>
-            <Eyebrow tone="cielo">Fracción de saturación por día (0 a 1) · modelo NASA</Eyebrow>
+            <Eyebrow tone="cielo">{t('nasa.soil.chartTitle')}</Eyebrow>
             <div className="mt-3 h-56 w-full">
               <ResponsiveContainer>
                 <LineChart data={data} margin={MARGIN}>
@@ -123,7 +127,7 @@ export function NasaSoilMoisture({
                     contentStyle={TOOLTIP_STYLE}
                     labelFormatter={(d) => formatDay(String(d))}
                     formatter={(v, name) => [
-                      v == null ? 'sin dato' : `${fraction(Number(v))} (${percent(Number(v))})`,
+                      v == null ? t('nasa.chart.noData') : `${fraction(Number(v))} (${percent(Number(v))})`,
                       String(name),
                     ]}
                   />
@@ -132,7 +136,7 @@ export function NasaSoilMoisture({
                       key={v.key}
                       type="monotone"
                       dataKey={v.key}
-                      name={v.label}
+                      name={t(v.labelKey)}
                       stroke={v.stroke}
                       strokeDasharray={v.dash}
                       strokeWidth={2}
@@ -147,21 +151,19 @@ export function NasaSoilMoisture({
               {VARIABLES.map((v) => (
                 <li key={v.key} className="flex items-center gap-2">
                   <LineSample stroke={v.stroke} dash={v.dash} />
-                  {v.label}
+                  {t(v.labelKey)}
                 </li>
               ))}
             </ul>
           </div>
         </>
       ) : (
-        <p className="text-muted">NASA no tiene datos de esta variable para el período elegido.</p>
+        <p className="text-muted">{t('nasa.soil.noData')}</p>
       )}
 
       <p className="text-muted">
-        Fracción de saturación del suelo estimada por un modelo de la NASA: capa superficial (~5 cm) y zona de
-        raíces, en una celda de unos 50 km. No es lo mismo que el porcentaje del sensor, que mide un punto de tu
-        parcela con su propia calibración.
-        {sensorIsTest && ' Hoy el sensor envía datos de prueba.'}
+        {t('nasa.soil.note')}
+        {sensorIsTest && ` ${t('nasa.soil.sensorTest')}`}
       </p>
     </div>
   )

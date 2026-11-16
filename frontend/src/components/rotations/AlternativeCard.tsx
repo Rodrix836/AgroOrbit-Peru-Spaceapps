@@ -5,6 +5,8 @@ import { labelClass } from '../ui/styles'
 import { CampaignCalendar } from './CampaignCalendar'
 import { CriteriaBreakdown } from './CriteriaBreakdown'
 import { SourcesList } from './SourcesList'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { td } from '../../i18n/dataText'
 
 interface Props {
   alternative: Alternative
@@ -28,18 +30,19 @@ export function AlternativeCard({
   previousCriteria,
   example = false,
 }: Props) {
+  const { t } = useLanguage()
   const sequence = a.campaigns.map((c) => c.crop).join(' → ')
   const score = Math.max(0, Math.min(100, a.score))
   const firstStart = a.campaigns.map((c) => c.starts_on).sort()[0]
 
   return (
     <article className={`min-w-0 bg-panel p-6 md:p-8 ${selected ? 'border-t-2 border-lima' : 'border-t-2 border-transparent'}`}>
-      <Eyebrow tone={selected ? 'lima' : 'muted'}>Alternativa {letter}</Eyebrow>
+      <Eyebrow tone={selected ? 'lima' : 'muted'}>{t('alt.title', { letter })}</Eyebrow>
       {/* El espacio de la etiqueta se reserva también en las demás tarjetas, para que todo quede a la misma altura. */}
       <p
         className={`mt-2 inline-block px-2 py-1 font-medium ${labelClass} ${selected ? 'bg-lima text-bg' : 'invisible'}`}
       >
-        Mejor puntaje con esta prioridad
+        {t('alt.bestScore')}
       </p>
 
       <h3
@@ -47,21 +50,20 @@ export function AlternativeCard({
           selected ? 'text-lima' : 'text-ink'
         }`}
       >
-        {sequence || 'Sin secuencia'}
+        {sequence || t('alt.noSequence')}
       </h3>
 
       <p className="mt-6 flex flex-wrap items-baseline gap-x-3 font-mono">
         <span className={`text-[72px] font-medium leading-none tracking-[-0.04em] ${selected ? 'text-lima' : 'text-ink'}`}>
           {a.score}
         </span>
-        <span className={`${labelClass} text-muted`}>/ 100 · Criterio del prototipo</span>
+        <span className={`${labelClass} text-muted`}>{t('alt.scoreLabel')}</span>
       </p>
       <div className="mt-3 h-1 w-full bg-track" aria-hidden>
         <div className={`h-full ${selected ? 'bg-lima' : 'bg-muted'}`} style={{ width: `${score}%` }} />
       </div>
       <p className="mt-2 text-muted">
-        Es un criterio de comparación del prototipo. No es la probabilidad de éxito ni el rendimiento
-        esperado.
+        {t('alt.scoreNote')}
       </p>
 
       {/* Solo si la API trae `criteria`. */}
@@ -73,16 +75,16 @@ export function AlternativeCard({
         example={example}
       />
 
-      <Eyebrow className="mb-3 mt-8">Calendario · dos campañas</Eyebrow>
+      <Eyebrow className="mb-3 mt-8">{t('alt.calendar')}</Eyebrow>
       {assumedStart && firstStart && (
         <p className="mb-3 font-mono text-base font-medium text-ambar">
-          Fecha de inicio supuesta: {formatDay(firstStart)}
+          {t('alt.assumedStart', { date: formatDay(firstStart) })}
         </p>
       )}
       <CampaignCalendar campaigns={a.campaigns} />
 
       <Eyebrow tone="lima" className="mb-3 mt-8">
-        A favor
+        {t('alt.pros')}
       </Eyebrow>
       <ul className="space-y-2">
         {a.reasons.map((r, i) => (
@@ -90,13 +92,13 @@ export function AlternativeCard({
             <span aria-hidden className="font-mono font-medium text-lima">
               +
             </span>
-            <span>{r}</span>
+            <span>{td(r)}</span>
           </li>
         ))}
       </ul>
 
       <Eyebrow tone="ambar" className="mb-3 mt-8">
-        Limitaciones
+        {t('alt.limits')}
       </Eyebrow>
       <ul className="space-y-2">
         {a.limitations.map((r, i) => (
@@ -104,12 +106,12 @@ export function AlternativeCard({
             <span aria-hidden className="font-mono font-medium text-ambar">
               –
             </span>
-            <span>{r}</span>
+            <span>{td(r)}</span>
           </li>
         ))}
       </ul>
 
-      <Eyebrow className="mb-3 mt-8">Fuentes</Eyebrow>
+      <Eyebrow className="mb-3 mt-8">{t('alt.sources')}</Eyebrow>
       <SourcesList sources={a.sources} />
     </article>
   )

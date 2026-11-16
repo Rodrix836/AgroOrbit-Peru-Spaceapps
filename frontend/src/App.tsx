@@ -4,6 +4,7 @@ import { Layout } from './components/layout/Layout'
 import { Loading } from './components/ui/Loading'
 import { useAuth } from './hooks/useAuth'
 import { PlotProvider } from './hooks/usePlot'
+import { useLanguage } from './i18n/LanguageContext'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { PlotPage } from './pages/PlotPage'
@@ -11,7 +12,8 @@ import { RotationsPage } from './pages/RotationsPage'
 
 function Protected({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
-  if (loading) return <Loading label="Verificando sesión…" />
+  const { t } = useLanguage()
+  if (loading) return <Loading label={t('common.verifyingSession')} />
   if (!user) return <Navigate to="/login" replace />
   return <PlotProvider>{children}</PlotProvider>
 }
