@@ -61,7 +61,7 @@ ASSUMPTIONS = [
     Assumption(field="plot.current_crop_end", value="antes de 2026-12-01",
                reason="Se supone que el frijol caupí activo termina antes de la siembra: no tiene fecha registrada."),
     Assumption(field="crops.requirements", value="sintético",
-               reason="Los requisitos de pH, salinidad, suelos y agua de los cultivos son de prueba, sin fuente real."),
+               reason="Los requisitos de salinidad, suelos y agua de los cultivos son de prueba, sin fuente real."),
     Assumption(field="engine.criteria", value="sintético",
                reason="Las puntuaciones por criterio y los pesos por prioridad son de prueba, no agronómicos."),
 ]
@@ -305,7 +305,7 @@ def valle_chira_demo(priority: str = "improve_soil", clima: str = "nasa") -> dic
                 "puntuaciones": "SINTÉTICAS: score, criteria (puntuación por criterio) y pesos por prioridad "
                                 "son de prueba, no agronómicos; textos con prefijo SYNTHETIC.",
                 "requisitos_cultivo": "SINTÉTICOS donde el catálogo no tiene fuente (agua de frijol caupí y "
-                                      "camote; pH, salinidad y suelos de los tres); fuente example.invalid.",
+                                      "camote; salinidad y suelos de los tres); fuente example.invalid.",
                 "clima": climate_text,
             },
             "comando": f"python scripts/generar_demo_rotaciones.py --priority {priority} --clima {clima}",

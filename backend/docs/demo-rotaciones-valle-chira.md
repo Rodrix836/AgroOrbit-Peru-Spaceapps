@@ -54,7 +54,7 @@ Son las de [`ficha-comparativa-estrategias-valle-chira.md`](ficha-comparativa-es
 | Inicio 2026-12-01 y fechas de campaña (duración mínima del catálogo, sin pausas) | Supuesto | `assumptions` (`plot.next_sowing_date`, `campaigns.dates`) y `demo.supuestos.fechas` |
 | Fin del frijol caupí activo antes del 2026-12-01 | Supuesto (sin fecha registrada) | `assumptions` (`plot.current_crop_end`) |
 | `score`, `criteria`, pesos por prioridad | **Sintéticos** | `assumptions` (`engine.criteria`), `demo.sintetico.puntuaciones`, textos `SYNTHETIC …` en `reasons`/`limitations` |
-| Requisitos de cultivo sin fuente (agua de frijol caupí y camote; pH, salinidad y suelos) | **Sintéticos** (`example.invalid`) | `assumptions` (`crops.requirements`), `demo.sintetico.requisitos_cultivo` |
+| Requisitos de cultivo sin fuente (agua de frijol caupí y camote; salinidad y suelos) | **Sintéticos** (`example.invalid`) | `assumptions` (`crops.requirements`), `demo.sintetico.requisitos_cultivo` |
 | Clima | **NASA POWER real**, T2M y PRECTOTCORR diarios 2016-01-01 a 2026-11-15 en (-4.97, -80.89). Con `--clima sintetico` es una serie de prueba y se declara como supuesto (`climate.history`) | `demo.sintetico.clima` |
 | Rangos de temperatura y duraciones de cultivo | Del catálogo, con fuente (FAO GAEZ, EcoCrop, FAO) | `alternatives[].sources` |
 | Sensor `kit-lote4b-01` | `quality_flag: test`, no se usa como evidencia | `response.context.sensor` |

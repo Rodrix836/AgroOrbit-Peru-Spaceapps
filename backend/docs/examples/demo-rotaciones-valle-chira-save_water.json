@@ -85,7 +85,7 @@
     },
     "sintetico": {
       "puntuaciones": "SINTÉTICAS: score, criteria (puntuación por criterio) y pesos por prioridad son de prueba, no agronómicos; textos con prefijo SYNTHETIC.",
-      "requisitos_cultivo": "SINTÉTICOS donde el catálogo no tiene fuente (agua de frijol caupí y camote; pH, salinidad y suelos de los tres); fuente example.invalid.",
+      "requisitos_cultivo": "SINTÉTICOS donde el catálogo no tiene fuente (agua de frijol caupí y camote; salinidad y suelos de los tres); fuente example.invalid.",
       "clima": "NASA POWER real (T2M y PRECTOTCORR diarios, 2016-01-01 a 2026-11-15, -4.97, -80.89)"
     },
     "comando": "python scripts/generar_demo_rotaciones.py --priority save_water --clima nasa"
@@ -101,7 +101,7 @@
     "mode": "escenario_demostracion",
     "engine_version": "motor-1.0",
     "plot_id": "f544f739-bc06-45c6-9cf9-052c44499ab6",
-    "created_at": "2026-11-15T23:08:40.160271Z",
+    "created_at": "2026-11-16T00:28:01.159328Z",
     "context": {
       "notice": "Escenario de demostración: parte de los datos son supuestos, no medidos.",
       "start_on": "2026-12-01",
@@ -152,7 +152,7 @@
         {
           "field": "crops.requirements",
           "value": "sintético",
-          "reason": "Los requisitos de pH, salinidad, suelos y agua de los cultivos son de prueba, sin fuente real."
+          "reason": "Los requisitos de salinidad, suelos y agua de los cultivos son de prueba, sin fuente real."
         },
         {
           "field": "engine.criteria",
@@ -244,7 +244,7 @@
           },
           {
             "title": "Cowpea evapotranspiration and crop coefficient in the Gurgueia Valley, Piaui State, Brazil",
-            "url": "https://doi.org/10.15809/irriga.2008v13n2p182-190"
+            "url": "https://revistas.fca.unesp.br/index.php/irriga/article/view/3363"
           }
         ]
       },
@@ -308,7 +308,7 @@
           },
           {
             "title": "Cowpea evapotranspiration and crop coefficient in the Gurgueia Valley, Piaui State, Brazil",
-            "url": "https://doi.org/10.15809/irriga.2008v13n2p182-190"
+            "url": "https://revistas.fca.unesp.br/index.php/irriga/article/view/3363"
           },
           {
             "title": "SYNTHETIC fuente de demostración (no agronómica)",
@@ -399,6 +399,10 @@
             "url": "https://www.fao.org/4/s2022e/s2022e07.htm"
           },
           {
+            "title": "FAO EcoCrop data sheet: Zea mays ssp. mays",
+            "url": "https://ecocrop.apps.fao.org/ecocrop/srv/en/dataSheet?id=238663"
+          },
+          {
             "title": "SYNTHETIC fuente de demostración (no agronómica)",
             "url": "https://example.invalid/fuente-demostracion"
           },
@@ -408,7 +412,7 @@
           },
           {
             "title": "Cowpea evapotranspiration and crop coefficient in the Gurgueia Valley, Piaui State, Brazil",
-            "url": "https://doi.org/10.15809/irriga.2008v13n2p182-190"
+            "url": "https://revistas.fca.unesp.br/index.php/irriga/article/view/3363"
           }
         ]
       }

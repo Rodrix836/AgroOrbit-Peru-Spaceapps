@@ -37,7 +37,22 @@ El ejemplo de Rotaciones está en el **PR #23** ([Rodrix836/AgroOrbit-Peru-Space
 - El clima es el **histórico real de NASA POWER** de 2016 a 2026.
 - La evaluación real de la parcela sigue devolviendo `insufficient_data`: falta la textura del suelo y faltan requisitos de los cultivos.
 
-**Cómo lo usa el frontend:** carga copias de esos JSON en `frontend/src/data/`. Son las tomadas del commit `ec192fa` del mismo PR: tienen las mismas estrategias, fechas y respuesta. La pantalla usa sus propios textos de tarjeta (`frontend/src/data/lectura-milene.ts`).
+**Cómo lo usa el frontend:** carga copias de esos JSON en `frontend/src/data/`. Son las tomadas del commit `ec192fa` del mismo PR: tienen las mismas estrategias y fechas. Después se corrigió en `main` el enlace del artículo de ETc del caupí y se añadió el pH de EcoCrop al catálogo (PR «Fuentes y pH del catálogo»). Hasta que se vuelvan a copiar, las copias del frontend no tienen esos cambios. La pantalla usa sus propios textos de tarjeta (`frontend/src/data/lectura-milene.ts`).
+
+## Limitaciones y trabajo futuro
+
+Esto **no** está en la versión presentada:
+
+- **Sin evaluador agronómico real.** `EVALUATION_PROVIDER` es `None` en `backend/app/services/rotation_engine.py`. La evaluación real nunca da puntajes: responde `insufficient_data`, y los puntajes del ejemplo de Rotaciones son sintéticos.
+- **Requisitos de cultivo incompletos** en `backend/app/data/crops.py`:
+  - Falta el agua por campaña de frijol caupí y camote. El único dato del caupí (ETc de 288,5 mm en un sitio de Brasil) no sirve como rango general.
+  - Faltan la salinidad que tolera cada cultivo y los tipos de suelo que acepta.
+  - El pH sí está: es el rango óptimo de FAO EcoCrop (maíz 5–7, caupí 5,5–7,5, camote 5–7).
+- **Suelo de la parcela sin medir.** Falta la textura (en el ejemplo, «franco» es un supuesto), y faltan pH y salinidad. El kit ESP32 solo mide humedad y temperatura del suelo, y en la demo es un kit de prueba (`quality_flag: test`) que no se usa como evidencia.
+- **Ficha EcoCrop del caupí por confirmar.** El catálogo usa `id=10835` (*V. unguiculata* ssp. *unguiculata*) y el frontend enlaza `id=2153` (*V. unguiculata*). El pH óptimo es el mismo en las dos; la temperatura óptima no (20–35 °C frente a 25–35 °C).
+- **El escenario de demostración no se sirve por la API.** Sale de los JSON estáticos. La ruta que el frontend deja preparada (`POST /api/recommendations/demo`, con `VITE_SCENARIO_SOURCE=api`) no existe en el backend.
+- **`backend/app/services/climate_window_audit.py` no está conectado.** Ninguna ruta lo llama.
+- **El clima es histórico, no pronóstico.** NASA POWER da temperatura y lluvia de años anteriores en las mismas fechas, con unos 3 días de retraso. No reemplaza las mediciones de suelo.
 
 ## Reproducir
 
